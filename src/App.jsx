@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import '../node_modules/bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './styles.min.css'
 import Filter from './Components/Filter'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
