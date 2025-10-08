@@ -1,43 +1,74 @@
 package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 @Entity
-public class CustomerOrder extends Auditable {
+@Table(name = "Orders")
+public class CustomerOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "o_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
-    @Column(nullable = false)
-    private BigDecimal totalAmount;
+    @Column(name = "status", length = 50)
+    private String status;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private OrderStatus status = OrderStatus.PENDING;
+    @Column(name = "date_created")
+    @Temporal(TemporalType.TIMESTAMP)
+    private Date dateCreated;
 
-    private String shippingAddress;
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderDetails> orderDetails = new ArrayList<>();
 
-    public enum OrderStatus { PENDING, SHIPPED, COMPLETED }
+    public CustomerOrder() {
+        this.dateCreated = new Date();
+        this.status = "PENDING";
+    }
 
+    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public AppUser getUser() { return user; }
     public void setUser(AppUser user) { this.user = user; }
 
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
 
-    public OrderStatus getStatus() { return status; }
-    public void setStatus(OrderStatus status) { this.status = status; }
+    public Date getDateCreated() { return dateCreated; }
+    public void setDateCreated(Date dateCreated) { this.dateCreated = dateCreated; }
 
-    public String getShippingAddress() { return shippingAddress; }
-    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
+    public List<OrderDetails> getOrderDetails() { return orderDetails; }
+    public void setOrderDetails(List<OrderDetails> orderDetails) {
+        this.orderDetails.clear();
+        if (orderDetails != null) {
+            this.orderDetails.addAll(orderDetails);
+            orderDetails.forEach(detail -> detail.setOrder(this));
+        }
+    }
+
+    // Helper methods
+    public void addOrderDetail(OrderDetails detail) {
+        orderDetails.add(detail);
+        detail.setOrder(this);
+    }
+
+    public void removeOrderDetail(OrderDetails detail) {
+        orderDetails.remove(detail);
+        detail.setOrder(null);
+    }
+
+    // Calculate total price
+    public Float getTotalPrice() {
+        return orderDetails.stream()
+            .map(detail -> detail.getPrice() * detail.getQuantity())
+            .reduce(0f, Float::sum);
+    }
 }
-
-

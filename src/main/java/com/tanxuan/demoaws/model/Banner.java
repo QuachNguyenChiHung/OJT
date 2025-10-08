@@ -3,35 +3,57 @@ package com.tanxuan.demoaws.model;
 import jakarta.persistence.*;
 
 @Entity
-public class Banner extends Auditable {
+@Table(name = "Banner")
+public class Banner {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "banner_id")
     private Long id;
 
-    @Column(nullable = false)
-    private String title;
-
+    @Column(name = "image_url", length = 255)
     private String imageUrl;
 
-    private String link;
-
-    @Column(nullable = false)
+    @Column(name = "is_active")
     private Boolean isActive = true;
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    @Column(length = 128)
+    private String title;
 
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
+    // Constructor
+    public Banner() {
+    }
 
-    public String getImageUrl() { return imageUrl; }
-    public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    // Getters and Setters
+    public Long getId() {
+        return id;
+    }
 
-    public String getLink() { return link; }
-    public void setLink(String link) { this.link = link; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public Boolean getIsActive() { return isActive; }
-    public void setIsActive(Boolean active) { isActive = active; }
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public Boolean getActive() {
+        return isActive;
+    }
+
+    public void setActive(Boolean active) {
+        isActive = active;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
 }
-
 

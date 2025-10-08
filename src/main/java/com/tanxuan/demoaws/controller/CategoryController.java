@@ -1,44 +1,89 @@
 package com.tanxuan.demoaws.controller;
 
+import com.tanxuan.demoaws.dto.CategoryDTO.CategoryRequest;
+import com.tanxuan.demoaws.dto.CategoryDTO.CategoryResponse;
+import com.tanxuan.demoaws.exception.CategoryException;
 import com.tanxuan.demoaws.model.Category;
 import com.tanxuan.demoaws.service.CategoryService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/categories")
+@CrossOrigin(origins = "*")
+@RequiredArgsConstructor
 public class CategoryController {
     private final CategoryService categoryService;
 
-    public CategoryController(CategoryService categoryService) {
-        this.categoryService = categoryService;
+    @GetMapping
+    public ResponseEntity<List<CategoryResponse>> getAllCategories() {
+        List<CategoryResponse> categories = categoryService.findAll().stream()
+            .map(this::toCategoryResponse)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(categories);
     }
 
-    @GetMapping
-    public List<Category> all() { return categoryService.findAll(); }
-
     @GetMapping("/{id}")
-    public Category one(@PathVariable Long id) { return categoryService.findById(id); }
+    public ResponseEntity<CategoryResponse> getCategory(@PathVariable Long id) {
+        Category category = categoryService.findById(id);
+        return ResponseEntity.ok(toCategoryResponse(category));
+    }
 
     @PostMapping
-    public ResponseEntity<Category> create(@RequestBody Category category) {
-        Category created = categoryService.create(category);
-        return ResponseEntity.created(URI.create("/api/categories/" + created.getId())).body(created);
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
+        Category created = categoryService.create(request);
+        return ResponseEntity.created(URI.create("/api/categories/" + created.getId()))
+                .body(toCategoryResponse(created));
     }
 
     @PutMapping("/{id}")
-    public Category update(@PathVariable Long id, @RequestBody Category category) {
-        return categoryService.update(id, category);
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long id,
+            @Valid @RequestBody CategoryRequest request) {
+        Category updated = categoryService.update(id, request);
+        return ResponseEntity.ok(toCategoryResponse(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
         categoryService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<CategoryResponse>> searchCategories(
+            @RequestParam(required = false) String name) {
+        List<CategoryResponse> categories = categoryService.findByNameContaining(name).stream()
+            .map(this::toCategoryResponse)
+            .collect(Collectors.toList());
+        return ResponseEntity.ok(categories);
+    }
+
+    private CategoryResponse toCategoryResponse(Category category) {
+        return new CategoryResponse(
+            category.getId(),
+            category.getName(),
+            category.getProducts() != null ? category.getProducts().size() : 0
+        );
+    }
+
+    @ExceptionHandler(CategoryException.class)
+    public ResponseEntity<ErrorResponse> handleCategoryException(CategoryException e) {
+        ErrorResponse error = new ErrorResponse(
+            HttpStatus.BAD_REQUEST.value(),
+            e.getMessage(),
+            new Date()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    record ErrorResponse(int status, String message, Date timestamp) {}
 }
-
-

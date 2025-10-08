@@ -10,6 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
+@CrossOrigin(origins = "*")
 public class AppUserController {
     private final AppUserService appUserService;
 
@@ -18,10 +19,19 @@ public class AppUserController {
     }
 
     @GetMapping
-    public List<AppUser> all() { return appUserService.findAll(); }
+    public List<AppUser> all() {
+        return appUserService.findAll();
+    }
 
     @GetMapping("/{id}")
-    public AppUser one(@PathVariable Long id) { return appUserService.findById(id); }
+    public AppUser one(@PathVariable Long id) {
+        return appUserService.findById(id);
+    }
+
+    @GetMapping("/email/{email}")
+    public AppUser byEmail(@PathVariable String email) {
+        return appUserService.findByEmail(email);
+    }
 
     @PostMapping
     public ResponseEntity<AppUser> create(@RequestBody AppUser user) {
@@ -29,9 +39,14 @@ public class AppUserController {
         return ResponseEntity.created(URI.create("/api/users/" + created.getId())).body(created);
     }
 
+    @PutMapping("/{id}")
+    public AppUser update(@PathVariable Long id, @RequestBody AppUser user) {
+        return appUserService.update(id, user);
+    }
+
     @PatchMapping("/{id}/status")
-    public AppUser updateStatus(@PathVariable Long id, @RequestParam AppUser.UserStatus status) {
-        return appUserService.updateStatus(id, status);
+    public AppUser updateStatus(@PathVariable Long id, @RequestParam boolean isActive) {
+        return appUserService.updateStatus(id, isActive);
     }
 
     @DeleteMapping("/{id}")
@@ -40,5 +55,3 @@ public class AppUserController {
         return ResponseEntity.noContent().build();
     }
 }
-
-

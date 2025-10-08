@@ -1,42 +1,49 @@
 package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-public class Category extends Auditable {
+@Table(name = "Category")
+public class Category {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "c_id")
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "c_name", length = 255, nullable = false)
     private String name;
 
-    @Column(length = 1000)
-    private String description;
+    @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    private List<Product> products = new ArrayList<>();
 
-    public Long getId() {
-        return id;
+    // Constructor
+    public Category() {
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public List<Product> getProducts() { return products; }
+    public void setProducts(List<Product> products) { this.products = products; }
+
+    // Helper methods
+    public void addProduct(Product product) {
+        if (product != null) {
+            products.add(product);
+            product.setCategory(this);
+        }
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
+    public void removeProduct(Product product) {
+        if (product != null) {
+            products.remove(product);
+            product.setCategory(null);
+        }
     }
 }
-
-

@@ -24,10 +24,18 @@ public class AppUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         AppUser user = appUserRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
-        boolean enabled = user.getStatus() == AppUser.UserStatus.ACTIVE;
-        return new User(user.getEmail(), user.getPassword(), enabled, true, true, true, List.of(authority));
+
+        GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
+        boolean enabled = user.isActive();
+
+        return new User(
+            user.getEmail(),
+            user.getPassword(),
+            enabled,
+            true,
+            true,
+            true,
+            List.of(authority)
+        );
     }
 }
-
-
