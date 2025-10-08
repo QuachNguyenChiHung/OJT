@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-    
+
 const clothesImg = '/img/clothes.png';
 const xImg = '/img/x.png';
 
