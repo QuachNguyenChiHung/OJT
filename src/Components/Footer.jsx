@@ -1,8 +1,9 @@
 import React from 'react';
-import logoImg from '../assets/img/logo.png';
-import facebookImg from '../assets/img/facebook.png';
-import twitterImg from '../assets/img/twitter.png';
-import instagramImg from '../assets/img/instagram.png';
+
+const logoImg = '/img/logo.png';
+const facebookImg = '/img/facebook.png';
+const twitterImg = '/img/twitter.png';
+const instagramImg = '/img/instagram.png';
 
 const Footer = () => {
     return (

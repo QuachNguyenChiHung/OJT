@@ -1,6 +1,7 @@
 import React from 'react';
-import clothesImg from '../assets/img/clothes.png';
 import { Button } from 'react-bootstrap';
+
+const clothesImg = '/img/clothes.png';
 
 const ProductTable = ({ title, data, pagination }) => {
     // Sample product data - in a real app, this would come from props or state

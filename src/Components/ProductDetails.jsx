@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import clothesImg from '../assets/img/clothes.png';
-import pinkImg from '../assets/img/pink.jpg';
+
+const clothesImg = '/img/clothes.png';
+const pinkImg = '/img/pink.jpg';
 
 const ProductDetails = () => {
     const [selectedSize, setSelectedSize] = useState('S');

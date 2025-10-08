@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import clothesImg from '../assets/img/clothes.png';
-import xImg from '../assets/img/x.png';
+    
+const clothesImg = '/img/clothes.png';
+const xImg = '/img/x.png';
 
 // Small reusable OrderItem component
 const OrderItem = ({ item, onRemove }) => {

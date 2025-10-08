@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import logoImg from '../assets/img/logo.png';
+
+const logoImg = '/img/logo.png';
 
 const Register = () => {
     const [formData, setFormData] = useState({

@@ -20,6 +20,7 @@ import AdminCategories from './admin/AdminCategories'
 import CategoryPage from './pages/CategoryPage'
 import BrandPage from './pages/BrandPage'
 import AdminBrands from './admin/AdminBrands'
+import ChatBot from './Components/ChatBot';
 
 function Layout() {
   const location = useLocation()
@@ -28,6 +29,7 @@ function Layout() {
   return (
     <>
       {!showNavAndFooter && <Navbar />}
+      {!showNavAndFooter && <ChatBot />}
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/login" element={<Login />} />

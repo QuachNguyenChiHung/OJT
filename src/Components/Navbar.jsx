@@ -1,9 +1,10 @@
 import React from 'react';
-import logoImg from '../assets/img/logo.png';
-import magnifierImg from '../assets/img/magnifier.png';
-import searchImg from '../assets/img/search.png';
-import userImg from '../assets/img/user.png';
-import shoppingCartImg from '../assets/img/shopping-cart.png';
+
+const logoImg = '/img/logo.png';
+const magnifierImg = '/img/magnifier.png';
+const searchImg = '/img/search.png';
+const userImg = '/img/user.png';
+const shoppingCartImg = '/img/shopping-cart.png';
 
 const Navbar = () => {
     const menuItems = Array(7).fill('QUẦN ÁO');
