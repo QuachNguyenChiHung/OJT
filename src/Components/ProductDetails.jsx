@@ -28,7 +28,7 @@ const ProductDetails = () => {
             <div className="row d-flex justify-content-center">
                 <div className="col-8 col-md-5">
                     <div>
-                        <div>
+                        <div style={{ marginBottom: '8px' }}>
                             <div className="w-100">
                                 <div className="w-100">
                                     <img
@@ -39,16 +39,12 @@ const ProductDetails = () => {
                                     />
                                 </div>
                             </div>
-                            <div className="d-flex justify-content-around mt-3 w-100">
+                            <div className="item-groups d-flex justify-content-around mt-3 w-100">
                                 {[...Array(4)].map((_, index) => (
                                     <div
                                         key={index}
-                                        className={`w-25 border-orange ${index === 0 ? '' : index === 3 ? 'mx-1' : 'mx-1'
-                                            }`}
-                                        style={{
-                                            marginLeft: index === 0 ? '0px' : undefined,
-                                            marginRight: index === 0 ? '4px' : index === 3 ? '4px' : undefined
-                                        }}
+                                        className={`w-25 border-orange `}
+
                                     >
                                         <div className="w-100">
                                             <img
@@ -175,7 +171,14 @@ const ProductDetails = () => {
                                     className="star"
                                     data-value={star}
                                     onClick={() => handleStarClick(star)}
-                                    style={{ cursor: 'pointer' }}
+                                    style={{
+                                        cursor: 'pointer',
+                                        color: star <= rating ? 'orange' : '#ddd',
+                                        fontSize: '30px',
+                                        transition: 'color 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.target.style.color = 'orange'}
+                                    onMouseLeave={(e) => e.target.style.color = star <= rating ? 'orange' : '#ddd'}
                                 >
                                     ★
                                 </span>
@@ -183,7 +186,7 @@ const ProductDetails = () => {
                         </div>
                     </div>
                     <p className="fw-bolder text-center" style={{ marginBottom: '-13px' }}>
-                        0.00 trên 5
+                        {rating > 0 ? `${rating}.00 trên 5` : 'Chưa có đánh giá'}
                     </p>
                 </div>
                 <div className="col-12">

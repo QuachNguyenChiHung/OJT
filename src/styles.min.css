@@ -13,7 +13,7 @@
 
 select {
     color: #fff;
-    background-color: orange
+    background-color: rgb(228, 148, 0)
 }
 
 .bs-icon {
@@ -73,7 +73,12 @@ select {
     border-radius: 50%
 }
 
-.logo,
+.logo {
+    max-height: 120px;
+    max-width: 105px;
+    width: 120px;
+}
+
 .magifier {
     max-height: 40px
 }
@@ -130,8 +135,8 @@ select {
 }
 
 .page-link {
-    color: orange;
-    border: 1px solid orange
+    color: rgb(228, 148, 0);
+    border: 1px solid rgb(228, 148, 0)
 }
 
 .page-link:hover {
@@ -140,17 +145,17 @@ select {
 }
 
 footer {
-    background-color: orange
+    background-color: rgb(228, 148, 0)
 }
 
 .sort {
-    background: orange;
+    background: rgb(228, 148, 0);
     border: none;
     color: #fff
 }
 
 .form-check-input {
-    color: orange !important;
+    color: rgb(228, 148, 0) !important;
     display: none
 }
 
@@ -172,8 +177,8 @@ footer {
 }
 
 .form-check-input:checked+.form-check-label::before {
-    background-color: orange;
-    border-color: orange
+    background-color: rgb(228, 148, 0);
+    border-color: rgb(228, 148, 0)
 }
 
 .form-check-input:checked+.form-check-label::after {
@@ -191,7 +196,7 @@ footer {
 
 .btn-orange {
     color: #fff;
-    background: orange
+    background: rgb(228, 148, 0)
 }
 
 .btn-orange:hover {
@@ -204,7 +209,7 @@ footer {
     font-family: Inter, system-ui, Arial, sans-serif;
     padding: 24px;
     background: #fff;
-    color: orange
+    color: rgb(228, 148, 0)
 }
 
 .label,
@@ -224,13 +229,13 @@ footer {
     min-width: 44px;
     height: 44px;
     border-radius: 8px;
-    border: 2px solid orange;
+    border: 2px solid rgb(228, 148, 0);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     background: #fff;
-    color: orange;
+    color: rgb(228, 148, 0);
     font-weight: 600;
     box-shadow: none;
     font-size: 14px
@@ -254,7 +259,7 @@ footer {
 .qty-box {
     display: flex;
     align-items: center;
-    border: 2px solid orange;
+    border: 2px solid rgb(228, 148, 0);
     border-radius: 6px;
     width: 160px;
     height: 52px;
@@ -266,7 +271,7 @@ footer {
     height: 48px;
     border: 0;
     background: 0 0;
-    color: orange;
+    color: rgb(228, 148, 0);
     font-size: 20px;
     cursor: pointer
 }
@@ -301,7 +306,7 @@ footer {
 }
 
 .border-orange {
-    border: 3px solid orange
+    border: 3px solid rgb(228, 148, 0)
 }
 
 .stars {
@@ -320,4 +325,16 @@ footer {
 
 .star.filled {
     color: #ff0
+}
+
+.item-groups>div {
+    margin: 0px 8px;
+}
+
+.item-groups>div:first-child {
+    margin-left: 0px !important;
+}
+
+.item-groups>div:last-child {
+    margin-right: 0px !important;
 }

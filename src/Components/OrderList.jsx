@@ -21,20 +21,20 @@ const OrderItem = ({ item, onRemove }) => {
             >
                 <img
                     className="w-100"
-                    style={{ aspectRatio: '1/1.3', height: '100%', border: '3px solid orange' }}
+                    style={{ aspectRatio: '1/1.3', height: '100%', border: '3px solid rgb(228, 148, 0)' }}
                     src={clothesImg}
                     width="168"
                     height="218"
                     alt={item.name}
                 />
             </div>
-            <div className="col-lg-10 col-12" style={{ borderLeft: '3px solid orange' }}>
+            <div className="col-lg-10 col-12" style={{ borderLeft: '3px solid rgb(228, 148, 0)' }}>
                 <div className="d-flex justify-content-between align-items-center">
                     <h2 className="fw-normal">{item.name}</h2>
                     <button
                         className="btn"
                         type="button"
-                        style={{ border: '2px solid orange', padding: 0 }}
+                        style={{ border: '2px solid rgb(228, 148, 0)', padding: 0 }}
                         onClick={() => onRemove(item.id)}
                         aria-label={`Remove ${item.name}`}
                     >
@@ -55,7 +55,7 @@ const OrderItem = ({ item, onRemove }) => {
                             <span className="icon">−</span>
                         </button>
                         <div id={`qty-${item.id}`} className="qty-display">
-                            <span style={{ color: 'orange' }}>{quantity}</span>
+                            <span style={{ color: 'rgb(228, 148, 0)' }}>{quantity}</span>
                         </div>
                         <button id={`inc-${item.id}`} className="qty-btn" aria-label="Increase" onClick={increment}>
                             <span className="icon">+</span>
@@ -98,7 +98,7 @@ export default function OrderList() {
     return (
         <div className="container my-5" style={{ maxWidth: '1200px', paddingRight: '1rem', paddingLeft: '1rem' }}>
             <div className="row">
-                <div className="col-12" style={{ padding: '1rem', border: '3px solid orange' }}>
+                <div className="col-12" style={{ padding: '1rem', border: '3px solid rgb(228, 148, 0)' }}>
                     <div className="container">
                         <div>
                             <p>Ngày tạo đơn hàng : 26/3/2025</p>

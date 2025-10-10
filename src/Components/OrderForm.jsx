@@ -40,7 +40,7 @@ export default function OrderForm() {
     // Simple orange theme styles (inline so no extra css file required)
     const wrapperStyle = {
         background: '#fff7f0',
-        border: '3px solid orange',
+        border: '3px solid rgb(228, 148, 0)',
         padding: '1.25rem',
         borderRadius: '6px',
         maxWidth: 640,
@@ -48,7 +48,7 @@ export default function OrderForm() {
     };
 
     const labelStyle = { fontWeight: 600, color: '#333' };
-    const inputStyle = { borderColor: 'orange' };
+    const inputStyle = { borderColor: 'rgb(228, 148, 0)' };
 
     return (
         <div style={wrapperStyle}>
@@ -112,7 +112,7 @@ export default function OrderForm() {
                 </div>
 
                 <div className="d-flex justify-content-end">
-                    <button type="submit" className="btn btn-orange" style={{ background: 'orange', color: 'white', borderRadius: 0, border: '2px solid orange', padding: '0.5rem 1.25rem' }}>
+                    <button type="submit" className="btn btn-orange" style={{ background: 'rgb(228, 148, 0)', color: 'white', borderRadius: 0, border: '2px solid rgb(228, 148, 0)', padding: '0.5rem 1.25rem' }}>
                         Gửi
                     </button>
                 </div>

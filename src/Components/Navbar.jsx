@@ -33,7 +33,7 @@ const Navbar = () => {
                                     placeholder="Tìm kiếm từ khóa"
                                     style={{
                                         borderWidth: '2px',
-                                        borderColor: 'orange',
+                                        borderColor: 'rgb(228, 148, 0)',
                                         borderRightWidth: '0px'
                                     }}
                                 />
@@ -41,10 +41,10 @@ const Navbar = () => {
                                     className="btn"
                                     type="button"
                                     style={{
-                                        background: 'orange',
+                                        background: 'rgb(228, 148, 0)',
                                         padding: '0px 14px',
                                         borderWidth: '2px',
-                                        borderColor: 'orange'
+                                        borderColor: 'rgb(228, 148, 0)'
                                     }}
                                 >
                                     <img className="magifier" src={magnifierImg} alt="Search" />
@@ -81,7 +81,7 @@ const Navbar = () => {
                                             placeholder="Tìm kiếm từ khóa"
                                             style={{
                                                 borderWidth: '2px',
-                                                borderColor: 'orange',
+                                                borderColor: 'rgb(228, 148, 0)',
                                                 borderRightWidth: '0px'
                                             }}
                                         />
@@ -89,10 +89,10 @@ const Navbar = () => {
                                             className="btn"
                                             type="button"
                                             style={{
-                                                background: 'orange',
+                                                background: 'rgb(228, 148, 0)',
                                                 padding: '0px 14px',
                                                 borderWidth: '2px',
-                                                borderColor: 'orange'
+                                                borderColor: 'rgb(228, 148, 0)'
                                             }}
                                         >
                                             <img className="magifier" src={magnifierImg} alt="Search" />
@@ -137,7 +137,7 @@ const Navbar = () => {
                 </div>
             </header>
             <nav>
-                <div className="container-fluid" style={{ background: 'orange' }}>
+                <div className="container-fluid" style={{ background: 'rgb(228, 148, 0)' }}>
                     <div>
                         <div
                             className="container"
@@ -150,7 +150,7 @@ const Navbar = () => {
                         >
                             <nav
                                 className="navbar navbar-expand-md mt-2 navbar-dark"
-                                style={{ backgroundColor: 'orange', padding: 0 }}
+                                style={{ backgroundColor: 'rgb(228, 148, 0)', padding: 0 }}
                             >
                                 <div className="container-fluid navbar-light p-0">
                                     <button
@@ -190,7 +190,7 @@ const Navbar = () => {
                                                         className="dropdown-menu"
                                                         style={{
                                                             borderStyle: 'none',
-                                                            background: 'orange'
+                                                            background: 'rgb(228, 148, 0)'
                                                         }}
                                                     >
                                                         <a

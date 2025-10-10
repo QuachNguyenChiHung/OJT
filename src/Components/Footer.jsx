@@ -10,7 +10,7 @@ const Footer = () => {
         <footer style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
             <div>
                 <div className="container" style={{ maxWidth: '1200px !important' }}>
-                    <div className="d-block d-md-flex justify-content-md-between mb-2">
+                    <div className="d-block d-md-flex justify-content-md-between align-items-center mb-2">
                         <div className="d-flex align-items-center">
                             <img className="logo" src={logoImg} alt="Logo" />
                         </div>
@@ -22,17 +22,17 @@ const Footer = () => {
                                 <div className="d-flex">
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={facebookImg} alt="Facebook" />
+                                            <img className="magifier" src={facebookImg} alt="Facebook" />
                                         </a>
                                     </div>
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={twitterImg} alt="Twitter" />
+                                            <img className="magifier" src={twitterImg} alt="Twitter" />
                                         </a>
                                     </div>
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={instagramImg} alt="Instagram" />
+                                            <img className="magifier" src={instagramImg} alt="Instagram" />
                                         </a>
                                     </div>
                                 </div>

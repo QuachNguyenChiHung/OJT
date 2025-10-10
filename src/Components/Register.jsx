@@ -39,7 +39,7 @@ const Register = () => {
                             style={{
                                 padding: '1rem',
                                 borderWidth: '3px',
-                                borderColor: 'orange',
+                                borderColor: 'rgb(228, 148, 0)',
                                 paddingBottom: 0
                             }}
                         >
