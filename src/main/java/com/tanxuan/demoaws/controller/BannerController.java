@@ -1,12 +1,10 @@
 package com.tanxuan.demoaws.controller;
 
-import com.tanxuan.demoaws.exception.BannerException;
 import com.tanxuan.demoaws.model.Banner;
 import com.tanxuan.demoaws.service.BannerService;
 import com.tanxuan.demoaws.service.BannerService.BannerRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
@@ -58,16 +56,4 @@ public class BannerController {
     public ResponseEntity<Banner> toggleBannerActive(@PathVariable Long id) {
         return ResponseEntity.ok(bannerService.toggleActive(id));
     }
-
-    @ExceptionHandler(BannerException.class)
-    public ResponseEntity<ErrorResponse> handleBannerException(BannerException e) {
-        ErrorResponse error = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
-            e.getMessage(),
-            new java.util.Date()
-        );
-        return ResponseEntity.badRequest().body(error);
-    }
-
-    record ErrorResponse(int status, String message, java.util.Date timestamp) {}
 }

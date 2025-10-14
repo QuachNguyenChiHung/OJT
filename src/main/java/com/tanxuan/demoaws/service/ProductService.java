@@ -5,28 +5,39 @@ import com.tanxuan.demoaws.model.Category;
 import com.tanxuan.demoaws.model.Product;
 import com.tanxuan.demoaws.repository.BrandRepository;
 import com.tanxuan.demoaws.repository.CategoryRepository;
+import com.tanxuan.demoaws.repository.OrderDetailsRepository;
 import com.tanxuan.demoaws.repository.ProductRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final BrandRepository brandRepository;
+    private final OrderDetailsRepository orderDetailsRepository;
 
     public ProductService(ProductRepository productRepository,
                         CategoryRepository categoryRepository,
-                        BrandRepository brandRepository) {
+                        BrandRepository brandRepository,
+                        OrderDetailsRepository orderDetailsRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
+        this.orderDetailsRepository = orderDetailsRepository;
     }
 
-    public List<Product> findAll() { return productRepository.findAll(); }
+    public List<Product> findAll() {
+        return productRepository.findAll();
+    }
 
-    public Product findById(Long id) { return productRepository.findById(id).orElseThrow(); }
+    public Product findById(Long id) {
+        return productRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+    }
 
     public Product create(Product product, Long categoryId, Long brandId) {
         if (categoryId != null) {
@@ -65,7 +76,17 @@ public class ProductService {
         return productRepository.save(existing);
     }
 
-    public void delete(Long id) { productRepository.deleteById(id); }
+    public void delete(Long id) {
+        // Check if product exists
+        Product product = findById(id);
+
+        // Check if product is used in any orders
+        if (!orderDetailsRepository.findByProduct_Id(id).isEmpty()) {
+            throw new RuntimeException("Cannot delete product that has been ordered");
+        }
+
+        productRepository.deleteById(id);
+    }
 
     public List<Product> findByCategory(Long categoryId) {
         return productRepository.findByCategory_Id(categoryId);

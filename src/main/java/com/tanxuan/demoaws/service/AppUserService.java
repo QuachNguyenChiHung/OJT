@@ -2,12 +2,14 @@ package com.tanxuan.demoaws.service;
 
 import com.tanxuan.demoaws.model.AppUser;
 import com.tanxuan.demoaws.repository.AppUserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class AppUserService {
     private final AppUserRepository appUserRepository;
     private final PasswordEncoder passwordEncoder;

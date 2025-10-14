@@ -1,5 +1,6 @@
 package com.tanxuan.demoaws.service;
 
+import com.tanxuan.demoaws.constant.OrderStatus;
 import com.tanxuan.demoaws.exception.OrderException;
 import com.tanxuan.demoaws.model.AppUser;
 import com.tanxuan.demoaws.model.CustomerOrder;
@@ -51,7 +52,7 @@ public class CustomerOrderService {
         // Create new order
         CustomerOrder order = new CustomerOrder();
         order.setUser(user);
-        order.setStatus("PENDING");
+        order.setStatus(OrderStatus.PENDING);
         order.setDateCreated(new Date());
 
         // Save order first to get ID
@@ -90,7 +91,7 @@ public class CustomerOrderService {
             detail.setOrder(order);
             detail.setProduct(product);
             detail.setQuantity(item.getQuantity());
-            detail.setPrice(itemPrice);
+            detail.setPrice(product.getPrice());  // Fixed: Store unit price, not total
 
             try {
                 // Save order detail
@@ -123,21 +124,20 @@ public class CustomerOrderService {
     }
 
     private void validateStatusTransition(String currentStatus, String newStatus) {
-        // Define valid status transitions
-        if (currentStatus.equals("PENDING")) {
-            if (!newStatus.equals("PROCESSING") && !newStatus.equals("CANCELLED")) {
+        // Define valid status transitions using OrderStatus constants
+        if (currentStatus.equals(OrderStatus.PENDING)) {
+            if (!newStatus.equals(OrderStatus.PROCESSING) && !newStatus.equals(OrderStatus.CANCELLED)) {
                 throw new OrderException("Invalid status transition from PENDING to " + newStatus);
             }
-        } else if (currentStatus.equals("PROCESSING")) {
-            if (!newStatus.equals("SHIPPED") && !newStatus.equals("CANCELLED")) {
+        } else if (currentStatus.equals(OrderStatus.PROCESSING)) {
+            if (!newStatus.equals(OrderStatus.SHIPPING) && !newStatus.equals(OrderStatus.CANCELLED)) {
                 throw new OrderException("Invalid status transition from PROCESSING to " + newStatus);
             }
-        } else if (currentStatus.equals("SHIPPED")) {
-            if (!newStatus.equals("DELIVERED") && !newStatus.equals("RETURNED")) {
-                throw new OrderException("Invalid status transition from SHIPPED to " + newStatus);
+        } else if (currentStatus.equals(OrderStatus.SHIPPING)) {
+            if (!newStatus.equals(OrderStatus.DELIVERED)) {
+                throw new OrderException("Invalid status transition from SHIPPING to " + newStatus);
             }
-        } else if (currentStatus.equals("DELIVERED") || currentStatus.equals("CANCELLED") ||
-                   currentStatus.equals("RETURNED")) {
+        } else if (currentStatus.equals(OrderStatus.DELIVERED) || currentStatus.equals(OrderStatus.CANCELLED)) {
             throw new OrderException("Cannot change status of " + currentStatus + " order");
         }
     }
@@ -168,7 +168,7 @@ public class CustomerOrderService {
 
     public void cancelOrder(Long orderId) {
         CustomerOrder order = findById(orderId);
-        if (!order.getStatus().equals("PENDING")) {
+        if (!order.getStatus().equals(OrderStatus.PENDING)) {
             throw new OrderException("Can only cancel PENDING orders");
         }
 
@@ -179,7 +179,7 @@ public class CustomerOrderService {
             productRepository.save(product);
         }
 
-        order.setStatus("CANCELLED");
+        order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
     }
 

@@ -2,17 +2,14 @@ package com.tanxuan.demoaws.controller;
 
 import com.tanxuan.demoaws.dto.CategoryDTO.CategoryRequest;
 import com.tanxuan.demoaws.dto.CategoryDTO.CategoryResponse;
-import com.tanxuan.demoaws.exception.CategoryException;
 import com.tanxuan.demoaws.model.Category;
 import com.tanxuan.demoaws.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
-import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -74,16 +71,4 @@ public class CategoryController {
             category.getProducts() != null ? category.getProducts().size() : 0
         );
     }
-
-    @ExceptionHandler(CategoryException.class)
-    public ResponseEntity<ErrorResponse> handleCategoryException(CategoryException e) {
-        ErrorResponse error = new ErrorResponse(
-            HttpStatus.BAD_REQUEST.value(),
-            e.getMessage(),
-            new Date()
-        );
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-    }
-
-    record ErrorResponse(int status, String message, Date timestamp) {}
 }

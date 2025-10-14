@@ -1,6 +1,7 @@
 package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,15 +13,20 @@ public class Product extends Auditable {
     @Column(name = "p_id")
     private Long id;
 
+    @NotBlank(message = "Product name is required")
     @Column(name = "p_name", nullable = false, length = 255)
     private String name;
 
     @Column(name = "img_list", columnDefinition = "nvarchar(MAX)")
     private String imgList;
 
+    @NotNull(message = "Price is required")
+    @Positive(message = "Price must be positive")
     @Column(name = "price")
     private Float price;
 
+    @NotNull(message = "Amount is required")
+    @Min(value = 0, message = "Amount cannot be negative")
     @Column(name = "amount")
     private Integer amount;
 
@@ -43,6 +49,12 @@ public class Product extends Auditable {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
     private List<OrderDetails> orderDetails = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    private List<Rating> ratings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    private List<ProductDetails> productDetails = new ArrayList<>();
 
     // Getters and setters
     public Long getId() { return id; }
@@ -77,4 +89,10 @@ public class Product extends Auditable {
 
     public List<OrderDetails> getOrderDetails() { return orderDetails; }
     public void setOrderDetails(List<OrderDetails> orderDetails) { this.orderDetails = orderDetails; }
+
+    public List<Rating> getRatings() { return ratings; }
+    public void setRatings(List<Rating> ratings) { this.ratings = ratings; }
+
+    public List<ProductDetails> getProductDetails() { return productDetails; }
+    public void setProductDetails(List<ProductDetails> productDetails) { this.productDetails = productDetails; }
 }

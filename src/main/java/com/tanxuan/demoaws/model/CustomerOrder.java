@@ -1,5 +1,6 @@
 package com.tanxuan.demoaws.model;
 
+import com.tanxuan.demoaws.constant.OrderStatus;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.Date;
@@ -29,7 +30,7 @@ public class CustomerOrder {
 
     public CustomerOrder() {
         this.dateCreated = new Date();
-        this.status = "PENDING";
+        this.status = OrderStatus.PENDING;  // Fixed: Use constant instead of hardcoded string
     }
 
     // Getters and Setters

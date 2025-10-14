@@ -2,6 +2,7 @@ package com.tanxuan.demoaws.controller;
 
 import com.tanxuan.demoaws.model.Product;
 import com.tanxuan.demoaws.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,6 +11,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
+@CrossOrigin(origins = "*")
 public class ProductController {
     private final ProductService productService;
 
@@ -25,7 +27,7 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<Product> create(
-            @RequestBody Product product,
+            @Valid @RequestBody Product product,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long brandId) {
         Product created = productService.create(product, categoryId, brandId);
@@ -35,7 +37,7 @@ public class ProductController {
     @PutMapping("/{id}")
     public Product update(
             @PathVariable Long id,
-            @RequestBody Product product,
+            @Valid @RequestBody Product product,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long brandId) {
         return productService.update(id, product, categoryId, brandId);

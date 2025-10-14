@@ -2,15 +2,19 @@ package com.tanxuan.demoaws.service;
 
 import com.tanxuan.demoaws.model.Brand;
 import com.tanxuan.demoaws.repository.BrandRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.tanxuan.demoaws.repository.ProductRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class BrandService {
-    @Autowired
-    private BrandRepository brandRepository;
+    private final BrandRepository brandRepository;
+    private final ProductRepository productRepository;
 
     public List<Brand> getAllBrands() {
         return brandRepository.findAll();
@@ -36,6 +40,12 @@ public class BrandService {
 
     public void deleteBrand(Long id) {
         Brand brand = getBrandById(id);
+
+        // Check if brand is used in any products
+        if (!productRepository.findByBrand_Id(id).isEmpty()) {
+            throw new RuntimeException("Cannot delete brand that has associated products");
+        }
+
         brandRepository.delete(brand);
     }
 }

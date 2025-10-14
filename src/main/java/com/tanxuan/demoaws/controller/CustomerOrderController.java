@@ -105,7 +105,7 @@ public class CustomerOrderController {
             .collect(Collectors.toList()));
     }
 
-    @GetMapping("/status/date-range")
+    @PostMapping("/status/date-range")  // Fixed: Changed from GET to POST for @RequestBody
     public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByDateRangeAndStatus(
             @Valid @RequestBody OrderDTO.OrderDateRangeRequest request) {
         if (request.getStartDate().after(request.getEndDate())) {

@@ -40,6 +40,9 @@ public class AppUser {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<CustomerOrder> orders = new ArrayList<>();
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<Rating> ratings = new ArrayList<>();
+
     // Constructor
     public AppUser() {
         this.isActive = true;
@@ -76,4 +79,7 @@ public class AppUser {
 
     public List<CustomerOrder> getOrders() { return orders; }
     public void setOrders(List<CustomerOrder> orders) { this.orders = orders; }
+
+    public List<Rating> getRatings() { return ratings; }
+    public void setRatings(List<Rating> ratings) { this.ratings = ratings; }
 }
