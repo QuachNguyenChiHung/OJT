@@ -14,7 +14,7 @@ const ProductTable = ({ title, data, pagination }) => {
     });
 
     const pageNumbers = [1, 2, 3, 4, 5];
-
+    
     return (
         <div className="container py-4 py-xl-5" style={{ maxWidth: '1200px' }}>
             <div className="row mb-5">
@@ -27,7 +27,7 @@ const ProductTable = ({ title, data, pagination }) => {
 
                     <div key={index} className="col">
                         {/** Replace products with data prop when available */}
-                        <a href="#">
+                        <a href={`/product/${product.id}`}>
                             <div
                                 className="card"
                                 style={{

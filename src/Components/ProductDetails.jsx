@@ -34,7 +34,7 @@ const ProductDetails = () => {
                                     <img
                                         className="w-100 border-orange"
                                         src={clothesImg}
-                                        style={{ aspectRatio: '1/1.2' }}
+                                        style={{ aspectRatio: '1/1' }}
                                         alt="Main Product"
                                     />
                                 </div>

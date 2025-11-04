@@ -20,6 +20,8 @@ import AdminCategories from './admin/AdminCategories'
 import CategoryPage from './pages/CategoryPage'
 import BrandPage from './pages/BrandPage'
 import AdminBrands from './admin/AdminBrands'
+import AdminUsers from './admin/AdminUsers'
+import UserDetails from './admin/UserDetails'
 import ChatBot from './Components/ChatBot';
 
 function Layout() {
@@ -42,6 +44,8 @@ function Layout() {
         <Route path="/admin/products/:id" element={<AdminProductDetails />} />
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/brands" element={<AdminBrands />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
+        <Route path="/admin/users/:id" element={<UserDetails />} />
         <Route path="*" element={<h2 className="text-center my-5">404 - Page Not Found</h2>} />
         <Route path='/enter-info' element={<OrderForm />} />
       </Routes>
