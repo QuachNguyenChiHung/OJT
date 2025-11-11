@@ -1,9 +1,8 @@
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const BR_KEY = 'admin_brands_v1';
 
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function AdminBrands() {
   const [brands, setBrands] = useState([]);
@@ -12,20 +11,19 @@ export default function AdminBrands() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
-
-  useEffect(() => {
-    const raw = localStorage.getItem(BR_KEY);
-    if (raw) setBrands(JSON.parse(raw));
-    else {
-      const seed = [{ brand_id: generateId(), brand_name: 'FURIOUS' }];
-      setBrands(seed);
-      localStorage.setItem(BR_KEY, JSON.stringify(seed));
+  const fetchBrands = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/brands`);
+      setBrands(response.data);
     }
+    catch (error) {
+      alert('Failed to fetch brands');
+    }
+  }
+  useEffect(() => {
+    fetchBrands();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(BR_KEY, JSON.stringify(brands));
-  }, [brands]);
 
   // Filter brands based on search term
   useEffect(() => {
@@ -33,28 +31,46 @@ export default function AdminBrands() {
       setFilteredBrands(brands);
     } else {
       const filtered = brands.filter(brand =>
-        brand.brand_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        brand.brand_id.toLowerCase().includes(searchTerm.toLowerCase())
+        brand.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        brand.brandId.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredBrands(filtered);
     }
   }, [brands, searchTerm]);
 
-  const add = (e) => {
+  const add = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setBrands((b) => [{ brand_id: generateId(), brand_name: name.trim() }, ...b]);
-    setName('');
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/brands`, { brandName: name.trim() }, { withCredentials: true });
+      // assume API returns created brand
+      setBrands(b => [res.data, ...b]);
+      setName('');
+      alert('Brand added');
+    } catch (err) {
+      console.error('Add brand failed', err);
+      alert('Failed to add brand');
+    }
   };
 
-  const remove = (brand_id) => {
+  const remove = async (brandId) => {
     if (!confirm('Xóa brand?')) return;
-    setBrands((b) => b.filter(x => x.brand_id !== brand_id));
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { withCredentials: true });
+      setBrands((b) => b.filter(x => x.brandId !== brandId));
+      alert('Brand deleted');
+    } catch (err) {
+      if (!err.response || !err.response.data || !err.response.data.message)
+        alert('Failed to delete brand');
+      else
+        alert(err.response.data.message);
+      console.error('Delete brand failed', err);
+    }
   };
 
   const startEdit = (brand) => {
-    setEditingId(brand.brand_id);
-    setEditingName(brand.brand_name);
+    setEditingId(brand.brandId);
+    setEditingName(brand.brandName);
   };
 
   const cancelEdit = () => {
@@ -62,14 +78,21 @@ export default function AdminBrands() {
     setEditingName('');
   };
 
-  const saveEdit = (brand_id) => {
+  const saveEdit = async (brandId) => {
     if (!editingName.trim()) return alert('Tên không được rỗng');
-    setBrands(b => b.map(item => item.brand_id === brand_id ? { ...item, brand_name: editingName.trim() } : item));
-    cancelEdit();
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { brandName: editingName.trim() }, { withCredentials: true });
+      setBrands(b => b.map(item => item.brandId === brandId ? res.data : item));
+      cancelEdit();
+      alert('Brand updated');
+    } catch (err) {
+      console.error('Update brand failed', err);
+      alert('Failed to update brand');
+    }
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 900 }}>
+    <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Admin - Brands</h2>
         <div>
@@ -78,6 +101,7 @@ export default function AdminBrands() {
           <Link to="/admin/products" className="btn btn-outline-secondary">Products</Link>
         </div>
       </div>
+      {/* inline editing (Edit toggles row into input) */}
 
       {/* Search Bar */}
       <div className="mb-3">
@@ -141,27 +165,27 @@ export default function AdminBrands() {
           </div>
         ) : (
           filteredBrands.map(b => (
-            <div key={b.brand_id} className="list-group-item d-flex justify-content-between align-items-center">
+            <div key={b.brandId} className="list-group-item d-flex justify-content-between align-items-center">
               <div style={{ flex: 1 }}>
-                {editingId === b.brand_id ? (
+                {editingId === b.brandId ? (
                   <input
                     className="form-control"
                     value={editingName}
                     onChange={e => setEditingName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && saveEdit(b.brand_id)}
+                    onKeyPress={(e) => e.key === 'Enter' && saveEdit(b.brandId)}
                     autoFocus
                   />
                 ) : (
                   <div>
-                    <strong>{b.brand_name}</strong>
-                    <div className="text-muted small">ID: {b.brand_id}</div>
+                    <strong>{b.brandName}</strong>
+                    <div className="text-muted small">ID: {b.brandId}</div>
                   </div>
                 )}
               </div>
               <div className="d-flex gap-2">
-                {editingId === b.brand_id ? (
+                {editingId === b.brandId ? (
                   <>
-                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(b.brand_id)}>Save</button>
+                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(b.brandId)}>Save</button>
                     <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Cancel</button>
                   </>
                 ) : (
@@ -169,7 +193,7 @@ export default function AdminBrands() {
                     <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(b)}>Edit</button>
                     <button
                       className="btn btn-sm btn-outline-danger"
-                      onClick={() => remove(b.brand_id)}
+                      onClick={() => remove(b.brandId)}
                       title="Delete brand"
                     >
                       Delete

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import axios from 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -21,13 +22,7 @@ export default function AdminProductDetails() {
   });
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState(null);
-  const [editingProduct, setEditingProduct] = useState(false);
-  const [productEditForm, setProductEditForm] = useState({
-    p_name: '',
-    c_id: '',
-    brand_id: '',
-    desc: ''
-  });
+
   const [variantImages, setVariantImages] = useState([]);
   const [cropperData, setCropperData] = useState({
     show: false,
@@ -50,17 +45,86 @@ export default function AdminProductDetails() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const products = JSON.parse(raw);
-    const found = products.find(p => p.p_id === id);
-    setProduct(found || null);
+    let mounted = true;
 
-    const cat = localStorage.getItem('admin_categories_v1');
-    if (cat) setCategories(JSON.parse(cat));
+    const loadFromLocal = () => {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const products = JSON.parse(raw);
+      const found = products.find(p => p.p_id === id);
+      if (mounted) setProduct(found || null);
 
-    const br = localStorage.getItem('admin_brands_v1');
-    if (br) setBrands(JSON.parse(br));
+      const cat = localStorage.getItem('admin_categories_v1');
+      if (cat) setCategories(JSON.parse(cat));
+
+      const br = localStorage.getItem('admin_brands_v1');
+      if (br) setBrands(JSON.parse(br));
+    };
+
+    const tryFetchFromApi = async () => {
+      if (!import.meta.env.VITE_API_URL) return;
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/product-details/product/${id}`);
+        const data = res && res.data ? res.data : null;
+        // backend may return an array of detail objects for the product
+        if (Array.isArray(data) && data.length > 0) {
+          // normalize into the product shape used by this component
+          const first = data[0];
+          let p = null;
+          try {
+            p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+
+          } catch (error) {
+
+          }
+          const normalized = {
+            p_id: first.productId,
+            p_name: first.productName,
+            c_id: p?.data?.categoryId ?? '',
+            brand_id: p?.data?.brandID ?? '',
+            // also keep readable names when backend provides them
+            categoryName: p?.data?.categoryName ?? first.categoryName ?? '',
+            brandName: p?.data?.brandName ?? first.brandName ?? '',
+            desc: p?.data?.desc ?? p?.data?.description ?? '',
+            price: (p?.data?.price) + " VND" ?? null,
+            details: data.map(d => {
+              // imgList may be JSON string or already array
+              let imgs = [];
+              try {
+                if (typeof d.imgList === 'string') imgs = JSON.parse(d.imgList);
+                else if (Array.isArray(d.imgList)) imgs = d.imgList;
+              } catch (e) {
+                imgs = [];
+              }
+              return {
+                pd_id: d.pdId ?? d.pd_id ?? d.pdId,
+                img_list: imgs,
+                size: d.size ?? d.sz ?? '',
+                color: d.colorName ?? d.color ?? '',
+                colorId: d.colorId ?? d.color_id ?? null,
+                amount: d.amount ?? d.qty ?? 0,
+                price: d.price ?? null,
+                status: d.inStock === false ? 'out_of_stock' : 'available'
+              };
+            })
+          };
+          if (mounted) {
+            setProduct(normalized);
+          }
+        } else {
+          // fallback to local if API returns nothing useful
+          loadFromLocal();
+        }
+      } catch (err) {
+        // network or server error; fallback to local
+        loadFromLocal();
+      }
+    };
+
+    // try API first, then localStorage fallback
+    tryFetchFromApi();
+
+    return () => { mounted = false; };
   }, [id]);
 
   const removeDetail = (pd_id) => {
@@ -300,56 +364,7 @@ export default function AdminProductDetails() {
     cancelEditVariant();
   };
 
-  const startEditProduct = () => {
-    setEditingProduct(true);
-    setProductEditForm({
-      p_name: product.p_name,
-      c_id: product.c_id,
-      brand_id: product.brand_id,
-      desc: product.desc
-    });
-  };
 
-  const cancelEditProduct = () => {
-    setEditingProduct(false);
-    setProductEditForm({
-      p_name: '',
-      c_id: '',
-      brand_id: '',
-      desc: ''
-    });
-  };
-
-  const updateProduct = (e) => {
-    e.preventDefault();
-    if (!productEditForm.p_name.trim()) {
-      alert('Product name is required');
-      return;
-    }
-
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const products = JSON.parse(raw);
-    const idx = products.findIndex(p => p.p_id === id);
-    if (idx === -1) return;
-
-    products[idx] = {
-      ...products[idx],
-      p_name: productEditForm.p_name.trim(),
-      c_id: productEditForm.c_id,
-      brand_id: productEditForm.brand_id,
-      desc: productEditForm.desc.trim()
-    };
-
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    setProduct(products[idx]);
-    cancelEditProduct();
-  };
-
-  const handleProductEditChange = (e) => {
-    const { name, value } = e.target;
-    setProductEditForm(prev => ({ ...prev, [name]: value }));
-  };
 
   const getCategoryName = (c_id) => {
     const cat = categories.find(c => c.c_id === c_id);
@@ -366,7 +381,7 @@ export default function AdminProductDetails() {
   );
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1100 }}>
+    <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>{product.p_name}</h2>
         <div>
@@ -391,105 +406,36 @@ export default function AdminProductDetails() {
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h4>Product Information</h4>
-              {!editingProduct ? (
-                <button className="btn btn-sm btn-outline-primary" onClick={startEditProduct}>
-                  Edit Product
-                </button>
-              ) : (
-                <div className="d-flex gap-2">
-                  <button className="btn btn-sm btn-success" onClick={updateProduct}>Save</button>
-                  <button className="btn btn-sm btn-secondary" onClick={cancelEditProduct}>Cancel</button>
-                </div>
-              )}
             </div>
 
-            {editingProduct ? (
-              <form onSubmit={updateProduct}>
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label">Product Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="p_name"
-                      value={productEditForm.p_name}
-                      onChange={handleProductEditChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label">Category</label>
-                    <select
-                      className="form-select"
-                      name="c_id"
-                      value={productEditForm.c_id}
-                      onChange={handleProductEditChange}
-                      required
-                    >
-                      <option value="">Select category</option>
-                      {categories.map(c => (
-                        <option key={c.c_id} value={c.c_id}>{c.c_name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-md-3">
-                    <label className="form-label">Brand</label>
-                    <select
-                      className="form-select"
-                      name="brand_id"
-                      value={productEditForm.brand_id}
-                      onChange={handleProductEditChange}
-                      required
-                    >
-                      <option value="">Select brand</option>
-                      {brands.map(b => (
-                        <option key={b.brand_id} value={b.brand_id}>{b.brand_name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="col-12">
-                    <label className="form-label">Description</label>
-                    <textarea
-                      className="form-control"
-                      name="desc"
-                      value={productEditForm.desc}
-                      onChange={handleProductEditChange}
-                      rows="3"
-                    />
-                  </div>
-                  <div className="col-12">
-                    <div className="text-muted small">
-                      <strong>Product ID:</strong> {product.p_id} (cannot be changed)
-                    </div>
-                  </div>
-                </div>
-              </form>
-            ) : (
-              <table className="table table-bordered">
-                <tbody>
-                  <tr>
-                    <th style={{ width: '30%' }}>Product ID</th>
-                    <td>{product.p_id}</td>
-                  </tr>
-                  <tr>
-                    <th>Product Name</th>
-                    <td>{product.p_name}</td>
-                  </tr>
-                  <tr>
-                    <th>Category</th>
-                    <td>{getCategoryName(product.c_id)}</td>
-                  </tr>
-                  <tr>
-                    <th>Brand</th>
-                    <td>{getBrandName(product.brand_id)}</td>
-                  </tr>
-                  <tr>
-                    <th>Description</th>
-                    <td>{product.desc || 'N/A'}</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
+            <table className="table table-bordered">
+              <tbody>
+                <tr>
+                  <th style={{ width: '30%' }}>Product ID</th>
+                  <td>{product.p_id}</td>
+                </tr>
+                <tr>
+                  <th>Product Name</th>
+                  <td>{product.p_name}</td>
+                </tr>
+                <tr>
+                  <th>Category</th>
+                  <td>{product.categoryName || getCategoryName(product.c_id)}</td>
+                </tr>
+                <tr>
+                  <th>Brand</th>
+                  <td>{product.brandName || getBrandName(product.brand_id)}</td>
+                </tr>
+                <tr>
+                  <th>Description</th>
+                  <td>{product.desc || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <th>Price</th>
+                  <td>{product.price || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
           {/* Add/Edit Variant Form */}

@@ -1,31 +1,29 @@
+import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const CAT_KEY = 'admin_categories_v1';
-
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function AdminCategories() {
+  //add post, delete, put with credentials
   const [cats, setCats] = useState([]);
   const [filteredCats, setFilteredCats] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
-
-  useEffect(() => {
-    const raw = localStorage.getItem(CAT_KEY);
-    if (raw) setCats(JSON.parse(raw));
-    else {
-      const seed = [{ c_id: generateId(), c_name: 'Quần áo' }];
-      setCats(seed);
-      localStorage.setItem(CAT_KEY, JSON.stringify(seed));
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/categories`);
+      setCats(response.data);
     }
-  }, []);
-
+    catch (error) {
+      console.error('Failed to fetch categories', error);
+      alert('Failed to fetch categories');
+    }
+  }
   useEffect(() => {
-    localStorage.setItem(CAT_KEY, JSON.stringify(cats));
-  }, [cats]);
+    fetchCategories();
+  }, []);
 
   // Filter categories based on search term
   useEffect(() => {
@@ -33,28 +31,45 @@ export default function AdminCategories() {
       setFilteredCats(cats);
     } else {
       const filtered = cats.filter(cat =>
-        cat.c_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cat.c_id.toLowerCase().includes(searchTerm.toLowerCase())
+        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        cat.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredCats(filtered);
     }
   }, [cats, searchTerm]);
 
-  const add = (e) => {
+  const add = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setCats((c) => [{ c_id: generateId(), c_name: name.trim() }, ...c]);
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/categories`, { name: name.trim() }, { withCredentials: true });
+      setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
+    } catch (error) {
+      console.error('Add category failed', error);
+      alert('Failed to add category');
+    }
+    setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
     setName('');
   };
 
-  const remove = (c_id) => {
+  const remove = async (id) => {
     if (!confirm('Xóa category?')) return;
-    setCats((c) => c.filter(x => x.c_id !== c_id));
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/categories/${id}`, { withCredentials: true });
+      setCats((c) => c.filter(x => x.id !== id));
+    } catch (error) {
+      console.error('Delete category failed', error);
+      if (!error.response || !error.response.data || !error.response.data.message)
+        alert('Failed to delete category');
+      else
+        alert(error.response.data.message);
+    }
+
   };
 
   const startEdit = (cat) => {
-    setEditingId(cat.c_id);
-    setEditingName(cat.c_name);
+    setEditingId(cat.id);
+    setEditingName(cat.name);
   };
 
   const cancelEdit = () => {
@@ -62,14 +77,24 @@ export default function AdminCategories() {
     setEditingName('');
   };
 
-  const saveEdit = (c_id) => {
+  const saveEdit = async (id) => {
     if (!editingName.trim()) return alert('Tên không được rỗng');
-    setCats(c => c.map(item => item.c_id === c_id ? { ...item, c_name: editingName.trim() } : item));
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/categories/${id}`, { name: editingName.trim() }, { withCredentials: true });
+      setCats(c => c.map(item => item.id === id ? { ...item, name: editingName.trim() } : item));
+    } catch (error) {
+      console.error('Update category failed', error);
+      if (!error.response || !error.response.data || !error.response.data.message)
+        alert('Failed to update category');
+      else
+        alert(error.response.data.message);
+    }
+    setCats(c => c.map(item => item.id === id ? { ...item, name: editingName.trim() } : item));
     cancelEdit();
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 900 }}>
+    <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
         <h2>Admin - Categories</h2>
         <div>
@@ -141,27 +166,27 @@ export default function AdminCategories() {
           </div>
         ) : (
           filteredCats.map(c => (
-            <div key={c.c_id} className="list-group-item d-flex justify-content-between align-items-center">
+            <div key={c.id} className="list-group-item d-flex justify-content-between align-items-center">
               <div style={{ flex: 1 }}>
-                {editingId === c.c_id ? (
+                {editingId === c.id ? (
                   <input
                     className="form-control"
                     value={editingName}
                     onChange={e => setEditingName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && saveEdit(c.c_id)}
+                    onKeyPress={(e) => e.key === 'Enter' && saveEdit(c.id)}
                     autoFocus
                   />
                 ) : (
                   <div>
-                    <strong>{c.c_name}</strong>
-                    <div className="text-muted small">ID: {c.c_id}</div>
+                    <strong>{c.name}</strong>
+                    <div className="text-muted small">ID: {c.id}</div>
                   </div>
                 )}
               </div>
               <div className="d-flex gap-2">
-                {editingId === c.c_id ? (
+                {editingId === c.id ? (
                   <>
-                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(c.c_id)}>Save</button>
+                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(c.id)}>Save</button>
                     <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Cancel</button>
                   </>
                 ) : (
@@ -169,7 +194,7 @@ export default function AdminCategories() {
                     <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(c)}>Edit</button>
                     <button
                       className="btn btn-sm btn-outline-danger"
-                      onClick={() => remove(c.c_id)}
+                      onClick={() => remove(c.id)}
                       title="Delete category"
                     >
                       Delete
