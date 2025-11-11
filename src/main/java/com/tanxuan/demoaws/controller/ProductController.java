@@ -1,13 +1,19 @@
 package com.tanxuan.demoaws.controller;
 
+import com.tanxuan.demoaws.dto.ProductDTO;
 import com.tanxuan.demoaws.model.Product;
+import com.tanxuan.demoaws.model.Rating;
 import com.tanxuan.demoaws.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/products")
@@ -20,54 +26,107 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<Product> all() { return productService.findAll(); }
+    public List<ProductDTO.ProductResponse> all() {
+        return productService.findAll().stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
 
     @GetMapping("/{id}")
-    public Product one(@PathVariable Long id) { return productService.findById(id); }
+    public ProductDTO.ProductResponse one(@PathVariable UUID id) {
+        return convertToDTO(productService.findById(id));
+    }
 
     @PostMapping
-    public ResponseEntity<Product> create(
-            @Valid @RequestBody Product product,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long brandId) {
-        Product created = productService.create(product, categoryId, brandId);
-        return ResponseEntity.created(URI.create("/api/products/" + created.getId())).body(created);
+    public ResponseEntity<ProductDTO.ProductResponse> create(
+            @Valid @RequestBody ProductDTO.ProductRequest productRequest) {
+        Product product = new Product();
+        product.setPName(productRequest.getName());
+        product.setPDesc(productRequest.getDescription());
+        product.setPrice(productRequest.getPrice());
+        System.out.println(productRequest.getCategoryId());
+        System.out.println(productRequest.getBrandId());
+        Product created = productService.create(product, productRequest.getCategoryId(), productRequest.getBrandId());
+        return ResponseEntity.created(URI.create("/api/products/" + created.getPId()))
+            .body(convertToDTO(created));
     }
 
     @PutMapping("/{id}")
-    public Product update(
-            @PathVariable Long id,
-            @Valid @RequestBody Product product,
-            @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) Long brandId) {
-        return productService.update(id, product, categoryId, brandId);
+    public ProductDTO.ProductResponse update(
+            @PathVariable UUID id,
+            @Valid @RequestBody Map<String, Object> body,
+            @RequestParam(required = false) UUID categoryId,
+            @RequestParam(required = false) UUID brandId) {
+        for(Map.Entry<String,Object> entry : body.entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue());
+        }
+        Product p=new Product();
+            p.setPrice(body.get("price") != null ? new BigDecimal(body.get("price").toString()) : null);
+            p.setPName(body.get("PName") != null ? body.get("PName").toString() : null);
+            p.setPDesc(body.get("pDesc") != null ? body.get("pDesc").toString() : null);
+        return convertToDTO(productService.update(id, p, categoryId, brandId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
         productService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<Product> getByCategory(@PathVariable Long categoryId) {
-        return productService.findByCategory(categoryId);
+    public List<ProductDTO.ProductResponse> getByCategory(@PathVariable UUID categoryId) {
+        return productService.findByCategory(categoryId).stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
     }
 
     @GetMapping("/brand/{brandId}")
-    public List<Product> getByBrand(@PathVariable Long brandId) {
-        return productService.findByBrand(brandId);
+    public List<ProductDTO.ProductResponse> getByBrand(@PathVariable UUID brandId) {
+        return productService.findByBrand(brandId).stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
     }
 
     @GetMapping("/price-range")
-    public List<Product> getByPriceRange(
-            @RequestParam Float minPrice,
-            @RequestParam Float maxPrice) {
-        return productService.findByPriceRange(minPrice, maxPrice);
+    public List<ProductDTO.ProductResponse> getByPriceRange(
+            @RequestParam BigDecimal minPrice,
+            @RequestParam BigDecimal maxPrice) {
+        return productService.findByPriceRange(minPrice, maxPrice).stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
     }
 
-    @GetMapping("/available")
-    public List<Product> getAvailableProducts() {
-        return productService.findAvailableProducts();
+    @GetMapping("/search")
+    public List<ProductDTO.ProductResponse> searchProducts(@RequestParam String name) {
+        return productService.findByNameContaining(name).stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList());
+    }
+
+    // Helper method to convert Entity to DTO
+    private ProductDTO.ProductResponse convertToDTO(Product product) {
+        // compute average rating if available
+        Double averageRating = null;
+        List<Rating> ratings = product.getRatings();
+        int ratingsCount = 0;
+        if (ratings != null && !ratings.isEmpty()) {
+            ratingsCount = ratings.size();
+            averageRating = ratings.stream()
+                .mapToInt(Rating::getRatingValue)
+                .average()
+                .orElse(0.0);
+        }
+
+        return new ProductDTO.ProductResponse(
+            product.getPId(),
+            product.getPName(),
+            product.getPDesc(),
+            product.getPrice(),
+            product.getCategory() != null ? product.getCategory().getCName() : null,
+            product.getBrand() != null ? product.getBrand().getBrandName() : null,
+            productService.productIsInStock(product.getPId()), // isAvailable - default value
+            averageRating,
+            ratingsCount
+        );
     }
 }

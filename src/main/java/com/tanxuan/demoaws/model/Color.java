@@ -1,24 +1,25 @@
 package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
+import org.hibernate.annotations.GenericGenerator;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Color")
-public class Color extends Auditable {
+public class Color {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "color_id")
-    private Long id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "color_id", columnDefinition = "uniqueidentifier")
+    private UUID colorId;
 
-    @NotBlank(message = "Color name is required")
-    @Column(name = "color_name", nullable = false, length = 64)
+    @Column(name = "color_name", length = 64, columnDefinition = "nvarchar(64)")
     private String colorName;
 
-    @NotBlank(message = "Color code is required")
-    @Column(name = "color_code", nullable = false, length = 64)
+    @Column(name = "color_code", length = 64, columnDefinition = "nvarchar(64)")
     private String colorCode;
 
     @OneToMany(mappedBy = "color", cascade = CascadeType.ALL)
@@ -33,12 +34,12 @@ public class Color extends Auditable {
     }
 
     // Getters and Setters
-    public Long getId() {
-        return id;
+    public UUID getColorId() {
+        return colorId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setColorId(UUID colorId) {
+        this.colorId = colorId;
     }
 
     public String getColorName() {

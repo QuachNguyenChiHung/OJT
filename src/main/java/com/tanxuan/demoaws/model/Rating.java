@@ -2,14 +2,17 @@ package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.GenericGenerator;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Rating")
-public class Rating extends Auditable {
+public class Rating {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "r_id")
-    private Long id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "r_id", columnDefinition = "uniqueidentifier")
+    private UUID rId;
 
     @NotNull(message = "Rating value is required")
     @Min(value = 1, message = "Rating must be at least 1")
@@ -18,11 +21,11 @@ public class Rating extends Auditable {
     private Integer ratingValue;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "u_id", nullable = false)
+    @JoinColumn(name = "u_id")
     private AppUser user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "p_id", nullable = false)
+    @JoinColumn(name = "p_id")
     private Product product;
 
     // Constructors
@@ -35,12 +38,12 @@ public class Rating extends Auditable {
     }
 
     // Getters and Setters
-    public Long getId() {
-        return id;
+    public UUID getRId() {
+        return rId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setRId(UUID rId) {
+        this.rId = rId;
     }
 
     public Integer getRatingValue() {
@@ -67,4 +70,3 @@ public class Rating extends Auditable {
         this.product = product;
     }
 }
-

@@ -1,94 +1,86 @@
 package com.tanxuan.demoaws.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.GenericGenerator;
+
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Product")
-public class Product extends Auditable {
+public class Product {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "p_id")
-    private Long id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "p_id", columnDefinition = "uniqueidentifier")
+    private UUID PId;
 
-    @NotBlank(message = "Product name is required")
-    @Column(name = "p_name", nullable = false, length = 255)
-    private String name;
+    @Column(name = "p_name", columnDefinition = "nvarchar(255)")
+    private String PName;
 
-    @Column(name = "img_list", columnDefinition = "nvarchar(MAX)")
-    private String imgList;
+    @Column(name = "p_desc", columnDefinition = "nvarchar(MAX)")
+    private String pDesc;
 
     @NotNull(message = "Price is required")
     @Positive(message = "Price must be positive")
-    @Column(name = "price")
-    private Float price;
-
-    @NotNull(message = "Amount is required")
-    @Min(value = 0, message = "Amount cannot be negative")
-    @Column(name = "amount")
-    private Integer amount;
-
-    @Column(length = 4)
-    private String size;
-
-    @Column(length = 50)
-    private String color;
-
-    @Column(length = 50)
-    private String status;
+    @Column(name = "price", precision = 10, scale = 2, nullable = false)
+    private BigDecimal price;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "c_id")
+    @JoinColumn(name = "c_id", nullable = false)
+    @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"})
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "brand_id")
+    @JoinColumn(name = "brand_id", nullable = false)
+    @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"})
     private Brand brand;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
-    private List<OrderDetails> orderDetails = new ArrayList<>();
-
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Rating> ratings = new ArrayList<>();
 
-    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<ProductDetails> productDetails = new ArrayList<>();
 
+    @Override
+    public String toString() {
+        return "Product{" +
+                "PId=" + PId +
+                ", PName='" + PName + '\'' +
+                ", pDesc='" + pDesc + '\'' +
+                ", price=" + price +
+                ", category=" + category +
+                ", brand=" + brand +
+                ", ratings=" + ratings +
+                ", productDetails=" + productDetails +
+                '}';
+    }
+
     // Getters and setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getPId() { return PId; }
+    public void setPId(UUID pId) { this.PId = pId; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getPName() { return PName; }
+    public void setPName(String pName) { this.PName = pName; }
 
-    public String getImgList() { return imgList; }
-    public void setImgList(String imgList) { this.imgList = imgList; }
+    public String getPDesc() { return pDesc; }
+    public void setPDesc(String pDesc) { this.pDesc = pDesc; }
 
-    public Float getPrice() { return price; }
-    public void setPrice(Float price) { this.price = price; }
-
-    public Integer getAmount() { return amount; }
-    public void setAmount(Integer amount) { this.amount = amount; }
-
-    public String getSize() { return size; }
-    public void setSize(String size) { this.size = size; }
-
-    public String getColor() { return color; }
-    public void setColor(String color) { this.color = color; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
 
     public Category getCategory() { return category; }
     public void setCategory(Category category) { this.category = category; }
 
     public Brand getBrand() { return brand; }
     public void setBrand(Brand brand) { this.brand = brand; }
-
-    public List<OrderDetails> getOrderDetails() { return orderDetails; }
-    public void setOrderDetails(List<OrderDetails> orderDetails) { this.orderDetails = orderDetails; }
 
     public List<Rating> getRatings() { return ratings; }
     public void setRatings(List<Rating> ratings) { this.ratings = ratings; }

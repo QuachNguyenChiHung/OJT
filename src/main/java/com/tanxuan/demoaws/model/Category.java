@@ -1,21 +1,27 @@
 package com.tanxuan.demoaws.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import org.hibernate.annotations.GenericGenerator;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "Category")
 public class Category {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "c_id")
-    private Long id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "c_id", columnDefinition = "uniqueidentifier")
+    private UUID CId;
 
-    @Column(name = "c_name", length = 255, nullable = false)
-    private String name;
+    @Column(name = "c_name", length = 255, unique = true, columnDefinition = "nvarchar(255)")
+    private String CName;
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"category", "brand", "ratings", "productDetails", "hibernateLazyInitializer", "handler"})
     private List<Product> products = new ArrayList<>();
 
     // Constructor
@@ -23,11 +29,11 @@ public class Category {
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getCId() { return CId; }
+    public void setCId(UUID cId) { this.CId = cId; }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+    public String getCName() { return CName; }
+    public void setCName(String cName) { this.CName = cName; }
 
     public List<Product> getProducts() { return products; }
     public void setProducts(List<Product> products) { this.products = products; }

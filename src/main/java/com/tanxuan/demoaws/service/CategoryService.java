@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -27,7 +28,7 @@ public class CategoryService {
         }
     }
 
-    public Category findById(Long id) {
+    public Category findById(UUID id) {
         validateId(id);
         return categoryRepository.findById(id)
             .orElseThrow(() -> new CategoryException("Category not found with id: " + id));
@@ -36,40 +37,40 @@ public class CategoryService {
     public Category create(@Valid CategoryRequest request) {
         validateCategoryRequest(request);
 
-        if (categoryRepository.existsByName(request.getName().trim())) {
+        if (categoryRepository.existsByCName(request.getName().trim())) {
             throw new CategoryException("Category name already exists: " + request.getName());
         }
 
         try {
             Category category = new Category();
-            category.setName(request.getName().trim());
+            category.setCName(request.getName().trim());
             return categoryRepository.save(category);
         } catch (Exception e) {
             throw new CategoryException("Error creating category", e);
         }
     }
 
-    public Category update(Long id, @Valid CategoryRequest request) {
+    public Category update(UUID id, @Valid CategoryRequest request) {
         validateId(id);
         validateCategoryRequest(request);
 
         Category existing = findById(id);
 
         // Check if new name already exists (excluding current category)
-        if (!existing.getName().equalsIgnoreCase(request.getName()) &&
-            categoryRepository.existsByName(request.getName().trim())) {
+        if (!existing.getCName().equalsIgnoreCase(request.getName()) &&
+            categoryRepository.existsByCName(request.getName().trim())) {
             throw new CategoryException("Category name already exists: " + request.getName());
         }
 
         try {
-            existing.setName(request.getName().trim());
+            existing.setCName(request.getName().trim());
             return categoryRepository.save(existing);
         } catch (Exception e) {
             throw new CategoryException("Error updating category with id: " + id, e);
         }
     }
 
-    public void delete(Long id) {
+    public void delete(UUID id) {
         validateId(id);
         Category category = findById(id);
 
@@ -95,12 +96,9 @@ public class CategoryService {
         }
     }
 
-    private void validateId(Long id) {
+    private void validateId(UUID id) {
         if (id == null) {
             throw new CategoryException("Category ID cannot be null");
-        }
-        if (id <= 0) {
-            throw new CategoryException("Category ID must be positive");
         }
     }
 

@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -21,7 +22,7 @@ public class BrandController {
     }
 
     @GetMapping("/{id}")
-    public Brand getBrandById(@PathVariable Long id) {
+    public Brand getBrandById(@PathVariable UUID id) {
         return brandService.getBrandById(id);
     }
 
@@ -31,12 +32,12 @@ public class BrandController {
     }
 
     @PutMapping("/{id}")
-    public Brand updateBrand(@PathVariable Long id, @RequestBody Brand brand) {
+    public Brand updateBrand(@PathVariable UUID id, @RequestBody Brand brand) {
         return brandService.updateBrand(id, brand);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteBrand(@PathVariable Long id) {
+    public ResponseEntity<?> deleteBrand(@PathVariable UUID id) {
         brandService.deleteBrand(id);
         return ResponseEntity.ok().build();
     }

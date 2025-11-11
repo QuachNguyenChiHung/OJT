@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -20,7 +21,7 @@ public class BrandService {
         return brandRepository.findAll();
     }
 
-    public Brand getBrandById(Long id) {
+    public Brand getBrandById(UUID id) {
         return brandRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Brand not found with id: " + id));
     }
@@ -32,17 +33,17 @@ public class BrandService {
         return brandRepository.save(brand);
     }
 
-    public Brand updateBrand(Long id, Brand brandDetails) {
+    public Brand updateBrand(UUID id, Brand brandDetails) {
         Brand brand = getBrandById(id);
         brand.setBrandName(brandDetails.getBrandName());
         return brandRepository.save(brand);
     }
 
-    public void deleteBrand(Long id) {
+    public void deleteBrand(UUID id) {
         Brand brand = getBrandById(id);
 
         // Check if brand is used in any products
-        if (!productRepository.findByBrand_Id(id).isEmpty()) {
+        if (!productRepository.findByBrandId(id).isEmpty()) {
             throw new RuntimeException("Cannot delete brand that has associated products");
         }
 

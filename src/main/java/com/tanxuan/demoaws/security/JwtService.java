@@ -21,7 +21,7 @@ import java.util.function.Function;
 @Service
 public class JwtService {
 
-    @Value("${app.jwt.secret:ZmFrZXNlY3JldGtleWZvcmp3dDEyMzQ1Njc4OTA=}")
+    @Value("${app.jwt.secret:ZmFrZXNlY3JldGtleWZvcmp3dDEyMzoerfhdisjugwhgjdrfoivjdfvsvdvdsgvdjbuie9f0ruer9t54r54gpogjdolgdopsedfSaygexisCooliiuihuiojiooi56789i0o0876trfghjki8765rtgfhjku675rtfghj7854io34pewfkldsvcnbnhgfhyjrut5iotreplBokunopicoisbeautifu234234Q1Njc4OTA=}")
     private String secret;
 
     @Value("${app.jwt.expiration-ms:3600000}")
@@ -48,6 +48,7 @@ public class JwtService {
 
     public String extractUsername(String token) {
         try {
+
             return extractClaim(token, Claims::getSubject);
         } catch (ExpiredJwtException e) {
             throw new RuntimeException("JWT token has expired", e);
@@ -67,7 +68,8 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
+
         return Jwts.parserBuilder()
                 .setSigningKey(getSignKey())
                 .build()

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,7 +30,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CategoryResponse> getCategory(@PathVariable Long id) {
+    public ResponseEntity<CategoryResponse> getCategory(@PathVariable UUID id) {
         Category category = categoryService.findById(id);
         return ResponseEntity.ok(toCategoryResponse(category));
     }
@@ -37,20 +38,20 @@ public class CategoryController {
     @PostMapping
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         Category created = categoryService.create(request);
-        return ResponseEntity.created(URI.create("/api/categories/" + created.getId()))
+        return ResponseEntity.created(URI.create("/api/categories/" + created.getCId()))
                 .body(toCategoryResponse(created));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<CategoryResponse> updateCategory(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody CategoryRequest request) {
         Category updated = categoryService.update(id, request);
         return ResponseEntity.ok(toCategoryResponse(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCategory(@PathVariable UUID id) {
         categoryService.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -66,9 +67,9 @@ public class CategoryController {
 
     private CategoryResponse toCategoryResponse(Category category) {
         return new CategoryResponse(
-            category.getId(),
-            category.getName(),
-            category.getProducts() != null ? category.getProducts().size() : 0
+            category.getCId(),
+            category.getCName()
         );
     }
 }
+

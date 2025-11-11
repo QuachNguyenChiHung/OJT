@@ -3,11 +3,6 @@
   <component name="CompilerConfiguration">
     <annotationProcessing>
       <profile default="true" name="Default" enabled="true" />
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-      </profile>
       <profile name="Annotation profile for demoaws" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
@@ -20,7 +15,7 @@
     </annotationProcessing>
   </component>
   <component name="JavacSettings">
-    <option name="ADDI  TIONAL_OPTIONS_OVERRIDE">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
       <module name="demoaws" options="-parameters" />
     </option>
   </component>

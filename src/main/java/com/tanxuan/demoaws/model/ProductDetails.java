@@ -2,15 +2,18 @@ package com.tanxuan.demoaws.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import java.math.BigDecimal;
+import org.hibernate.annotations.GenericGenerator;
+
+import java.util.UUID;
 
 @Entity
 @Table(name = "ProductDetails")
-public class ProductDetails extends Auditable {
+public class ProductDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "pd_id")
-    private Long id;
+    @GeneratedValue(generator = "uuid2")
+    @GenericGenerator(name = "uuid2", strategy = "org.hibernate.id.UUIDGenerator")
+    @Column(name = "pd_id", columnDefinition = "uniqueidentifier")
+    private UUID pdId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "p_id", nullable = false)
@@ -23,39 +26,34 @@ public class ProductDetails extends Auditable {
     @Column(name = "img_list", columnDefinition = "nvarchar(MAX)")
     private String imgList;
 
-    @Column(name = "size", length = 16)
+    @Column(name = "size", length = 10, columnDefinition = "nvarchar(10)")
     private String size;
 
     @Min(value = 0, message = "Amount cannot be negative")
     @Column(name = "amount")
     private Integer amount;
 
-    @Positive(message = "Price must be positive")
-    @Column(name = "price", precision = 10, scale = 2)
-    private BigDecimal price;
-
-    @Column(name = "status", length = 50)
-    private String status;
+    @Column(name = "in_stock", columnDefinition = "bit")
+    private Boolean inStock = true;
 
     // Constructors
     public ProductDetails() {}
 
-    public ProductDetails(Product product, Color color, String size, Integer amount, BigDecimal price, String status) {
+    public ProductDetails(Product product, Color color, String size, Integer amount, Boolean inStock) {
         this.product = product;
         this.color = color;
         this.size = size;
         this.amount = amount;
-        this.price = price;
-        this.status = status;
+        this.inStock = inStock;
     }
 
     // Getters and Setters
-    public Long getId() {
-        return id;
+    public UUID getPdId() {
+        return pdId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setPdId(UUID pdId) {
+        this.pdId = pdId;
     }
 
     public Product getProduct() {
@@ -98,20 +96,12 @@ public class ProductDetails extends Auditable {
         this.amount = amount;
     }
 
-    public BigDecimal getPrice() {
-        return price;
+    public Boolean getInStock() {
+        return inStock;
     }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
+    public void setInStock(Boolean inStock) {
+        this.inStock = inStock;
     }
 }
 

@@ -6,6 +6,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 public class CategoryDTO {
     @Data
     @NoArgsConstructor
@@ -20,8 +22,7 @@ public class CategoryDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CategoryResponse {
-        private Long id;
+        private UUID id;
         private String name;
-        private int productCount;
     }
 }

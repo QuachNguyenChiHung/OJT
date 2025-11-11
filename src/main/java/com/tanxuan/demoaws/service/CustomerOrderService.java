@@ -5,11 +5,11 @@ import com.tanxuan.demoaws.exception.OrderException;
 import com.tanxuan.demoaws.model.AppUser;
 import com.tanxuan.demoaws.model.CustomerOrder;
 import com.tanxuan.demoaws.model.OrderDetails;
-import com.tanxuan.demoaws.model.Product;
+import com.tanxuan.demoaws.model.ProductDetails;
 import com.tanxuan.demoaws.repository.AppUserRepository;
 import com.tanxuan.demoaws.repository.CustomerOrderRepository;
 import com.tanxuan.demoaws.repository.OrderDetailsRepository;
-import com.tanxuan.demoaws.repository.ProductRepository;
+import com.tanxuan.demoaws.repository.ProductDetailsRepository;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
@@ -20,8 +20,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -30,13 +32,13 @@ public class CustomerOrderService {
     private final CustomerOrderRepository orderRepository;
     private final OrderDetailsRepository orderDetailsRepository;
     private final AppUserRepository appUserRepository;
-    private final ProductRepository productRepository;
+    private final ProductDetailsRepository productDetailsRepository;
 
     public List<CustomerOrder> findAll() {
         return orderRepository.findAll();
     }
 
-    public CustomerOrder findById(Long id) {
+    public CustomerOrder findById(UUID id) {
         return orderRepository.findById(id)
             .orElseThrow(() -> new OrderException("Order not found with id: " + id));
     }
@@ -53,7 +55,7 @@ public class CustomerOrderService {
         CustomerOrder order = new CustomerOrder();
         order.setUser(user);
         order.setStatus(OrderStatus.PENDING);
-        order.setDateCreated(new Date());
+        order.setDateCreated(Instant.now());
 
         // Save order first to get ID
         try {
@@ -62,36 +64,33 @@ public class CustomerOrderService {
             throw new OrderException("Failed to create order", e);
         }
 
-        float totalOrderPrice = 0;
-
         // Process each order item
         for (OrderItemRequest item : request.getItems()) {
-            Product product = productRepository.findById(item.getProductId())
-                .orElseThrow(() -> new OrderException("Product not found with id: " + item.getProductId()));
+            ProductDetails productDetails = productDetailsRepository.findById(item.getProductDetailsId())
+                .orElseThrow(() -> new OrderException("Product details not found with id: " + item.getProductDetailsId()));
 
             // Validate quantity
             if (item.getQuantity() <= 0) {
-                throw new OrderException("Quantity must be greater than 0 for product: " + product.getName());
+                throw new OrderException("Quantity must be greater than 0 for product: " + productDetails.getProduct().getPName());
             }
 
             // Check stock
-            if (product.getAmount() < item.getQuantity()) {
+            if (productDetails.getAmount() < item.getQuantity()) {
                 throw new OrderException(String.format(
                     "Not enough stock for product '%s'. Requested: %d, Available: %d",
-                    product.getName(), item.getQuantity(), product.getAmount()
+                    productDetails.getProduct().getPName(), item.getQuantity(), productDetails.getAmount()
                 ));
             }
 
             // Calculate item total price
-            float itemPrice = product.getPrice() * item.getQuantity();
-            totalOrderPrice += itemPrice;
+            BigDecimal itemPrice = productDetails.getProduct().getPrice().multiply(BigDecimal.valueOf(item.getQuantity()));
 
             // Create order detail
             OrderDetails detail = new OrderDetails();
             detail.setOrder(order);
-            detail.setProduct(product);
+            detail.setProductDetails(productDetails);
             detail.setQuantity(item.getQuantity());
-            detail.setPrice(product.getPrice());  // Fixed: Store unit price, not total
+            detail.setPrice(productDetails.getProduct().getPrice());  // Store unit price
 
             try {
                 // Save order detail
@@ -99,17 +98,19 @@ public class CustomerOrderService {
                 order.addOrderDetail(detail);
 
                 // Update product stock
-                product.setAmount(product.getAmount() - item.getQuantity());
-                productRepository.save(product);
+                productDetails.setAmount(productDetails.getAmount() - item.getQuantity());
+                productDetailsRepository.save(productDetails);
             } catch (Exception e) {
-                throw new OrderException("Failed to process order item for product: " + product.getName(), e);
+                throw new OrderException("Failed to process order item for product: " + productDetails.getProduct().getPName(), e);
             }
         }
 
+        // Calculate and set total price
+        order.calculateTotalPrice();
         return orderRepository.save(order);
     }
 
-    public CustomerOrder updateStatus(Long id, String status) {
+    public CustomerOrder updateStatus(UUID id, String status) {
         if (status == null || status.trim().isEmpty()) {
             throw new OrderException("Status cannot be empty");
         }
@@ -142,31 +143,31 @@ public class CustomerOrderService {
         }
     }
 
-    public List<CustomerOrder> findByUser(Long userId) {
-        return orderRepository.findByUser_Id(userId);
+    public List<CustomerOrder> findByUser(UUID userId) {
+        return orderRepository.findByUserUserId(userId);
     }
 
-    public List<CustomerOrder> findByProduct(Long productId) {
+    public List<CustomerOrder> findByProduct(UUID productId) {
         return orderRepository.findByProductId(productId);
     }
 
-    public List<CustomerOrder> findByUserAndStatus(Long userId, String status) {
-        return orderRepository.findByUser_IdAndStatus(userId, status);
+    public List<CustomerOrder> findByUserAndStatus(UUID userId, String status) {
+        return orderRepository.findByUserUserIdAndStatus(userId, status);
     }
 
-    public List<CustomerOrder> findOrdersByDateAndStatus(String status, Date startDate, Date endDate) {
+    public List<CustomerOrder> findOrdersByDateAndStatus(String status, Instant startDate, Instant endDate) {
         return orderRepository.findByStatusAndDateCreatedBetween(status, startDate, endDate);
     }
 
     // Add new helper methods
-    public float calculateOrderTotal(Long orderId) {
+    public BigDecimal calculateOrderTotal(UUID orderId) {
         CustomerOrder order = findById(orderId);
         return order.getOrderDetails().stream()
-                .map(detail -> detail.getPrice() * detail.getQuantity())
-                .reduce(0f, Float::sum);
+                .map(detail -> detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    public void cancelOrder(Long orderId) {
+    public void cancelOrder(UUID orderId) {
         CustomerOrder order = findById(orderId);
         if (!order.getStatus().equals(OrderStatus.PENDING)) {
             throw new OrderException("Can only cancel PENDING orders");
@@ -174,9 +175,9 @@ public class CustomerOrderService {
 
         // Restore product stock
         for (OrderDetails detail : order.getOrderDetails()) {
-            Product product = detail.getProduct();
-            product.setAmount(product.getAmount() + detail.getQuantity());
-            productRepository.save(product);
+            ProductDetails productDetails = detail.getProductDetails();
+            productDetails.setAmount(productDetails.getAmount() + detail.getQuantity());
+            productDetailsRepository.save(productDetails);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
@@ -188,7 +189,7 @@ public class CustomerOrderService {
     @NoArgsConstructor
     public static class CreateOrderRequest {
         @NotNull(message = "User ID is required")
-        private Long userId;
+        private UUID userId;
 
         @NotEmpty(message = "Order items cannot be empty")
         private List<OrderItemRequest> items;
@@ -198,8 +199,8 @@ public class CustomerOrderService {
     @Setter
     @NoArgsConstructor
     public static class OrderItemRequest {
-        @NotNull(message = "Product ID is required")
-        private Long productId;
+        @NotNull(message = "Product details ID is required")
+        private UUID productDetailsId;
 
         @Min(value = 1, message = "Quantity must be at least 1")
         private Integer quantity;

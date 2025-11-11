@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 public class ProductDTO {
     @Data
@@ -22,41 +23,35 @@ public class ProductDTO {
         @NotNull(message = "Giá sản phẩm không được để trống")
         private BigDecimal price;
 
-        @NotNull(message = "Số lượng tồn kho không được để trống")
-        private Integer stockQuantity;
-
         @NotNull(message = "ID danh mục không được để trống")
-        private Long categoryId;
+        private UUID categoryId;
 
         @NotNull(message = "ID thương hiệu không được để trống")
-        private Long brandId;
-
-        private String imageUrl;
+        private UUID brandId;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProductResponse {
-        private Long id;
+        private UUID id;
         private String name;
         private String description;
         private BigDecimal price;
-        private Integer stockQuantity;
-        private String imageUrl;
         private String categoryName;
         private String brandName;
         private Boolean isAvailable;
+        private Double averageRating;
+        private Integer ratingsCount;
     }
 
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ProductSummary {
-        private Long id;
+        private UUID id;
         private String name;
         private BigDecimal price;
-        private String imageUrl;
         private Boolean isAvailable;
     }
 }

@@ -26,7 +26,7 @@ public class AppUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         GrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole());
-        boolean enabled = user.isActive();
+        boolean enabled = user.getIsActive();
 
         return new User(
             user.getEmail(),

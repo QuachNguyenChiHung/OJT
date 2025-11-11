@@ -10,8 +10,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.UUID;
 import java.util.List;
 
 public class OrderDTO {
@@ -30,8 +31,8 @@ public class OrderDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderItemRequest {
-        @NotNull(message = "Product ID is required")
-        private Long productId;
+        @NotNull(message = "Product details ID is required")
+        private UUID productDetailsId;
 
         @NotNull(message = "Quantity is required")
         @Min(value = 1, message = "Quantity must be at least 1")
@@ -42,7 +43,7 @@ public class OrderDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderResponse {
-        private Long id;
+        private UUID id;
         private String orderStatus;
         private BigDecimal totalAmount;
         private String shippingAddress;
@@ -58,7 +59,7 @@ public class OrderDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderItemResponse {
-        private Long productId;
+        private UUID productDetailsId;
         private String productName;
         private Integer quantity;
         private BigDecimal unitPrice;
@@ -69,10 +70,10 @@ public class OrderDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class OrderSummary {
-        private Long id;
-        private Long userId;
+        private UUID id;
+        private UUID userId;
         private String status;
-        private LocalDateTime dateCreated;
+        private Instant dateCreated;
         private BigDecimal total;
         private int itemCount;
     }
@@ -98,10 +99,11 @@ public class OrderDTO {
 
         @NotNull(message = "Ngày bắt đầu không được để trống")
         @PastOrPresent(message = "Ngày bắt đầu không được ở tương lai")
-        private Date startDate;
+        private Instant startDate;
 
         @NotNull(message = "Ngày kết thúc không được để trống")
         @PastOrPresent(message = "Ngày kết thúc không được ở tương lai")
-        private Date endDate;
+        private Instant endDate;
     }
 }
+

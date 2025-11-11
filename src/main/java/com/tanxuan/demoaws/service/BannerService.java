@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -29,7 +30,7 @@ public class BannerService {
         }
     }
 
-    public Banner findById(Long id) {
+    public Banner findById(UUID id) {
         try {
             return bannerRepository.findById(id)
                 .orElseThrow(() -> new BannerException("Banner not found with id: " + id));
@@ -60,7 +61,7 @@ public class BannerService {
         }
     }
 
-    public Banner update(Long id, @Valid BannerRequest request) {
+    public Banner update(UUID id, @Valid BannerRequest request) {
         validateBannerRequest(request);
         Banner existing = findById(id);
 
@@ -72,7 +73,7 @@ public class BannerService {
         }
     }
 
-    public void delete(Long id) {
+    public void delete(UUID id) {
         Banner banner = findById(id);
 
         try {
@@ -82,11 +83,11 @@ public class BannerService {
         }
     }
 
-    public Banner toggleActive(Long id) {
+    public Banner toggleActive(UUID id) {
         Banner banner = findById(id);
 
         try {
-            banner.setActive(!Boolean.TRUE.equals(banner.getActive()));
+            banner.setIsActive(!Boolean.TRUE.equals(banner.getIsActive()));
             return bannerRepository.save(banner);
         } catch (Exception e) {
             throw new BannerException("Failed to toggle banner status with id: " + id, e);
@@ -102,7 +103,7 @@ public class BannerService {
     private void updateBannerFromRequest(Banner banner, BannerRequest request) {
         banner.setTitle(request.getTitle());
         banner.setImageUrl(request.getImageUrl());
-        banner.setActive(request.getIsActive() != null ? request.getIsActive() : Boolean.TRUE);
+        banner.setIsActive(request.getIsActive() != null ? request.getIsActive() : Boolean.TRUE);
     }
 
     @Data

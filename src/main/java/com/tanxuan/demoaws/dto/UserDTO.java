@@ -8,6 +8,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.UUID;
 
 public class UserDTO {
     @Data
@@ -39,7 +40,7 @@ public class UserDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class UserResponse {
-        private Long id;
+        private UUID id;
 
         @Email(message = "Email không hợp lệ")
         private String email;
@@ -125,3 +126,4 @@ public class UserDTO {
         }
     }
 }
+

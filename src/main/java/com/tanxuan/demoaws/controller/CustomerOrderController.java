@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.net.URI;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,7 +30,7 @@ import java.util.stream.Collectors;
 public class CustomerOrderController {
     private final CustomerOrderService orderService;
     private final OrderDetailsRepository orderDetailsRepository;
-    private final AppUserRepository appUserRepository; // Thêm repository
+    private final AppUserRepository appUserRepository;
 
     @GetMapping
     public ResponseEntity<List<OrderDTO.OrderSummary>> getAllOrders() {
@@ -38,33 +40,33 @@ public class CustomerOrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderDTO.OrderResponse> getOrder(@PathVariable Long id) {
+    public ResponseEntity<OrderDTO.OrderResponse> getOrder(@PathVariable UUID id) {
         return ResponseEntity.ok(toOrderResponse(orderService.findById(id)));
     }
 
     @GetMapping("/{id}/details")
-    public ResponseEntity<List<OrderDTO.OrderItemResponse>> getOrderDetails(@PathVariable Long id) {
+    public ResponseEntity<List<OrderDTO.OrderItemResponse>> getOrderDetails(@PathVariable UUID id) {
         orderService.findById(id); // Verify order exists
-        return ResponseEntity.ok(orderDetailsRepository.findByOrder_Id(id).stream()
+        return ResponseEntity.ok(orderDetailsRepository.findByOrder_oId(id).stream()
             .map(this::toOrderDetailResponse)
             .collect(Collectors.toList()));
     }
 
     @PostMapping
     public ResponseEntity<OrderDTO.OrderResponse> createOrder(@Valid @RequestBody OrderDTO.OrderRequest request) {
-        // Lấy thông tin user hiện tại từ SecurityContext
+        // Get current user from SecurityContext
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = auth.getName();
 
-        // Tạo CreateOrderRequest từ OrderDTO.OrderRequest
+        // Create CreateOrderRequest from OrderDTO.OrderRequest
         CustomerOrderService.CreateOrderRequest serviceRequest = new CustomerOrderService.CreateOrderRequest();
         AppUser user = appUserRepository.findByEmail(userEmail)
             .orElseThrow(() -> new OrderException("User not found with email: " + userEmail));
-        serviceRequest.setUserId(user.getId());
+        serviceRequest.setUserId(user.getUserId());
         serviceRequest.setItems(request.getItems().stream()
             .map(item -> {
                 CustomerOrderService.OrderItemRequest orderItem = new CustomerOrderService.OrderItemRequest();
-                orderItem.setProductId(item.getProductId());
+                orderItem.setProductDetailsId(item.getProductDetailsId());
                 orderItem.setQuantity(item.getQuantity());
                 return orderItem;
             })
@@ -72,25 +74,25 @@ public class CustomerOrderController {
 
         CustomerOrder created = orderService.create(serviceRequest);
         return ResponseEntity
-            .created(URI.create("/api/orders/" + created.getId()))
+            .created(URI.create("/api/orders/" + created.getOId()))
             .body(toOrderResponse(created));
     }
 
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderDTO.OrderResponse> updateOrderStatus(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @Valid @RequestBody OrderDTO.OrderStatusUpdate request) {
         return ResponseEntity.ok(toOrderResponse(orderService.updateStatus(id, request.getStatus())));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelOrder(@PathVariable Long id) {
+    public ResponseEntity<Void> cancelOrder(@PathVariable UUID id) {
         orderService.cancelOrder(id);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByUser(@PathVariable Long userId) {
+    public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByUser(@PathVariable UUID userId) {
         return ResponseEntity.ok(orderService.findByUser(userId).stream()
             .map(this::toOrderSummary)
             .collect(Collectors.toList()));
@@ -98,17 +100,17 @@ public class CustomerOrderController {
 
     @GetMapping("/user/{userId}/status/{status}")
     public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByUserAndStatus(
-            @PathVariable Long userId,
+            @PathVariable UUID userId,
             @PathVariable String status) {
         return ResponseEntity.ok(orderService.findByUserAndStatus(userId, status).stream()
             .map(this::toOrderSummary)
             .collect(Collectors.toList()));
     }
 
-    @PostMapping("/status/date-range")  // Fixed: Changed from GET to POST for @RequestBody
+    @PostMapping("/status/date-range")
     public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByDateRangeAndStatus(
             @Valid @RequestBody OrderDTO.OrderDateRangeRequest request) {
-        if (request.getStartDate().after(request.getEndDate())) {
+        if (request.getStartDate().isAfter(request.getEndDate())) {
             throw new OrderException("Ngày bắt đầu không được sau ngày kết thúc");
         }
         return ResponseEntity.ok(orderService.findOrdersByDateAndStatus(
@@ -127,46 +129,40 @@ public class CustomerOrderController {
             .collect(Collectors.toList());
 
         return new OrderDTO.OrderResponse(
-            order.getId(),
+            order.getOId(),
             order.getStatus(),
-            calculateTotal(order),
-            "",  // CustomerOrder không có shippingAddress
-            "",  // CustomerOrder không có note
-            LocalDateTime.ofInstant(order.getDateCreated().toInstant(), ZoneId.systemDefault()),
-            LocalDateTime.ofInstant(order.getDateCreated().toInstant(), ZoneId.systemDefault()),
+            order.getTotalPrice(),
+            "",  // CustomerOrder doesn't have shippingAddress
+            "",  // CustomerOrder doesn't have note
+            LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()),
+            LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()),
             items,
-            order.getUser().getFullName(),
+            order.getUser().getUName(),
             order.getUser().getEmail()
         );
     }
 
     private OrderDTO.OrderSummary toOrderSummary(CustomerOrder order) {
         return new OrderDTO.OrderSummary(
-            order.getId(),
-            order.getUser().getId(),
+            order.getOId(),
+            order.getUser().getUserId(),
             order.getStatus(),
-            LocalDateTime.ofInstant(order.getDateCreated().toInstant(), ZoneId.systemDefault()),
-            calculateTotal(order),
+            order.getDateCreated(),
+            order.getTotalPrice(),
             order.getOrderDetails().size()
         );
     }
 
     private OrderDTO.OrderItemResponse toOrderDetailResponse(OrderDetails detail) {
-        BigDecimal price = BigDecimal.valueOf(detail.getPrice());
+        BigDecimal unitPrice = detail.getPrice();
         BigDecimal quantity = BigDecimal.valueOf(detail.getQuantity());
         return new OrderDTO.OrderItemResponse(
-            detail.getProduct().getId(),
-            detail.getProduct().getName(),
+            detail.getProductDetails().getPdId(),
+            detail.getProductDetails().getProduct().getPName(),
             detail.getQuantity(),
-            price,
-            price.multiply(quantity)
+            unitPrice,
+            unitPrice.multiply(quantity)
         );
     }
-
-    private BigDecimal calculateTotal(CustomerOrder order) {
-        return order.getOrderDetails().stream()
-            .map(detail -> BigDecimal.valueOf(detail.getPrice())
-                .multiply(BigDecimal.valueOf(detail.getQuantity())))
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
 }
+

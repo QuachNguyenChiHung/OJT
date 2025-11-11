@@ -7,6 +7,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -23,7 +24,7 @@ public class AppUserService {
         return appUserRepository.findAll();
     }
 
-    public AppUser findById(Long id) {
+    public AppUser findById(UUID id) {
         return appUserRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("User not found"));
     }
@@ -38,7 +39,7 @@ public class AppUserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         // Set default values
-        user.setActive(true);
+        user.setIsActive(true);
         if (user.getRole() == null) {
             user.setRole("USER");
         }
@@ -46,7 +47,7 @@ public class AppUserService {
         return appUserRepository.save(user);
     }
 
-    public AppUser update(Long id, AppUser updatedUser) {
+    public AppUser update(UUID id, AppUser updatedUser) {
         AppUser existingUser = findById(id);
 
         if (updatedUser.getEmail() != null && !updatedUser.getEmail().equals(existingUser.getEmail())) {
@@ -60,8 +61,8 @@ public class AppUserService {
             existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
         }
 
-        if (updatedUser.getFullName() != null) {
-            existingUser.setFullName(updatedUser.getFullName());
+        if (updatedUser.getUName() != null) {
+            existingUser.setUName(updatedUser.getUName());
         }
 
         if (updatedUser.getPhoneNumber() != null) {
@@ -79,13 +80,13 @@ public class AppUserService {
         return appUserRepository.save(existingUser);
     }
 
-    public AppUser updateStatus(Long id, boolean isActive) {
+    public AppUser updateStatus(UUID id, boolean isActive) {
         AppUser user = findById(id);
-        user.setActive(isActive);
+        user.setIsActive(isActive);
         return appUserRepository.save(user);
     }
 
-    public void delete(Long id) {
+    public void delete(UUID id) {
         findById(id); // Check if exists
         appUserRepository.deleteById(id);
     }
