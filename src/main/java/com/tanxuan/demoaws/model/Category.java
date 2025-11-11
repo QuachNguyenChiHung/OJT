@@ -1,5 +1,6 @@
 package com.tanxuan.demoaws.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.GenericGenerator;
 
@@ -20,6 +21,7 @@ public class Category {
     private String CName;
 
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"category", "brand", "ratings", "productDetails", "hibernateLazyInitializer", "handler"})
     private List<Product> products = new ArrayList<>();
 
     // Constructor

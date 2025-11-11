@@ -24,6 +24,5 @@ public class CategoryDTO {
     public static class CategoryResponse {
         private UUID id;
         private String name;
-        private int productCount;
     }
 }

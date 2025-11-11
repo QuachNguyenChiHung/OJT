@@ -2,6 +2,7 @@ package com.tanxuan.demoaws.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,16 +28,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        final String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
 
         try {
-            final String token = authHeader.substring(7);
+            final String token = getTokenFromRequest(request);
             final String username = jwtService.extractUsername(token);
-
+            System.out.println(username);
             if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
@@ -55,6 +51,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
+    private String getTokenFromRequest(HttpServletRequest request){
+        Cookie[] cookies=request.getCookies();
+        if(cookies==null)return null;
+        for(Cookie c: cookies){
+            if("token".equals(c.getName()))return c.getValue();
+        }
+        return null;
+    }
+
 }
 
 

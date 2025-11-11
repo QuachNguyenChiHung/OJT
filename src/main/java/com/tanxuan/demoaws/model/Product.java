@@ -1,5 +1,7 @@
 package com.tanxuan.demoaws.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.GenericGenerator;
@@ -31,17 +33,35 @@ public class Product {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "c_id", nullable = false)
+    @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"})
     private Category category;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
+    @JsonIgnoreProperties({"products", "hibernateLazyInitializer", "handler"})
     private Brand brand;
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
+    @JsonIgnore
     private List<Rating> ratings = new ArrayList<>();
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<ProductDetails> productDetails = new ArrayList<>();
+
+    @Override
+    public String toString() {
+        return "Product{" +
+                "PId=" + PId +
+                ", PName='" + PName + '\'' +
+                ", pDesc='" + pDesc + '\'' +
+                ", price=" + price +
+                ", category=" + category +
+                ", brand=" + brand +
+                ", ratings=" + ratings +
+                ", productDetails=" + productDetails +
+                '}';
+    }
 
     // Getters and setters
     public UUID getPId() { return PId; }

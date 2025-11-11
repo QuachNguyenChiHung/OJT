@@ -68,8 +68,7 @@ public class CategoryController {
     private CategoryResponse toCategoryResponse(Category category) {
         return new CategoryResponse(
             category.getCId(),
-            category.getCName(),
-            category.getProducts() != null ? category.getProducts().size() : 0
+            category.getCName()
         );
     }
 }

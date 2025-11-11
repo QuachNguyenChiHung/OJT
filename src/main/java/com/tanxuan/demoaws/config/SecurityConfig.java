@@ -9,6 +9,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.tanxuan.demoaws.security.JwtAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 
 @Configuration
 @EnableWebSecurity
@@ -29,19 +30,36 @@ public class SecurityConfig {
             "/webjars/**",
             "/swagger-ui.html"
     };
-    private static final String[] WHITE_LIST_URL_GET={
-      "/api/brands",
-      "/api/products",
-      "api/categories"
+    private static final String[] WHITE_LIST_URL_GET = {
+            "/api/brands",
+            "/api/brands/**",
+            "/api/products",
+            "/api/products/**",
+            "api/categories",
+            "/api/categories/**",
+            "/api/colors",
+            "/api/colors/**",
+            "/api/product-details",
+            "/api/product-details/**"
     };
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean public CorsConfiguration corsConfiguration() {
+        CorsConfiguration corsConfig = new CorsConfiguration();
+        corsConfig.addAllowedOriginPattern("http://localhost:5173");
+        corsConfig.addAllowedHeader("*");
+        corsConfig.addAllowedMethod("*");
+        corsConfig.setAllowCredentials(true);
+        return corsConfig;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(request -> corsConfiguration()))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(WHITE_LIST_URL).permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

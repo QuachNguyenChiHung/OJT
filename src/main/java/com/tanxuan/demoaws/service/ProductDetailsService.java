@@ -128,7 +128,7 @@ public class ProductDetailsService {
     // Convert Entity to DTO
     private ProductDetailsDTO convertToDTO(ProductDetails productDetails) {
         ProductDetailsDTO dto = new ProductDetailsDTO();
-        dto.setProductId(productDetails.getPdId());
+        dto.setPdId(productDetails.getPdId());
         dto.setProductId(productDetails.getProduct().getPId());
         dto.setProductName(productDetails.getProduct().getPName());
 

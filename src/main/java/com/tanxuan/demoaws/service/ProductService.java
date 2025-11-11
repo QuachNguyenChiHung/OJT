@@ -3,8 +3,10 @@ package com.tanxuan.demoaws.service;
 import com.tanxuan.demoaws.model.Brand;
 import com.tanxuan.demoaws.model.Category;
 import com.tanxuan.demoaws.model.Product;
+import com.tanxuan.demoaws.model.ProductDetails;
 import com.tanxuan.demoaws.repository.BrandRepository;
 import com.tanxuan.demoaws.repository.CategoryRepository;
+import com.tanxuan.demoaws.repository.ProductDetailsRepository;
 import com.tanxuan.demoaws.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -19,13 +21,14 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final BrandRepository brandRepository;
-
+    private final ProductDetailsRepository productDetailsRepository;
     public ProductService(ProductRepository productRepository,
                         CategoryRepository categoryRepository,
-                        BrandRepository brandRepository) {
+                        BrandRepository brandRepository, ProductDetailsRepository productDetailsRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
+        this.productDetailsRepository = productDetailsRepository;
     }
 
     public List<Product> findAll() {
@@ -75,6 +78,17 @@ public class ProductService {
         productRepository.delete(product);
     }
 
+    public boolean productIsInStock(UUID productId) {
+        List<ProductDetails> p=this.productDetailsRepository.findByProductPId(productId);
+        boolean isInStock=false;
+        for(ProductDetails pd :p){
+            if(pd.getInStock()){
+                isInStock=true;
+                break;
+            }
+        }
+        return isInStock;
+    }
     public List<Product> findByCategory(UUID categoryId) {
         return productRepository.findByCategoryCId(categoryId);
     }

@@ -7,11 +7,14 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -44,6 +47,9 @@ public class AuthController {
 
     public record AuthResponse(String token, String email, String fullName) {}
 
+    // response for /me
+    public record MeResponse(String email, String fullName, String role, String phoneNumber, String address) {}
+
     @PostMapping("/signup")
     public ResponseEntity<Object> signup(@Valid @RequestBody AuthRequest req) {
         if (appUserRepository.findByEmail(req.email()).isPresent()) {
@@ -62,7 +68,8 @@ public class AuthController {
 
             AppUser savedUser = appUserRepository.save(user);
             UserDetails ud = userDetailsService.loadUserByUsername(savedUser.getEmail());
-            String token = jwtService.generateToken(ud);
+            // include role as an extra claim in the JWT
+            String token = jwtService.generateToken(Map.of("role", savedUser.getRole()), ud);
 
             return ResponseEntity.ok(new AuthResponse(token, savedUser.getEmail(), savedUser.getUName()));
         } catch (Exception e) {
@@ -73,6 +80,7 @@ public class AuthController {
         }
     }
 
+
     @PostMapping("/login")
     public ResponseEntity<Object> login(@Valid @RequestBody AuthRequest req) {
         try {
@@ -82,12 +90,19 @@ public class AuthController {
             );
 
             UserDetails ud = userDetailsService.loadUserByUsername(req.email());
-
-            String token = jwtService.generateToken(ud);
             AppUser user = appUserRepository.findByEmail(req.email())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-            return ResponseEntity.ok(new AuthResponse(token, user.getEmail(), user.getUName()));
+            // include role as an extra claim in the JWT
+            String token = jwtService.generateToken(Map.of("role", user.getRole()), ud);
+            ResponseCookie jwtCookie = ResponseCookie.from("token", token)
+                    .httpOnly(true)
+                    .secure(false)
+                    .maxAge(3600)
+                    .path("/")
+                    .sameSite("Lax")
+                    .build();
+            return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,jwtCookie.toString()).body(new AuthResponse(token, user.getEmail(), user.getUName()));
         } catch (BadCredentialsException e) {
             return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
@@ -98,5 +113,19 @@ public class AuthController {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(ERROR_KEY, "Authentication failed"));
         }
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<Object> me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(ERROR_KEY, "Not authenticated"));
+        }
+
+        String email = authentication.getName();
+        AppUser user = appUserRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        MeResponse resp = new MeResponse(user.getEmail(), user.getUName(), user.getRole(), user.getPhoneNumber(), user.getAddress());
+        return ResponseEntity.ok(resp);
     }
 }

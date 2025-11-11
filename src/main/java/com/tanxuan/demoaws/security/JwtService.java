@@ -48,6 +48,7 @@ public class JwtService {
 
     public String extractUsername(String token) {
         try {
+
             return extractClaim(token, Claims::getSubject);
         } catch (ExpiredJwtException e) {
             throw new RuntimeException("JWT token has expired", e);
@@ -67,7 +68,8 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    public Claims extractAllClaims(String token) {
+
         return Jwts.parserBuilder()
                 .setSigningKey(getSignKey())
                 .build()
