@@ -253,8 +253,8 @@ public class DataInitializer {
                 pd.setProduct(products.get(i));
                 // cycle colors so we have variety across the 50 details
                 pd.setColor(colors.get((i * 5 + j) % colors.size()));
-                // Ensure at least 4 images and they must be "/img/clothes.png"
-                pd.setImgList("[\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\"]");
+                // Ensure exactly 5 images and they must be "/img/clothes.png"
+                pd.setImgList("[\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\"]");
                 pd.setSize(sizes[j % sizes.length]);
                 // amount decreases with j to create variety
                 pd.setAmount(10 - j);
