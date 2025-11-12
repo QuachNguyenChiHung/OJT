@@ -84,14 +84,22 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Object> login(@Valid @RequestBody AuthRequest req) {
         try {
+            // First check if user exists and is active
+            AppUser user = appUserRepository.findByEmail(req.email())
+                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+
+            // Check if user is active
+            if (user.getIsActive() == null || !user.getIsActive()) {
+                return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(Map.of(ERROR_KEY, "Account is inactive. Please contact administrator."));
+            }
 
             authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
 
             UserDetails ud = userDetailsService.loadUserByUsername(req.email());
-            AppUser user = appUserRepository.findByEmail(req.email())
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
             // include role as an extra claim in the JWT
             String token = jwtService.generateToken(Map.of("role", user.getRole()), ud);

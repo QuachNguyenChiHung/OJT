@@ -49,6 +49,14 @@ public class Product {
     @JsonIgnore
     private List<ProductDetails> productDetails = new ArrayList<>();
 
+    @Column(name = "is_active", columnDefinition = "bit")
+    private Boolean isActive;
+
+    // Constructor
+    public Product() {
+        this.isActive = true;
+    }
+
     @Override
     public String toString() {
         return "Product{" +
@@ -87,4 +95,7 @@ public class Product {
 
     public List<ProductDetails> getProductDetails() { return productDetails; }
     public void setProductDetails(List<ProductDetails> productDetails) { this.productDetails = productDetails; }
+
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
 }

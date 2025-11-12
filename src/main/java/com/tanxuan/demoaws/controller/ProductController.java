@@ -6,6 +6,8 @@ import com.tanxuan.demoaws.model.Rating;
 import com.tanxuan.demoaws.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,8 +28,9 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductDTO.ProductResponse> all() {
-        return productService.findAll().stream()
+    public List<ProductDTO.ProductResponse> all(Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findAllForUser(isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
@@ -74,15 +77,17 @@ public class ProductController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<ProductDTO.ProductResponse> getByCategory(@PathVariable UUID categoryId) {
-        return productService.findByCategory(categoryId).stream()
+    public List<ProductDTO.ProductResponse> getByCategory(@PathVariable UUID categoryId, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByCategoryForUser(categoryId, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
 
     @GetMapping("/brand/{brandId}")
-    public List<ProductDTO.ProductResponse> getByBrand(@PathVariable UUID brandId) {
-        return productService.findByBrand(brandId).stream()
+    public List<ProductDTO.ProductResponse> getByBrand(@PathVariable UUID brandId, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByBrandForUser(brandId, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
@@ -90,17 +95,30 @@ public class ProductController {
     @GetMapping("/price-range")
     public List<ProductDTO.ProductResponse> getByPriceRange(
             @RequestParam BigDecimal minPrice,
-            @RequestParam BigDecimal maxPrice) {
-        return productService.findByPriceRange(minPrice, maxPrice).stream()
+            @RequestParam BigDecimal maxPrice,
+            Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByPriceRangeForUser(minPrice, maxPrice, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
 
     @GetMapping("/search")
-    public List<ProductDTO.ProductResponse> searchProducts(@RequestParam String name) {
-        return productService.findByNameContaining(name).stream()
+    public List<ProductDTO.ProductResponse> searchProducts(@RequestParam String name, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByNameContainingForUser(name, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
+    }
+
+    // Helper method to check if user is admin
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 
     // Helper method to convert Entity to DTO
