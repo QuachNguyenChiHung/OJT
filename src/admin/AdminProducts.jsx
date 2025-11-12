@@ -1,158 +1,410 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
-const STORAGE_KEY = 'admin_products_v1';
+import axios from 'axios';
 
 const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function AdminProducts() {
+  //fix name and desc always being empty or null on edit
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ p_name: '', c_name: '', brand_name: '', brand_name_custom: '', images: '', size: '', color: '', amount: 1, price: '', status: 'available' });
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [productForm, setProductForm] = useState({
+    name: '',
+    PName: '',
+    pName: '',
+    description: '',
+    price: '',
+    categoryId: '',
+    brandId: '',
+    isAvailable: true
+  });
+  const [editingProduct, setEditingProduct] = useState(null);
   const [brands, setBrands] = useState([]);
+  const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
 
+  // fetch products, categories and brands in parallel and normalize
   useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) setProducts(JSON.parse(raw));
-    else {
-      // seed sample
-      const sample = [
-        {
-          p_id: generateId(),
-          p_name: 'Áo Thun Sample',
-          c_name: 'Quần áo',
-          brand_name: 'FURIOUS',
-          details: [
-            {
-              pd_id: generateId(),
-              img_list: ['../assets/img/clothes.png'],
-              size: 'M',
-              color: 'Đỏ',
-              amount: 10,
-              price: 157000,
-              status: 'available'
-            }
-          ]
+    let mounted = true;
+    const fetchAll = async () => {
+      setLoading(true);
+      try {
+        const [pRes, cRes, bRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/products`),
+          axios.get(`${import.meta.env.VITE_API_URL}/categories`),
+          axios.get(`${import.meta.env.VITE_API_URL}/brands`)
+        ]);
+
+        // normalize categories
+        const rawCats = Array.isArray(cRes.data) ? cRes.data : [];
+        const normalizedCats = rawCats.map(item => {
+          if (!item) return null;
+          if (item.id !== undefined && item.name !== undefined) return { id: item.id, name: item.name, raw: item };
+          if (item.c_id !== undefined && item.c_name !== undefined) return { id: item.c_id, name: item.c_name, raw: item };
+          if (item.cId !== undefined && item.cName !== undefined) return { id: item.cId, name: item.cName, raw: item };
+          const idKey = Object.keys(item).find(k => /id$/i.test(k)) || Object.keys(item)[0];
+          const nameKey = Object.keys(item).find(k => /name$/i.test(k)) || Object.keys(item)[1] || idKey;
+          return { id: item[idKey], name: item[nameKey], raw: item };
+        }).filter(Boolean);
+
+        // normalize brands
+        const rawBrands = Array.isArray(bRes.data) ? bRes.data : [];
+        const normalizedBrands = rawBrands.map(item => {
+          if (!item) return null;
+          if (item.id !== undefined && item.name !== undefined) return { id: item.id, name: item.name, raw: item };
+          if (item.brand_id !== undefined && item.brand_name !== undefined) return { id: item.brand_id, name: item.brand_name, raw: item };
+          if (item.b_id !== undefined && item.b_name !== undefined) return { id: item.b_id, name: item.b_name, raw: item };
+          const idKey = Object.keys(item).find(k => /id$/i.test(k)) || Object.keys(item)[0];
+          const nameKey = Object.keys(item).find(k => /name$/i.test(k)) || Object.keys(item)[1] || idKey;
+          return { id: item[idKey], name: item[nameKey], raw: item };
+        }).filter(Boolean);
+
+        // normalize products into a lightweight list (strip heavy nested fields like details/images)
+        const rawProducts = Array.isArray(pRes.data) ? pRes.data : [];
+        const normalizedProducts = rawProducts.map(item => {
+          const id = item.id ?? item.p_id ?? item.PId ?? item.pId;
+          const name = item.name ?? item.PName ?? item.pName ?? item.p_name ?? null;
+          const description = item.description ?? item.pDesc ?? item.p_desc ?? item.desc ?? null;
+          const price = item.price ?? null;
+          const categoryName = item.categoryName ?? item.category?.c_name ?? item.category?.name ?? null;
+          const brandName = item.brandName ?? item.brand?.brand_name ?? item.brand?.name ?? null;
+          const isAvailable = item.isAvailable ?? true;
+          const averageRating = item.averageRating ?? null;
+          return { id, name, description, price, categoryName, brandName, isAvailable, averageRating };
+        });
+
+        if (!mounted) return;
+        setCategories(normalizedCats);
+        setBrands(normalizedBrands);
+        setProducts(normalizedProducts);
+      } catch (err) {
+        console.error('Failed to fetch product/category/brand lists', err);
+        // If any fetch fails, try to fall back to localStorage values (keeps previous behavior)
+        try {
+          const br = localStorage.getItem('admin_brands_v1');
+          if (br) {
+            const parsed = JSON.parse(br);
+            setBrands(parsed.map(item => ({ id: item.brand_id ?? item.b_id ?? item.id, name: item.brand_name ?? item.b_name ?? item.name })));
+          }
+          const cat = localStorage.getItem('admin_categories_v1');
+          if (cat) {
+            const parsed = JSON.parse(cat);
+            setCategories(parsed.map(item => ({ id: item.c_id ?? item.id, name: item.c_name ?? item.name })));
+          }
+        } catch (e) {
+          console.error('Failed to parse localStorage fallback', e);
         }
-      ];
-      setProducts(sample);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sample));
-    }
-  }, []);
-
-  useEffect(() => {
-    const br = localStorage.getItem('admin_brands_v1');
-    if (br) setBrands(JSON.parse(br));
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-  }, [products]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((f) => ({ ...f, [name]: value }));
-  };
-
-  const addProduct = (e) => {
-    e.preventDefault();
-    const brandToUse = form.brand_name === '__other' ? (form.brand_name_custom || 'Unknown') : (form.brand_name || 'Unknown');
-    const newProduct = {
-      p_id: generateId(),
-      p_name: form.p_name || 'Untitled',
-      c_name: form.c_name || 'Uncategorized',
-      brand_name: brandToUse,
-      details: [
-        {
-          pd_id: generateId(),
-          img_list: form.images ? form.images.split(',').map(s => s.trim()) : [],
-          size: form.size,
-          color: form.color,
-          amount: Number(form.amount) || 0,
-          price: Number(form.price) || 0,
-          status: form.status || 'available'
-        }
-      ]
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
-    setProducts((p) => [newProduct, ...p]);
-    setForm({ p_name: '', c_name: '', brand_name: '', brand_name_custom: '', images: '', size: '', color: '', amount: 1, price: '', status: 'available' });
+    fetchAll();
+    return () => { mounted = false; };
+  }, []);
+
+
+  // Filter products based on search term
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return products;
+    const term = searchTerm.toLowerCase();
+    return products.filter(product =>
+      (product.name || '').toLowerCase().includes(term) ||
+      (product.description || '').toLowerCase().includes(term) ||
+      (product.categoryName || '').toLowerCase().includes(term) ||
+      (product.brandName || '').toLowerCase().includes(term)
+    );
+  }, [products, searchTerm]);
+
+  const handleProductChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setProductForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
   };
 
-  const remove = (p_id) => {
+  const addProduct = async (e) => {
+    e.preventDefault();
+    if (!productForm.name.trim()) {
+      alert('Tên sản phẩm là bắt buộc');
+      return;
+    }
+    const payload = {
+      // provide multiple name/description keys to match various backend DTOs
+      name: productForm.name.trim(),
+      description: productForm.description.trim(),
+      price: parseFloat(productForm.price) || 0,
+      categoryId: productForm.categoryId || '',
+      brandId: productForm.brandId || '',
+      isAvailable: !!productForm.isAvailable
+    };
+    try {
+      console.log(payload)
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/products`, payload, { withCredentials: true });
+
+      const created = res && res.data ? res.data : payload;
+      setProducts(p => [created, ...p]);
+      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isAvailable: true });
+    } catch (err) {
+      console.error('Add product failed', err);
+      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
+      alert(msg);
+    }
+  };
+
+  const startEditProduct = (product) => {
+    const categoryId = categories.find(c => String(c.name) === String(product.categoryName) || String(c.id) === String(product.categoryName))?.id || '';
+    const brandId = brands.find(b => String(b.name) === String(product.brandName) || String(b.id) === String(product.brandName))?.id || '';
+    setEditingProduct({ ...product, categoryId, brandId });
+  };
+
+  const updateProduct = async (e) => {
+    e.preventDefault();
+    if (!editingProduct.name.trim()) {
+      alert('Tên sản phẩm là bắt buộc');
+      return;
+    }
+    const payload = {
+      id: editingProduct.id,
+      // duplicate name/description under keys backend may expect
+      PName: editingProduct.name.trim(),
+      pDesc: editingProduct.description.trim(),
+      price: parseFloat(editingProduct.price) || 0,
+    };
+    try {
+      // backend expects categoryId and brandId as request params
+      const categoryParam = editingProduct.categoryId ? `?categoryId=${editingProduct.categoryId}` : '';
+      const brandParam = editingProduct.brandId ? `${categoryParam ? '&' : '?'}brandId=${editingProduct.brandId}` : '';
+      const query = `${categoryParam}${brandParam}`;
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingProduct.id}${query}`, payload, { withCredentials: true });
+      console.log(payload)
+      const updated = res && res.data ? res.data : payload;
+      setProducts(products => products.map(p => p.id === editingProduct.id ? updated : p));
+      setEditingProduct(null);
+    } catch (err) {
+      console.error('Update product failed', err);
+      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
+      alert(msg);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingProduct(null);
+  };
+
+  const remove = async (id) => {
     if (!confirm('Xóa sản phẩm này?')) return;
-    setProducts((p) => p.filter(x => x.p_id !== p_id));
+    try {
+      await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`, { withCredentials: true });
+      setProducts((p) => p.filter(x => x.id !== id));
+    } catch (err) {
+      console.error('Delete product failed', err);
+      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
+      alert(msg);
+    }
+  };
+
+  // Helper functions to get names from IDs
+  const getCategoryName = (idOrName) => {
+    if (!idOrName) return 'N/A';
+    const found = categories.find(c => String(c.id) === String(idOrName) || String(c.name) === String(idOrName));
+    return found ? found.name : String(idOrName);
+  };
+
+  const getBrandName = (idOrName) => {
+    if (!idOrName) return 'N/A';
+    const found = brands.find(b => String(b.id) === String(idOrName) || String(b.name) === String(idOrName));
+    return found ? found.name : String(idOrName);
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1100 }}>
+    <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Admin - Products</h2>
+        <h2>Quản trị - Sản phẩm</h2>
         <div>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Refresh</button>
+          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người dùng</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh mục</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương hiệu</Link>
+          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm mới</button>
         </div>
       </div>
 
-      <form onSubmit={addProduct} className="mb-4 p-3" style={{ border: '2px solid orange' }}>
-        <div className="row g-2">
-          <div className="col-md-4">
-            <input className="form-control" name="p_name" placeholder="Product name" value={form.p_name} onChange={handleChange} />
+      {/* Search Bar */}
+      <div className="mb-3">
+        <div className="row">
+          <div className="col-md-6">
+            <div className="input-group">
+              <span className="input-group-text">
+                <i className="fas fa-search"></i>
+              </span>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="Tìm sản phẩm theo tên, mô tả, danh mục hoặc thương hiệu..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              {searchTerm && (
+                <button
+                  className="btn btn-outline-secondary"
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
           </div>
-          <div className="col-md-2">
-            <input className="form-control" name="c_name" placeholder="Category" value={form.c_name} onChange={handleChange} />
-          </div>
-          <div className="col-md-2">
-            <select className="form-select" name="brand_name" value={form.brand_name} onChange={handleChange}>
-              <option value="">Select brand</option>
-              {brands.map(b => <option key={b.brand_id} value={b.brand_name}>{b.brand_name}</option>)}
-              <option value="__other">Other...</option>
-            </select>
-          </div>
-          <div className="col-md-2" style={{ display: form.brand_name === '__other' ? 'block' : 'none' }}>
-            <input className="form-control" name="brand_name_custom" placeholder="Brand name" value={form.brand_name_custom || ''} onChange={(e) => setForm(f => ({ ...f, brand_name_custom: e.target.value }))} />
-          </div>
-          <div className="col-md-4">
-            <input className="form-control" name="images" placeholder="Image URLs (comma separated)" value={form.images} onChange={handleChange} />
-          </div>
-        </div>
-        <div className="row g-2 mt-2">
-          <div className="col-md-2">
-            <input className="form-control" name="size" placeholder="Size" value={form.size} onChange={handleChange} />
-          </div>
-          <div className="col-md-2">
-            <input className="form-control" name="color" placeholder="Color" value={form.color} onChange={handleChange} />
-          </div>
-          <div className="col-md-2">
-            <input className="form-control" name="amount" type="number" placeholder="Amount" value={form.amount} onChange={handleChange} />
-          </div>
-          <div className="col-md-2">
-            <input className="form-control" name="price" type="number" placeholder="Price" value={form.price} onChange={handleChange} />
-          </div>
-          <div className="col-md-2">
-            <select className="form-select" name="status" value={form.status} onChange={handleChange}>
-              <option value="available">available</option>
-              <option value="out_of_stock">out_of_stock</option>
-            </select>
-          </div>
-          <div className="col-md-2 d-grid">
-            <button className="btn btn-orange" type="submit">Add product</button>
+          <div className="col-md-6 text-end">
+            <small className="text-muted">
+              Hiển thị {filteredProducts.length} trên {products.length} sản phẩm
+            </small>
           </div>
         </div>
-      </form>
+      </div>
+
+      {/* Product Creation/Edit Form */}
+      <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+        <h4>{editingProduct ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}</h4>
+        <form onSubmit={editingProduct ? updateProduct : addProduct}>
+          <div className="row g-2">
+            <div className="col-md-3">
+              <input
+                className="form-control"
+                name="name"
+                placeholder="Tên sản phẩm"
+                value={editingProduct ? editingProduct.name : productForm.name}
+                onChange={editingProduct ?
+                  (e) => setEditingProduct({ ...editingProduct, name: e.target.value, PName: e.target.value, pName: e.target.value }) :
+                  handleProductChange
+                }
+                required
+              />
+            </div>
+            <div className="col-md-2">
+              <input
+                className="form-control"
+                name="price"
+                placeholder="Giá"
+                type="number"
+                value={editingProduct ? editingProduct.price : productForm.price}
+                onChange={editingProduct ?
+                  (e) => setEditingProduct({ ...editingProduct, price: e.target.value }) :
+                  handleProductChange
+                }
+              />
+            </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                name="categoryId"
+                value={editingProduct ? editingProduct.categoryId : productForm.categoryId}
+                onChange={editingProduct ?
+                  (e) => setEditingProduct({ ...editingProduct, categoryId: e.target.value }) :
+                  handleProductChange
+                }
+                required
+              >
+                <option value="">Chọn danh mục</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="col-md-2">
+              <select
+                className="form-select"
+                name="brandId"
+                value={editingProduct ? editingProduct.brandId : productForm.brandId}
+                onChange={editingProduct ?
+                  (e) => setEditingProduct({ ...editingProduct, brandId: e.target.value }) :
+                  handleProductChange
+                }
+                required
+              >
+                <option value="">Chọn thương hiệu</option>
+                {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </select>
+            </div>
+            <div className="col-md-2 d-flex align-items-center">
+            </div>
+            <div className="col-md-2 d-grid">
+              {editingProduct ? (
+                <div className="d-flex gap-1">
+                  <button className="btn btn-success btn-sm" type="submit">Cập nhật</button>
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={cancelEdit}>Hủy</button>
+                </div>
+              ) : (
+                <button className="btn btn-orange" type="submit">Tạo sản phẩm</button>
+              )}
+            </div>
+            <div className="col-md-12">
+              <textarea
+                className="form-control"
+                name="description"
+                placeholder="Mô tả sản phẩm"
+                value={editingProduct ? editingProduct.description : productForm.description}
+                onChange={editingProduct ?
+                  (e) => setEditingProduct({ ...editingProduct, description: e.target.value }) :
+                  handleProductChange
+                }
+                rows="2"
+              />
+            </div>
+          </div>
+        </form>
+      </div>
 
       <div className="list-group">
-        {products.map((p) => (
-          <div key={p.p_id} className="list-group-item d-flex justify-content-between align-items-center">
-            <div>
-              <Link to={`/admin/products/${p.p_id}`} className="h5 d-block text-decoration-none">{p.p_name}</Link>
-              <div className="text-muted small">{p.c_name} — {p.brand_name}</div>
+        {filteredProducts.length === 0 ? (
+          <div className="text-center py-4">
+            <div className="text-muted">
+              {searchTerm ? `Không tìm thấy sản phẩm phù hợp "${searchTerm}"` : 'Không có sản phẩm'}
             </div>
-            <div>
-              <button className="btn btn-sm btn-outline-danger me-2" onClick={() => remove(p.p_id)}>Delete</button>
-              <Link to={`/admin/products/${p.p_id}`} className="btn btn-sm btn-primary">Open</Link>
-            </div>
+            {searchTerm && (
+              <button
+                className="btn btn-link btn-sm"
+                onClick={() => setSearchTerm('')}
+              >
+                Xóa tìm kiếm để hiển thị tất cả sản phẩm
+              </button>
+            )}
           </div>
-        ))}
+        ) : (
+          filteredProducts.map((p) => (
+            <div key={p.id} className="list-group-item">
+              <div className="d-flex justify-content-between align-items-start">
+                <div style={{ flex: 1 }}>
+                  <Link to={`/admin/products/${p.id}`} className="h5 d-block text-decoration-none">{p.name}</Link>
+                  <div className="text-muted small">
+                    Danh mục: {p.categoryName || getCategoryName(p.categoryName)} — Thương hiệu: {p.brandName || getBrandName(p.brandName)}
+                  </div>
+                  {p.description && <div className="text-muted small mt-1">{p.description.length > 120 ? `${p.description.substring(0, 120)}...` : p.description}</div>}
+
+                  <div className="mt-2">
+                    <span className="badge bg-success me-2">{p.price ? `${p.price.toLocaleString()} VND` : 'Chưa có giá'}</span>
+
+                    {/* averageRating shown below price */}
+                    <div className="small text-muted mt-1">
+                      {typeof p.averageRating === 'number'
+                        ? `⭐ ${p.averageRating.toFixed(1)} / 5`
+                        : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)} / 5` : 'Chưa có đánh giá')}
+                    </div>
+
+                    <span className={`badge ${p.isAvailable ? 'bg-primary' : 'bg-secondary'}`} style={{ marginLeft: 8 }}>{p.isAvailable ? 'Còn hàng' : 'Hết hàng'}</span>
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => startEditProduct(p)}
+                    disabled={editingProduct && editingProduct.id === p.id}
+                  >
+                    Chỉnh sửa
+                  </button>
+                  <button className="btn btn-sm btn-outline-danger" onClick={() => remove(p.id)}>Xóa</button>
+                  <Link to={`/admin/products/${p.id}`} className="btn btn-sm btn-primary">Xem chi tiết</Link>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

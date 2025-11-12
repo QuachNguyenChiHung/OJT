@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import logoImg from '../assets/img/logo.png';
+
+const logoImg = '/img/logo.png';
 
 const Register = () => {
     const [formData, setFormData] = useState({
@@ -38,7 +39,7 @@ const Register = () => {
                             style={{
                                 padding: '1rem',
                                 borderWidth: '3px',
-                                borderColor: 'orange',
+                                borderColor: 'rgb(228, 148, 0)',
                                 paddingBottom: 0
                             }}
                         >

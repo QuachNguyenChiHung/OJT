@@ -11,7 +11,7 @@ export default function CategoryPage() {
   }, []);
 
   return (
-    <div className="container py-5" style={{ maxWidth: 1100 }}>
+    <div className="container py-5" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Categories</h2>
         <Link to="/admin/categories" className="btn btn-outline-secondary">Manage Categories</Link>

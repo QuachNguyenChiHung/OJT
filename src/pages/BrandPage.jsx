@@ -11,7 +11,7 @@ export default function BrandPage() {
   }, []);
 
   return (
-    <div className="container py-5" style={{ maxWidth: 1100 }}>
+    <div className="container py-5" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>Brands</h2>
         <Link to="/admin/brands" className="btn btn-outline-secondary">Manage Brands</Link>

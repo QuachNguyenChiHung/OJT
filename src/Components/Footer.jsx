@@ -1,15 +1,16 @@
 import React from 'react';
-import logoImg from '../assets/img/logo.png';
-import facebookImg from '../assets/img/facebook.png';
-import twitterImg from '../assets/img/twitter.png';
-import instagramImg from '../assets/img/instagram.png';
+
+const logoImg = '/img/logo.png';
+const facebookImg = '/img/facebook.png';
+const twitterImg = '/img/twitter.png';
+const instagramImg = '/img/instagram.png';
 
 const Footer = () => {
     return (
         <footer style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
             <div>
                 <div className="container" style={{ maxWidth: '1200px !important' }}>
-                    <div className="d-block d-md-flex justify-content-md-between mb-2">
+                    <div className="d-block d-md-flex justify-content-md-between align-items-center mb-2">
                         <div className="d-flex align-items-center">
                             <img className="logo" src={logoImg} alt="Logo" />
                         </div>
@@ -21,17 +22,17 @@ const Footer = () => {
                                 <div className="d-flex">
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={facebookImg} alt="Facebook" />
+                                            <img className="magifier" src={facebookImg} alt="Facebook" />
                                         </a>
                                     </div>
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={twitterImg} alt="Twitter" />
+                                            <img className="magifier" src={twitterImg} alt="Twitter" />
                                         </a>
                                     </div>
                                     <div className="mx-2">
                                         <a href="#">
-                                            <img className="logo" src={instagramImg} alt="Instagram" />
+                                            <img className="magifier" src={instagramImg} alt="Instagram" />
                                         </a>
                                     </div>
                                 </div>

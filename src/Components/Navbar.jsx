@@ -1,13 +1,17 @@
-import React from 'react';
-import logoImg from '../assets/img/logo.png';
-import magnifierImg from '../assets/img/magnifier.png';
-import searchImg from '../assets/img/search.png';
-import userImg from '../assets/img/user.png';
-import shoppingCartImg from '../assets/img/shopping-cart.png';
+import { Button } from 'react-bootstrap';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+
+const logoImg = '/img/logo.png';
+const magnifierImg = '/img/magnifier.png';
+const searchImg = '/img/search.png';
+const userImg = '/img/user.png';
+const shoppingCartImg = '/img/shopping-cart.png';
 
 const Navbar = () => {
     const menuItems = Array(7).fill('QUẦN ÁO');
-
+    const [loggedIn, setLoggedIn] = useState(false);
+    const navigate = useNavigate();
     return (
         <>
             <header className="d-flex justify-content-center align-items-center container-fluid">
@@ -32,7 +36,7 @@ const Navbar = () => {
                                     placeholder="Tìm kiếm từ khóa"
                                     style={{
                                         borderWidth: '2px',
-                                        borderColor: 'orange',
+                                        borderColor: 'rgb(228, 148, 0)',
                                         borderRightWidth: '0px'
                                     }}
                                 />
@@ -40,10 +44,10 @@ const Navbar = () => {
                                     className="btn"
                                     type="button"
                                     style={{
-                                        background: 'orange',
+                                        background: 'rgb(228, 148, 0)',
                                         padding: '0px 14px',
                                         borderWidth: '2px',
-                                        borderColor: 'orange'
+                                        borderColor: 'rgb(228, 148, 0)'
                                     }}
                                 >
                                     <img className="magifier" src={magnifierImg} alt="Search" />
@@ -80,7 +84,7 @@ const Navbar = () => {
                                             placeholder="Tìm kiếm từ khóa"
                                             style={{
                                                 borderWidth: '2px',
-                                                borderColor: 'orange',
+                                                borderColor: 'rgb(228, 148, 0)',
                                                 borderRightWidth: '0px'
                                             }}
                                         />
@@ -88,10 +92,10 @@ const Navbar = () => {
                                             className="btn"
                                             type="button"
                                             style={{
-                                                background: 'orange',
+                                                background: 'rgb(228, 148, 0)',
                                                 padding: '0px 14px',
                                                 borderWidth: '2px',
-                                                borderColor: 'orange'
+                                                borderColor: 'rgb(228, 148, 0)'
                                             }}
                                         >
                                             <img className="magifier" src={magnifierImg} alt="Search" />
@@ -100,43 +104,69 @@ const Navbar = () => {
                                 </div>
                             </div>
                         </div>
-                        <div className="mx-1">
-                            <div className="dropdown">
-                                <button
-                                    className="btn dropdown-toggle cancel-bg-change"
-                                    aria-expanded="false"
-                                    data-bs-toggle="dropdown"
-                                    type="button"
-                                    style={{ paddingRight: '6px', paddingLeft: '6px' }}
-                                >
-                                    <span>
-                                        <img className="icon" src={userImg} alt="User" />
-                                    </span>
-                                </button>
-                                <div className="dropdown-menu">
-                                    <a className="dropdown-item" href="#">
-                                        Đăng Nhập
-                                    </a>
-                                    <a className="dropdown-item" href="#">
-                                        Đăng Kí
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="mx-1">
-                            <a className="d-block" href="#">
-                                <img
-                                    className="icon shopping"
-                                    src={shoppingCartImg}
-                                    alt="Shopping Cart"
-                                />
-                            </a>
-                        </div>
+                        {
+                            loggedIn ? (
+                                <>
+                                    <div className="mx-1">
+                                        <div className="dropdown">
+                                            <button
+                                                className="btn dropdown-toggle cancel-bg-change"
+                                                aria-expanded="false"
+                                                data-bs-toggle="dropdown"
+                                                type="button"
+                                                style={{ paddingRight: '6px', paddingLeft: '6px' }}
+                                            >
+                                                <span>
+                                                    <img className="icon" src={userImg} alt="User" />
+                                                </span>
+                                            </button>
+                                            <div className="dropdown-menu">
+                                                <a className="dropdown-item" href="#">
+                                                   Thông Tin Cá Nhân
+                                                </a>
+                                                <a className="dropdown-item" href="#">
+                                                    Lịch Sử Mua Hàng
+                                                </a>
+                                                <a className="dropdown-item" href="#">
+                                                    Đăng Xuất
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mx-1">
+                                        <a className="d-block" href="#">
+                                            <img
+                                                className="icon shopping"
+                                                src={shoppingCartImg}
+                                                alt="Shopping Cart"
+                                            />
+                                        </a>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+
+                                    <div className="mx-1">
+                                        <Button variant="orange" className='btn-orange' style={{
+                                            borderColor: 'rgb(228, 148, 0)'
+                                        }} onClick={() => navigate('/login')}>
+                                            Đăng Nhập
+                                        </Button>
+                                        <Button variant="orange" className='btn-orange mx-3' style={{
+                                            borderColor: 'rgb(228, 148, 0)'
+                                        }} onClick={() => navigate('/register')}>
+                                            Đăng Kí
+                                        </Button>
+                                    </div>
+                                </>
+                            )
+                        }
+
                     </div>
                 </div>
             </header>
             <nav>
-                <div className="container-fluid" style={{ background: 'orange' }}>
+                <div className="container-fluid" style={{ background: 'rgb(228, 148, 0)' }}>
                     <div>
                         <div
                             className="container"
@@ -149,7 +179,7 @@ const Navbar = () => {
                         >
                             <nav
                                 className="navbar navbar-expand-md mt-2 navbar-dark"
-                                style={{ backgroundColor: 'orange', padding: 0 }}
+                                style={{ backgroundColor: 'rgb(228, 148, 0)', padding: 0 }}
                             >
                                 <div className="container-fluid navbar-light p-0">
                                     <button
@@ -189,7 +219,7 @@ const Navbar = () => {
                                                         className="dropdown-menu"
                                                         style={{
                                                             borderStyle: 'none',
-                                                            background: 'orange'
+                                                            background: 'rgb(228, 148, 0)'
                                                         }}
                                                     >
                                                         <a
