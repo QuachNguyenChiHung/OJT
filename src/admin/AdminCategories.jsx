@@ -25,6 +25,29 @@ export default function AdminCategories() {
     fetchCategories();
   }, []);
 
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN' ||res?.data.role !== 'EMPLOYEE') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
   // Filter categories based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {

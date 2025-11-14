@@ -120,10 +120,6 @@ const Login = () => {
                                                 Đăng Nhập
                                             </button>
                                             <div className="d-flex">
-                                                <p className="text-muted">Quên mật khẩu?&nbsp;</p>
-                                                <a href="#">Nhấp vào đây để cài lại mật khẩu</a>
-                                            </div>
-                                            <div className="d-flex">
                                                 <p className="text-muted">Chưa có tài khoản?&nbsp;</p>
                                                 <a href="#">Đăng kí</a>
                                             </div>

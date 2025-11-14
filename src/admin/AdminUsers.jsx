@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-
-const STORAGE_KEY = 'admin_users_v1';
-
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -11,67 +8,70 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userForm, setUserForm] = useState({
     email: '',
-    phone_number: '',
-    u_name: '',
+    phoneNumber: '',
+    fullName: '',
     address: '',
     role: 'USER',
-    status: 'ACTIVE',
-    date_of_birth: '',
+    active: true,
+    dateOfBirth: '',
     password: ''
   });
+
   const [editingUser, setEditingUser] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      setUsers(JSON.parse(raw));
-    } else {
-      // Seed sample data
-      const sampleUsers = [
-        {
-          user_id: generateId(),
-          email: 'john.doe@example.com',
-          phone_number: '0123456789',
-          u_name: 'John Doe',
-          address: '123 Main St, City',
-          role: 'USER',
-          status: 'ACTIVE',
-          date_of_birth: '1990-05-15',
-          password: 'hashed_password_123'
-        },
-        {
-          user_id: generateId(),
-          email: 'admin@example.com',
-          phone_number: '0987654321',
-          u_name: 'Admin User',
-          address: '456 Admin Ave, City',
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          date_of_birth: '1985-03-20',
-          password: 'hashed_admin_pass'
-        }
-      ];
-      setUsers(sampleUsers);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleUsers));
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
     }
-  }, []);
-
+  }
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  }, [users]);
+    fetchCurrentUser();
+  }, []);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const base = import.meta.env.VITE_API_URL || '';
+        const res = await axios.get(`${base}/users`, { withCredentials: true });
+        const data = res?.data;
+        if (Array.isArray(data) && data.length > 0) {
+          setUsers(data);
+          return;
+        }
+      } catch (err) {
+        // ignore network/backend errors and fallback to local sample data
+      }
+
+      // Seed sample data as last resort (use fixed ids so generateId is not required here)
+
+    };
+    load();
+  }, []);
 
   // Filter users based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
       setFilteredUsers(users);
     } else {
-      const filtered = users.filter(user => 
-        user.u_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      const filtered = users.filter(user =>
+        user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone_number?.includes(searchTerm) ||
+        user.phoneNumber?.includes(searchTerm) ||
         user.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.status?.toLowerCase().includes(searchTerm.toLowerCase())
+        String(user.active).toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -79,12 +79,17 @@ export default function AdminUsers() {
 
   const handleUserChange = (e) => {
     const { name, value } = e.target;
-    setUserForm((f) => ({ ...f, [name]: value }));
+    // Coerce active to boolean when changed via select
+    if (name === 'active') {
+      setUserForm((f) => ({ ...f, [name]: value === 'true' }));
+    } else {
+      setUserForm((f) => ({ ...f, [name]: value }));
+    }
   };
 
   const addUser = (e) => {
     e.preventDefault();
-    if (!userForm.email.trim() || !userForm.u_name.trim()) {
+    if (!userForm.email.trim() || !userForm.fullName.trim()) {
       alert('Email and name are required');
       return;
     }
@@ -97,26 +102,25 @@ export default function AdminUsers() {
     }
 
     const newUser = {
-      user_id: generateId(),
       email: userForm.email.trim(),
-      phone_number: userForm.phone_number.trim() || null,
-      u_name: userForm.u_name.trim(),
+      phoneNumber: userForm.phoneNumber.trim() || null,
+      fullName: userForm.fullName.trim(),
       address: userForm.address.trim() || null,
       role: userForm.role,
-      status: userForm.status,
-      date_of_birth: userForm.date_of_birth || null,
+      active: Boolean(userForm.active),
+      dateOfBirth: userForm.dateOfBirth || null,
       password: userForm.password.trim() || 'default_password_123'
     };
 
     setUsers((u) => [newUser, ...u]);
     setUserForm({
       email: '',
-      phone_number: '',
-      u_name: '',
+      phoneNumber: '',
+      fullName: '',
       address: '',
       role: 'USER',
-      status: 'ACTIVE',
-      date_of_birth: '',
+      active: true,
+      dateOfBirth: '',
       password: ''
     });
   };
@@ -127,14 +131,14 @@ export default function AdminUsers() {
 
   const updateUser = (e) => {
     e.preventDefault();
-    if (!editingUser.email.trim() || !editingUser.u_name.trim()) {
+    if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
       alert('Email and name are required');
       return;
     }
 
     // Check if email already exists (excluding current user)
-    const emailExists = users.some(user => 
-      user.user_id !== editingUser.user_id && 
+    const emailExists = users.some(user =>
+      user.id !== editingUser.id &&
       user.email.toLowerCase() === editingUser.email.toLowerCase()
     );
     if (emailExists) {
@@ -142,20 +146,20 @@ export default function AdminUsers() {
       return;
     }
 
-    setUsers(users => 
-      users.map(u => 
-        u.user_id === editingUser.user_id 
-          ? { 
-              ...u, 
-              email: editingUser.email.trim(),
-              phone_number: editingUser.phone_number?.trim() || null,
-              u_name: editingUser.u_name.trim(),
-              address: editingUser.address?.trim() || null,
-              role: editingUser.role,
-              status: editingUser.status,
-              date_of_birth: editingUser.date_of_birth || null,
-              password: editingUser.password.trim() || u.password
-            }
+    setUsers(users =>
+      users.map(u =>
+        u.id === editingUser.id
+          ? {
+            ...u,
+            email: editingUser.email.trim(),
+            phoneNumber: editingUser.phoneNumber?.trim() || null,
+            fullName: editingUser.fullName.trim(),
+            address: editingUser.address?.trim() || null,
+            role: editingUser.role,
+            active: Boolean(editingUser.active),
+            dateOfBirth: editingUser.dateOfBirth || null,
+            password: editingUser.password?.trim() || u.password
+          }
           : u
       )
     );
@@ -168,24 +172,20 @@ export default function AdminUsers() {
 
   const removeUser = (user_id) => {
     if (!confirm('Delete this user? This action cannot be undone.')) return;
-    setUsers((u) => u.filter(x => x.user_id !== user_id));
+    setUsers((u) => u.filter(x => x.id !== user_id));
   };
 
   const getRoleColor = (role) => {
-    switch(role) {
+    switch (role) {
       case 'ADMIN': return 'danger';
       case 'USER': return 'primary';
       default: return 'secondary';
     }
   };
 
-  const getStatusColor = (status) => {
-    switch(status) {
-      case 'ACTIVE': return 'success';
-      case 'INACTIVE': return 'warning';
-      case 'BANNED': return 'danger';
-      default: return 'secondary';
-    }
+  const getStatusColor = (active) => {
+    if (active === true || String(active).toLowerCase() === 'true') return 'success';
+    return 'warning';
   };
 
   return (
@@ -216,8 +216,8 @@ export default function AdminUsers() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               {searchTerm && (
-                <button 
-                  className="btn btn-outline-secondary" 
+                <button
+                  className="btn btn-outline-secondary"
                   type="button"
                   onClick={() => setSearchTerm('')}
                 >
@@ -241,55 +241,55 @@ export default function AdminUsers() {
           <div className="row g-3">
             <div className="col-md-6">
               <label className="form-label">Email *</label>
-              <input 
-                className="form-control" 
-                name="email" 
+              <input
+                className="form-control"
+                name="email"
                 type="email"
-                placeholder="user@example.com" 
-                value={editingUser ? editingUser.email : userForm.email} 
-                onChange={editingUser ? 
-                  (e) => setEditingUser({...editingUser, email: e.target.value}) :
+                placeholder="user@example.com"
+                value={editingUser ? editingUser.email : userForm.email}
+                onChange={editingUser ?
+                  (e) => setEditingUser({ ...editingUser, email: e.target.value }) :
                   handleUserChange
-                } 
+                }
                 required
               />
             </div>
             <div className="col-md-6">
               <label className="form-label">Full Name *</label>
-              <input 
-                className="form-control" 
-                name="u_name" 
-                placeholder="Full Name" 
-                value={editingUser ? editingUser.u_name : userForm.u_name} 
-                onChange={editingUser ? 
-                  (e) => setEditingUser({...editingUser, u_name: e.target.value}) :
+              <input
+                className="form-control"
+                name="fullName"
+                placeholder="Full Name"
+                value={editingUser ? editingUser.fullName : userForm.fullName}
+                onChange={editingUser ?
+                  (e) => setEditingUser({ ...editingUser, fullName: e.target.value }) :
                   handleUserChange
-                } 
+                }
                 required
               />
             </div>
             <div className="col-md-4">
               <label className="form-label">Phone Number</label>
-              <input 
-                className="form-control" 
-                name="phone_number" 
-                placeholder="0123456789" 
+              <input
+                className="form-control"
+                name="phoneNumber"
+                placeholder="0123456789"
                 maxLength="13"
-                value={editingUser ? (editingUser.phone_number || '') : userForm.phone_number} 
-                onChange={editingUser ? 
-                  (e) => setEditingUser({...editingUser, phone_number: e.target.value}) :
+                value={editingUser ? (editingUser.phoneNumber || '') : userForm.phoneNumber}
+                onChange={editingUser ?
+                  (e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value }) :
                   handleUserChange
-                } 
+                }
               />
             </div>
             <div className="col-md-4">
               <label className="form-label">Role</label>
-              <select 
-                className="form-select" 
-                name="role" 
-                value={editingUser ? editingUser.role : userForm.role} 
+              <select
+                className="form-select"
+                name="role"
+                value={editingUser ? editingUser.role : userForm.role}
                 onChange={editingUser ?
-                  (e) => setEditingUser({...editingUser, role: e.target.value}) :
+                  (e) => setEditingUser({ ...editingUser, role: e.target.value }) :
                   handleUserChange
                 }
               >
@@ -299,43 +299,42 @@ export default function AdminUsers() {
             </div>
             <div className="col-md-4">
               <label className="form-label">Status</label>
-              <select 
-                className="form-select" 
-                name="status" 
-                value={editingUser ? editingUser.status : userForm.status} 
+              <select
+                className="form-select"
+                name="active"
+                value={editingUser ? String(editingUser.active) : String(userForm.active)}
                 onChange={editingUser ?
-                  (e) => setEditingUser({...editingUser, status: e.target.value}) :
+                  (e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' }) :
                   handleUserChange
                 }
               >
-                <option value="ACTIVE">Active</option>
-                <option value="INACTIVE">Inactive</option>
-                <option value="BANNED">Banned</option>
+                <option value={true}>Active</option>
+                <option value={false}>Inactive</option>
               </select>
             </div>
             <div className="col-md-6">
               <label className="form-label">Date of Birth</label>
-              <input 
-                className="form-control" 
-                name="date_of_birth" 
+              <input
+                className="form-control"
+                name="dateOfBirth"
                 type="date"
-                value={editingUser ? (editingUser.date_of_birth || '') : userForm.date_of_birth} 
+                value={editingUser ? (editingUser.dateOfBirth || '') : userForm.dateOfBirth}
                 onChange={editingUser ?
-                  (e) => setEditingUser({...editingUser, date_of_birth: e.target.value}) :
+                  (e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value }) :
                   handleUserChange
                 }
               />
             </div>
             <div className="col-md-6">
               <label className="form-label">Password {!editingUser && '*'}</label>
-              <input 
-                className="form-control" 
-                name="password" 
+              <input
+                className="form-control"
+                name="password"
                 type="password"
                 placeholder={editingUser ? "Leave blank to keep current password" : "Enter password"}
-                value={editingUser ? (editingUser.password || '') : userForm.password} 
+                value={editingUser ? (editingUser.password || '') : userForm.password}
                 onChange={editingUser ?
-                  (e) => setEditingUser({...editingUser, password: e.target.value}) :
+                  (e) => setEditingUser({ ...editingUser, password: e.target.value }) :
                   handleUserChange
                 }
                 required={!editingUser}
@@ -343,14 +342,14 @@ export default function AdminUsers() {
             </div>
             <div className="col-md-12">
               <label className="form-label">Address</label>
-              <textarea 
-                className="form-control" 
-                name="address" 
-                placeholder="Full address" 
+              <textarea
+                className="form-control"
+                name="address"
+                placeholder="Full address"
                 rows="2"
-                value={editingUser ? (editingUser.address || '') : userForm.address} 
+                value={editingUser ? (editingUser.address || '') : userForm.address}
                 onChange={editingUser ?
-                  (e) => setEditingUser({...editingUser, address: e.target.value}) :
+                  (e) => setEditingUser({ ...editingUser, address: e.target.value }) :
                   handleUserChange
                 }
               />
@@ -377,8 +376,8 @@ export default function AdminUsers() {
               {searchTerm ? `No users found matching "${searchTerm}"` : 'No users available'}
             </div>
             {searchTerm && (
-              <button 
-                className="btn btn-link btn-sm" 
+              <button
+                className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
                 Clear search to show all users
@@ -387,25 +386,25 @@ export default function AdminUsers() {
           </div>
         ) : (
           filteredUsers.map((user) => (
-            <div key={user.user_id} className="list-group-item">
+            <div key={user.id} className="list-group-item">
               <div className="d-flex justify-content-between align-items-start">
                 <div style={{ flex: 1 }}>
                   <div className="d-flex align-items-center mb-2">
-                    <h5 className="mb-0 me-3">{user.u_name}</h5>
+                    <h5 className="mb-0 me-3">{user.fullName || '(No name)'}</h5>
                     <span className={`badge bg-${getRoleColor(user.role)} me-2`}>{user.role}</span>
-                    <span className={`badge bg-${getStatusColor(user.status)}`}>{user.status}</span>
+                    <span className={`badge bg-${getStatusColor(user.active)}`}>{user.active ? 'ACTIVE' : 'INACTIVE'}</span>
                   </div>
                   <div className="text-muted small mb-1">
                     <strong>Email:</strong> {user.email}
                   </div>
-                  {user.phone_number && (
+                  {user.phoneNumber && (
                     <div className="text-muted small mb-1">
-                      <strong>Phone:</strong> {user.phone_number}
+                      <strong>Phone:</strong> {user.phoneNumber}
                     </div>
                   )}
-                  {user.date_of_birth && (
+                  {user.dateOfBirth && (
                     <div className="text-muted small mb-1">
-                      <strong>Birth Date:</strong> {new Date(user.date_of_birth).toLocaleDateString()}
+                      <strong>Birth Date:</strong> {new Date(user.dateOfBirth).toLocaleDateString()}
                     </div>
                   )}
                   {user.address && (
@@ -415,21 +414,21 @@ export default function AdminUsers() {
                   )}
                 </div>
                 <div className="d-flex gap-2">
-                  <button 
-                    className="btn btn-sm btn-outline-secondary" 
+                  <button
+                    className="btn btn-sm btn-outline-secondary"
                     onClick={() => startEditUser(user)}
-                    disabled={editingUser && editingUser.user_id === user.user_id}
+                    disabled={editingUser && editingUser.id === user.id}
                   >
                     Edit
                   </button>
-                  <button 
-                    className="btn btn-sm btn-outline-danger" 
-                    onClick={() => removeUser(user.user_id)}
+                  <button
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => removeUser(user.id)}
                   >
                     Delete
                   </button>
-                  <Link 
-                    to={`/admin/users/${user.user_id}`} 
+                  <Link
+                    to={`/admin/users/${user.id}`}
                     className="btn btn-sm btn-primary"
                   >
                     View Details

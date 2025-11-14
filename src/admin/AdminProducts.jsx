@@ -23,7 +23,28 @@ export default function AdminProducts() {
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
-
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN' || res?.data.role !== 'EMPLOYEE') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
   // fetch products, categories and brands in parallel and normalize
   useEffect(() => {
     let mounted = true;

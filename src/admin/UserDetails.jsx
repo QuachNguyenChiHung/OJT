@@ -13,7 +13,28 @@ export default function UserDetails() {
   const [editingUser, setEditingUser] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
-
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+    useEffect(() => {
+      fetchCurrentUser();
+    }, []);
   useEffect(() => {
     // Load user data
     const usersRaw = localStorage.getItem(USERS_KEY);
@@ -116,12 +137,12 @@ export default function UserDetails() {
 
     const usersRaw = localStorage.getItem(USERS_KEY);
     if (!usersRaw) return;
-    
+
     const users = JSON.parse(usersRaw);
-    const updatedUsers = users.map(u => 
+    const updatedUsers = users.map(u =>
       u.user_id === editingUser.user_id ? editingUser : u
     );
-    
+
     localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
     setUser(editingUser);
     setEditingUser(null);
@@ -132,7 +153,7 @@ export default function UserDetails() {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'PENDING': return 'warning';
       case 'PROCESSING': return 'info';
       case 'SHIPPING': return 'primary';
@@ -143,7 +164,7 @@ export default function UserDetails() {
   };
 
   const getRoleColor = (role) => {
-    switch(role) {
+    switch (role) {
       case 'ADMIN': return 'danger';
       case 'USER': return 'primary';
       default: return 'secondary';
@@ -151,7 +172,7 @@ export default function UserDetails() {
   };
 
   const getUserStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'ACTIVE': return 'success';
       case 'INACTIVE': return 'warning';
       case 'BANNED': return 'danger';
@@ -182,7 +203,7 @@ export default function UserDetails() {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2>User Details</h2>
         <div>
-          <button 
+          <button
             className="btn btn-outline-success me-2"
             onClick={editingUser ? cancelEdit : handleEditUser}
           >
@@ -204,37 +225,37 @@ export default function UserDetails() {
                 <form onSubmit={handleUpdateUser}>
                   <div className="mb-3">
                     <label className="form-label">Full Name *</label>
-                    <input 
-                      className="form-control" 
-                      value={editingUser.u_name} 
-                      onChange={(e) => setEditingUser({...editingUser, u_name: e.target.value})}
+                    <input
+                      className="form-control"
+                      value={editingUser.u_name}
+                      onChange={(e) => setEditingUser({ ...editingUser, u_name: e.target.value })}
                       required
                     />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Email *</label>
-                    <input 
-                      className="form-control" 
+                    <input
+                      className="form-control"
                       type="email"
-                      value={editingUser.email} 
-                      onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
+                      value={editingUser.email}
+                      onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
                       required
                     />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Phone Number</label>
-                    <input 
-                      className="form-control" 
-                      value={editingUser.phone_number || ''} 
-                      onChange={(e) => setEditingUser({...editingUser, phone_number: e.target.value})}
+                    <input
+                      className="form-control"
+                      value={editingUser.phone_number || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, phone_number: e.target.value })}
                     />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Role</label>
-                    <select 
+                    <select
                       className="form-select"
-                      value={editingUser.role} 
-                      onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
+                      value={editingUser.role}
+                      onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                     >
                       <option value="USER">User</option>
                       <option value="ADMIN">Admin</option>
@@ -242,10 +263,10 @@ export default function UserDetails() {
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Status</label>
-                    <select 
+                    <select
                       className="form-select"
-                      value={editingUser.status} 
-                      onChange={(e) => setEditingUser({...editingUser, status: e.target.value})}
+                      value={editingUser.status}
+                      onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
                     >
                       <option value="ACTIVE">Active</option>
                       <option value="INACTIVE">Inactive</option>
@@ -254,20 +275,20 @@ export default function UserDetails() {
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Date of Birth</label>
-                    <input 
-                      className="form-control" 
+                    <input
+                      className="form-control"
                       type="date"
-                      value={editingUser.date_of_birth || ''} 
-                      onChange={(e) => setEditingUser({...editingUser, date_of_birth: e.target.value})}
+                      value={editingUser.date_of_birth || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, date_of_birth: e.target.value })}
                     />
                   </div>
                   <div className="mb-3">
                     <label className="form-label">Address</label>
-                    <textarea 
-                      className="form-control" 
+                    <textarea
+                      className="form-control"
                       rows="3"
-                      value={editingUser.address || ''} 
-                      onChange={(e) => setEditingUser({...editingUser, address: e.target.value})}
+                      value={editingUser.address || ''}
+                      onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
                     />
                   </div>
                   <div className="d-flex gap-2">
