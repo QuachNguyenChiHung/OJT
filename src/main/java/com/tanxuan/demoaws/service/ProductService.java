@@ -35,6 +35,13 @@ public class ProductService {
         return productRepository.findAll();
     }
 
+    public List<Product> findAllForUser(boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findAll();
+        }
+        return productRepository.findByIsActive(true);
+    }
+
     public Product findById(UUID id) {
         return productRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
@@ -56,10 +63,19 @@ public class ProductService {
 
     public Product update(UUID id, Product updated, UUID categoryId, UUID brandId) {
         Product existing = findById(id);
-        existing.setPName(updated.getPName());
-        existing.setPDesc(updated.getPDesc());
-        existing.setPrice(updated.getPrice());
-
+        // Only overwrite fields if the client provided them (non-null)
+        if (updated.getPName() != null) {
+            existing.setPName(updated.getPName());
+        }
+        if (updated.getPDesc() != null) {
+            existing.setPDesc(updated.getPDesc());
+        }
+        if (updated.getPrice() != null) {
+            existing.setPrice(updated.getPrice());
+        }
+        if (updated.getIsActive() != null) {
+            existing.setIsActive(updated.getIsActive());
+        }
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));
@@ -93,15 +109,43 @@ public class ProductService {
         return productRepository.findByCategoryCId(categoryId);
     }
 
+    public List<Product> findByCategoryForUser(UUID categoryId, boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findByCategoryCId(categoryId);
+        }
+        return productRepository.findByCategoryCIdAndIsActive(categoryId, true);
+    }
+
     public List<Product> findByBrand(UUID brandId) {
         return productRepository.findByBrandId(brandId);
+    }
+
+    public List<Product> findByBrandForUser(UUID brandId, boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findByBrandId(brandId);
+        }
+        return productRepository.findByBrandIdAndIsActive(brandId, true);
     }
 
     public List<Product> findByPriceRange(BigDecimal minPrice, BigDecimal maxPrice) {
         return productRepository.findByPriceBetween(minPrice, maxPrice);
     }
 
+    public List<Product> findByPriceRangeForUser(BigDecimal minPrice, BigDecimal maxPrice, boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findByPriceBetween(minPrice, maxPrice);
+        }
+        return productRepository.findByPriceBetweenAndIsActive(minPrice, maxPrice, true);
+    }
+
     public List<Product> findByNameContaining(String name) {
         return productRepository.findByPNameContainingIgnoreCase(name);
+    }
+
+    public List<Product> findByNameContainingForUser(String name, boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findByPNameContainingIgnoreCase(name);
+        }
+        return productRepository.findByPNameContainingIgnoreCaseAndIsActive(name, true);
     }
 }

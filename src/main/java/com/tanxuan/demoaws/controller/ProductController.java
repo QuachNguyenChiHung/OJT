@@ -6,6 +6,8 @@ import com.tanxuan.demoaws.model.Rating;
 import com.tanxuan.demoaws.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -26,7 +28,8 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductDTO.ProductResponse> all() {
+    public List<ProductDTO.ProductResponse> all(Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
         return productService.findAll().stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
@@ -44,8 +47,7 @@ public class ProductController {
         product.setPName(productRequest.getName());
         product.setPDesc(productRequest.getDescription());
         product.setPrice(productRequest.getPrice());
-        System.out.println(productRequest.getCategoryId());
-        System.out.println(productRequest.getBrandId());
+        product.setIsActive(productRequest.getIsActive());
         Product created = productService.create(product, productRequest.getCategoryId(), productRequest.getBrandId());
         return ResponseEntity.created(URI.create("/api/products/" + created.getPId()))
             .body(convertToDTO(created));
@@ -61,9 +63,11 @@ public class ProductController {
             System.out.println(entry.getKey() + ": " + entry.getValue());
         }
         Product p=new Product();
+        System.out.println(Boolean.parseBoolean(body.get("isActive").toString()));
             p.setPrice(body.get("price") != null ? new BigDecimal(body.get("price").toString()) : null);
             p.setPName(body.get("PName") != null ? body.get("PName").toString() : null);
             p.setPDesc(body.get("pDesc") != null ? body.get("pDesc").toString() : null);
+            p.setIsActive(body.get("isActive") != null ? Boolean.parseBoolean(body.get("isActive").toString()) : false);
         return convertToDTO(productService.update(id, p, categoryId, brandId));
     }
 
@@ -74,15 +78,17 @@ public class ProductController {
     }
 
     @GetMapping("/category/{categoryId}")
-    public List<ProductDTO.ProductResponse> getByCategory(@PathVariable UUID categoryId) {
-        return productService.findByCategory(categoryId).stream()
+    public List<ProductDTO.ProductResponse> getByCategory(@PathVariable UUID categoryId, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByCategoryForUser(categoryId, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
 
     @GetMapping("/brand/{brandId}")
-    public List<ProductDTO.ProductResponse> getByBrand(@PathVariable UUID brandId) {
-        return productService.findByBrand(brandId).stream()
+    public List<ProductDTO.ProductResponse> getByBrand(@PathVariable UUID brandId, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByBrandForUser(brandId, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
@@ -90,17 +96,30 @@ public class ProductController {
     @GetMapping("/price-range")
     public List<ProductDTO.ProductResponse> getByPriceRange(
             @RequestParam BigDecimal minPrice,
-            @RequestParam BigDecimal maxPrice) {
-        return productService.findByPriceRange(minPrice, maxPrice).stream()
+            @RequestParam BigDecimal maxPrice,
+            Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByPriceRangeForUser(minPrice, maxPrice, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
 
     @GetMapping("/search")
-    public List<ProductDTO.ProductResponse> searchProducts(@RequestParam String name) {
-        return productService.findByNameContaining(name).stream()
+    public List<ProductDTO.ProductResponse> searchProducts(@RequestParam String name, Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findByNameContainingForUser(name, isAdmin).stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
+    }
+
+    // Helper method to check if user is admin
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+            .map(GrantedAuthority::getAuthority)
+            .anyMatch(role -> role.equals("ROLE_ADMIN"));
     }
 
     // Helper method to convert Entity to DTO
@@ -124,6 +143,7 @@ public class ProductController {
             product.getPrice(),
             product.getCategory() != null ? product.getCategory().getCName() : null,
             product.getBrand() != null ? product.getBrand().getBrandName() : null,
+                product.getIsActive(),
             productService.productIsInStock(product.getPId()), // isAvailable - default value
             averageRating,
             ratingsCount

@@ -12,4 +12,11 @@ public interface ProductRepository extends JpaRepository<Product, UUID> {
     List<Product> findByBrandId(UUID brandId);
     List<Product> findByPriceBetween(BigDecimal minPrice, BigDecimal maxPrice);
     List<Product> findByPNameContainingIgnoreCase(String name);
+
+    // Methods for filtering by isActive status
+    List<Product> findByIsActive(Boolean isActive);
+    List<Product> findByCategoryCIdAndIsActive(UUID categoryId, Boolean isActive);
+    List<Product> findByBrandIdAndIsActive(UUID brandId, Boolean isActive);
+    List<Product> findByPriceBetweenAndIsActive(BigDecimal minPrice, BigDecimal maxPrice, Boolean isActive);
+    List<Product> findByPNameContainingIgnoreCaseAndIsActive(String name, Boolean isActive);
 }
