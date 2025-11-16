@@ -35,7 +35,7 @@ export default function AdminCategories() {
   const fetchCurrentUser = async () => {
     try {
       const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' ||res?.data.role !== 'EMPLOYEE') {
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
@@ -82,10 +82,7 @@ export default function AdminCategories() {
       setCats((c) => c.filter(x => x.id !== id));
     } catch (error) {
       console.error('Delete category failed', error);
-      if (!error.response || !error.response.data || !error.response.data.message)
-        alert('Failed to delete category');
-      else
-        alert(error.response.data.message);
+      alert(error?.response?.data?.message || 'Failed to delete category');
     }
 
   };

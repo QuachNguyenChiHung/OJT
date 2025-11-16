@@ -1,5 +1,5 @@
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,6 +10,31 @@ const Login = () => {
         email: '',
         password: ''
     });
+    const [currentUser, setCurrentUser] = useState({
+        email: '',
+        fullName: '',
+        role: '',
+        phoneNumber: '',
+        address: ''
+    });
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            setCurrentUser(res.data);
+            if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+                navigate('/admin/products');
+                return;
+            } else {
+                navigate('/');
+                return;
+            }
+
+        } catch (error) {
+        }
+    }
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
     const [alertType, setAlert] = useState('');
     const failed_login_alert = () => {
         return (
@@ -37,16 +62,12 @@ const Login = () => {
             [e.target.name]: e.target.value
         });
     };
-
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             const response = await axios.post(import.meta.env.VITE_API_URL + '/auth/login', formData, {
                 withCredentials: true
             });
-            if (response.status === 200) {
-                navigate('/');
-            }
         } catch (error) {
             console.log(error.response.status);
             if (error.response.status === 401) {
@@ -55,6 +76,7 @@ const Login = () => {
                 setAlert({ type: 'failed_server' });
             }
         }
+        fetchCurrentUser();
     };
     return (
         <>

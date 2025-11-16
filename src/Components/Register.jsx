@@ -1,5 +1,6 @@
 import axios from 'axios';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const logoImg = '/img/logo.png';
 
@@ -9,14 +10,31 @@ const Register = () => {
         password: '',
         confirmPassword: ''
     });
-
+    const navigate = useNavigate();
     const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
     };
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            console.log(res.data);
+            if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+                navigate('/admin/products');
+                return;
+            } else {
+                navigate('/');
+                return;
+            }
 
+        } catch (error) {
+        }
+    }
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
     const [message, setMessage] = useState('');
     const [messageType, setMessageType] = useState(null); // 'error' | 'success'
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +62,8 @@ const Register = () => {
             setMessage('Đăng ký thành công!, vui lòng đăng nhập.');
             setMessageType('success');
             setFormData({ email: '', password: '', confirmPassword: '' });
+            navigate('/login');
+            return;
         } catch (error) {
             // Show specific message for HTTP 409 (conflict / already exists)
             if (error?.response?.status === 409) {

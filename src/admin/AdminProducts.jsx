@@ -17,7 +17,7 @@ export default function AdminProducts() {
     price: '',
     categoryId: '',
     brandId: '',
-    isAvailable: true
+    isActive: Boolean(true)
   });
   const [editingProduct, setEditingProduct] = useState(null);
   const [brands, setBrands] = useState([]);
@@ -33,7 +33,7 @@ export default function AdminProducts() {
   const fetchCurrentUser = async () => {
     try {
       const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' || res?.data.role !== 'EMPLOYEE') {
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
@@ -90,9 +90,9 @@ export default function AdminProducts() {
           const price = item.price ?? null;
           const categoryName = item.categoryName ?? item.category?.c_name ?? item.category?.name ?? null;
           const brandName = item.brandName ?? item.brand?.brand_name ?? item.brand?.name ?? null;
-          const isAvailable = item.isAvailable ?? true;
+          const isActive = item.isActive ?? item.is_active ?? item.isAvailable ?? item.available ?? false;
           const averageRating = item.averageRating ?? null;
-          return { id, name, description, price, categoryName, brandName, isAvailable, averageRating };
+          return { id, name, description, price, categoryName, brandName, isActive, averageRating };
         });
 
         if (!mounted) return;
@@ -155,7 +155,8 @@ export default function AdminProducts() {
       price: parseFloat(productForm.price) || 0,
       categoryId: productForm.categoryId || '',
       brandId: productForm.brandId || '',
-      isAvailable: !!productForm.isAvailable
+      isActive: Boolean(!!productForm.isActive)
+      // include alternate naming for some backends
     };
     try {
       console.log(payload)
@@ -163,11 +164,11 @@ export default function AdminProducts() {
 
       const created = res && res.data ? res.data : payload;
       setProducts(p => [created, ...p]);
-      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isAvailable: true });
+      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
     } catch (err) {
       console.error('Add product failed', err);
       setProducts(p => [payload, ...p]);
-      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isAvailable: true });
+      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
       alert('Failed to add product on server; added locally');
     }
   };
@@ -175,7 +176,7 @@ export default function AdminProducts() {
   const startEditProduct = (product) => {
     const categoryId = categories.find(c => String(c.name) === String(product.categoryName) || String(c.id) === String(product.categoryName))?.id || '';
     const brandId = brands.find(b => String(b.name) === String(product.brandName) || String(b.id) === String(product.brandName))?.id || '';
-    setEditingProduct({ ...product, categoryId, brandId });
+    setEditingProduct({ ...product, categoryId, brandId, isActive: product.isActive ?? product.available ?? product.isAvailable ?? true, _originalIsActive: product.isActive ?? product.available ?? product.isAvailable ?? true });
   };
 
   const updateProduct = async (e) => {
@@ -190,6 +191,7 @@ export default function AdminProducts() {
       PName: editingProduct.name.trim(),
       pDesc: editingProduct.description.trim(),
       price: parseFloat(editingProduct.price) || 0,
+      isActive: Boolean(!!editingProduct.isActive),
     };
     try {
       // backend expects categoryId and brandId as request params
@@ -198,30 +200,48 @@ export default function AdminProducts() {
       const query = `${categoryParam}${brandParam}`;
       const res = await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingProduct.id}${query}`, payload, { withCredentials: true });
       console.log(payload)
-      const updated = res && res.data ? res.data : payload;
-      setProducts(products => products.map(p => p.id === editingProduct.id ? updated : p));
+      const responseObj = res && res.data ? res.data : payload;
+      // determine id from multiple possible keys
+      const updatedId = responseObj.id ?? responseObj.p_id ?? responseObj.PId ?? responseObj.pId ?? editingProduct.id;
+      // normalize resulting object to the lightweight shape used in the list
+      const normalizedUpdated = {
+        id: updatedId,
+        name: responseObj.name ?? responseObj.PName ?? responseObj.pName ?? editingProduct.name,
+        description: responseObj.description ?? responseObj.pDesc ?? responseObj.desc ?? editingProduct.description,
+        price: responseObj.price ?? editingProduct.price,
+        categoryName: responseObj.categoryName ?? editingProduct.categoryName,
+        brandName: responseObj.brandName ?? editingProduct.brandName,
+        isActive: (typeof responseObj.isActive !== 'undefined') ? responseObj.isActive : ((typeof responseObj.isAvailable !== 'undefined') ? responseObj.isAvailable : (typeof responseObj.available !== 'undefined' ? responseObj.available : editingProduct.isActive)),
+        averageRating: responseObj.averageRating ?? editingProduct.averageRating ?? null
+      };
+      setProducts(products => products.map(p => (String(p.id) === String(updatedId) ? normalizedUpdated : p)));
       setEditingProduct(null);
     } catch (err) {
       console.error('Update product failed', err);
-      setProducts(products => products.map(p => p.id === editingProduct.id ? payload : p));
+      // revert optimistic change if present
+      setProducts(products => products.map(p => p.id === editingProduct.id ? ({ ...p, isActive: editingProduct._originalIsActive ?? p.isActive }) : p));
       setEditingProduct(null);
       alert('Failed to update product on server; updated locally');
     }
   };
 
   const cancelEdit = () => {
+    // if we had an original active state stored, restore the product list to that value
+    if (editingProduct && typeof editingProduct._originalIsActive !== 'undefined') {
+      setProducts(prev => prev.map(p => (String(p.id) === String(editingProduct.id) ? { ...p, isActive: editingProduct._originalIsActive } : p)));
+    }
     setEditingProduct(null);
   };
 
   const remove = async (id) => {
     if (!confirm('Xóa sản phẩm này?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`);
+      await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`, { withCredentials: true });
       setProducts((p) => p.filter(x => x.id !== id));
     } catch (err) {
       console.error('Delete product failed', err);
       setProducts((p) => p.filter(x => x.id !== id));
-      alert('Failed to delete product on server; removed locally');
+      alert(err?.response?.data?.message || 'Failed to delete product on server');
     }
   };
 
@@ -346,6 +366,24 @@ export default function AdminProducts() {
               </select>
             </div>
             <div className="col-md-2 d-flex align-items-center">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="isActive"
+                  name="isActive"
+                  checked={editingProduct ? !!editingProduct.isActive : !!productForm.isActive}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (editingProduct) {
+                      // optimistic update: update both editingProduct and products list so UI reflects change immediately
+                      setEditingProduct(prev => ({ ...prev, isActive: checked }));
+                      setProducts(prev => prev.map(p => (String(p.id) === String(editingProduct.id) ? { ...p, isActive: checked } : p)));
+                    } else setProductForm(f => ({ ...f, isActive: checked }));
+                  }}
+                />
+                <label className="form-check-label ms-2" htmlFor="isActive">Active</label>
+              </div>
             </div>
             <div className="col-md-2 d-grid">
               {editingProduct ? (
@@ -410,7 +448,13 @@ export default function AdminProducts() {
                         : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)} / 5` : 'No rating')}
                     </div>
 
-                    <span className={`badge ${p.isAvailable ? 'bg-primary' : 'bg-secondary'}`} style={{ marginLeft: 8 }}>{p.isAvailable ? 'Available' : 'Not Available'}</span>
+                    {typeof p.isActive !== 'undefined' ? (
+                      <span className={`badge ${p.isActive ? 'bg-success' : 'bg-secondary'}`} style={{ marginLeft: 8 }}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    ) : (
+                      <span className="badge bg-secondary" style={{ marginLeft: 8 }}>Unknown</span>
+                    )}
                   </div>
                 </div>
                 <div className="d-flex gap-2">

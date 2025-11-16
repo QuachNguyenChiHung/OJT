@@ -35,7 +35,7 @@ export default function AdminBrands() {
   const fetchCurrentUser = async () => {
     try {
       const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' || res?.data.role !== 'EMPLOYEE') {
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
@@ -83,10 +83,7 @@ export default function AdminBrands() {
       setBrands((b) => b.filter(x => x.brandId !== brandId));
       alert('Brand deleted');
     } catch (err) {
-      if (!err.response || !err.response.data || !err.response.data.message)
-        alert('Failed to delete brand');
-      else
-        alert(err.response.data.message);
+      alert(err?.response?.data?.message || 'Failed to delete brand');
       console.error('Delete brand failed', err);
     }
   };

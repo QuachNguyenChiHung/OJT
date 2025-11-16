@@ -17,7 +17,6 @@ export default function AdminProductDetails() {
     size: '',
     color: '',
     amount: 1,
-    price: '',
     status: 'available'
   });
   const [showVariantForm, setShowVariantForm] = useState(false);
@@ -54,7 +53,7 @@ export default function AdminProductDetails() {
   const fetchCurrentUser = async () => {
     try {
       const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' || res?.data.role !== 'EMPLOYEE') {
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
@@ -90,27 +89,28 @@ export default function AdminProductDetails() {
         const res = await axios.get(`${import.meta.env.VITE_API_URL}/product-details/product/${id}`);
         const data = res && res.data ? res.data : null;
         // backend may return an array of detail objects for the product
-        if (Array.isArray(data) && data.length > 0) {
-          // normalize into the product shape used by this component
-          const first = data[0];
-          let p = null;
-          try {
-            p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+        // Always try to fetch the product info so we can display product details
+        // even when `data` is an empty array (no variants yet).
+        let p = null;
+        try {
+          p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+        } catch (error) {
+          // ignore product fetch errors for now; we'll decide fallback below
+        }
 
-          } catch (error) {
-
-          }
+        if (Array.isArray(data)) {
+          // build normalized product using product info when available
+          const first = data.length > 0 ? data[0] : null;
           const normalized = {
-            p_id: first.productId,
-            p_name: first.productName,
+            p_id: first?.productId ?? p?.data?.id ?? p?.data?.productId ?? id,
+            p_name: first?.productName ?? p?.data?.name ?? p?.data?.productName ?? '',
             c_id: p?.data?.categoryId ?? '',
             brand_id: p?.data?.brandID ?? '',
-            // also keep readable names when backend provides them
-            categoryName: p?.data?.categoryName ?? first.categoryName ?? '',
-            brandName: p?.data?.brandName ?? first.brandName ?? '',
+            categoryName: p?.data?.categoryName ?? first?.categoryName ?? '',
+            brandName: p?.data?.brandName ?? first?.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
             price: (p?.data?.price) + " VND" ?? null,
-            details: data.map(d => {
+            details: (data || []).map(d => {
               // imgList may be JSON string or already array
               let imgs = [];
               try {
@@ -131,12 +131,62 @@ export default function AdminProductDetails() {
               };
             })
           };
+
+          // If there are no details but we have product info, still show product
           if (mounted) {
             setProduct(normalized);
+          } else {
+            // fallback to local if we couldn't construct a useful product
+            if (!first && !p) loadFromLocal();
           }
+        } else if (data && typeof data === 'object') {
+          // backend returned a single detail object
+          let imgs = [];
+          try {
+            if (typeof data.imgList === 'string') imgs = JSON.parse(data.imgList);
+            else if (Array.isArray(data.imgList)) imgs = data.imgList;
+          } catch (e) { imgs = []; }
+
+          const normalized = {
+            p_id: data.productId ?? p?.data?.id ?? id,
+            p_name: data.productName ?? p?.data?.name ?? '',
+            c_id: p?.data?.categoryId ?? '',
+            brand_id: p?.data?.brandID ?? '',
+            categoryName: p?.data?.categoryName ?? data.categoryName ?? '',
+            brandName: p?.data?.brandName ?? data.brandName ?? '',
+            desc: p?.data?.desc ?? p?.data?.description ?? '',
+            price: (p?.data?.price) + " VND" ?? null,
+            details: [{
+              pd_id: data.pdId ?? data.pd_id ?? null,
+              img_list: imgs,
+              size: data.size ?? data.sz ?? '',
+              color: data.colorName ?? data.color ?? '',
+              colorId: data.colorId ?? data.color_id ?? null,
+              amount: data.amount ?? data.qty ?? 0,
+              price: data.price ?? null,
+              status: data.inStock === false ? 'out_of_stock' : 'available'
+            }]
+          };
+
+          if (mounted) setProduct(normalized);
         } else {
-          // fallback to local if API returns nothing useful
-          loadFromLocal();
+          // no useful product-details response; if product endpoint succeeded show product, else fallback to local
+          if (p && p.data) {
+            const normalized = {
+              p_id: p.data.id ?? p.data.productId ?? id,
+              p_name: p.data.name ?? p.data.productName ?? '',
+              c_id: p.data.categoryId ?? '',
+              brand_id: p.data.brandID ?? '',
+              categoryName: p.data.categoryName ?? '',
+              brandName: p.data.brandName ?? '',
+              desc: p.data.desc ?? p.data.description ?? '',
+              price: (p?.data?.price) + " VND" ?? null,
+              details: []
+            };
+            if (mounted) setProduct(normalized);
+          } else {
+            loadFromLocal();
+          }
         }
       } catch (err) {
         // network or server error; fallback to local
@@ -152,14 +202,10 @@ export default function AdminProductDetails() {
 
   const removeDetail = (pd_id) => {
     if (!confirm('Xóa chi tiết sản phẩm này?')) return;
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const products = JSON.parse(raw);
-    const idx = products.findIndex(p => p.p_id === id);
-    if (idx === -1) return;
-    products[idx].details = products[idx].details.filter(d => d.pd_id !== pd_id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    setProduct(products[idx]);
+    // Update UI only; backend deletion can be implemented separately if desired
+    if (!product) return;
+    const newDetails = (product.details || []).filter(d => d.pd_id !== pd_id);
+    setProduct({ ...product, details: newDetails });
   };
 
   const handleVariantChange = (e) => {
@@ -286,40 +332,65 @@ export default function AdminProductDetails() {
     }
 
     // Validate form fields
-    if (!variantForm.size || !variantForm.color || !variantForm.price) {
-      alert('Please fill in all required fields (size, color, price).');
+    if (!variantForm.size || !variantForm.color) {
+      alert('Please fill in all required fields (size, color).');
       return;
     }
 
-    const newVariant = {
+    const newVariantLocal = {
       pd_id: generateId(),
       img_list: variantImages,
       size: variantForm.size.trim(),
       color: variantForm.color.trim(),
       amount: Number(variantForm.amount) || 0,
-      price: Number(variantForm.price) || 0,
       status: variantForm.status || 'available'
     };
 
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const products = JSON.parse(raw);
-    const idx = products.findIndex(p => p.p_id === id);
-    if (idx === -1) return;
+    // Build payload according to backend ProductDetailsDTO
+    const payload = {
+      productId: product?.p_id || null,
+      productName: product?.p_name || null,
+      colorId: variantForm.colorId || null,
+      colorName: variantForm.color || null,
+      colorCode: variantForm.colorCode || null,
+      imgList: JSON.stringify(variantImages),
+      size: variantForm.size.trim(),
+      amount: Number(variantForm.amount) || 0,
+      inStock: variantForm.status !== 'out_of_stock'
+    };
 
-    products[idx].details = [...products[idx].details, newVariant];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    setProduct(products[idx]);
+    (async () => {
+      try {
+        if (!import.meta.env.VITE_API_URL) throw new Error('API URL not configured');
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/product-details`, payload, { withCredentials: true });
+        const created = res?.data;
+        const createdVariant = {
+          pd_id: created?.pdId ?? created?.pd_id ?? newVariantLocal.pd_id,
+          img_list: (() => {
+            try {
+              if (!created?.imgList) return variantImages;
+              if (typeof created.imgList === 'string') return JSON.parse(created.imgList);
+              if (Array.isArray(created.imgList)) return created.imgList;
+              return variantImages;
+            } catch (e) { return variantImages; }
+          })(),
+          size: created?.size ?? newVariantLocal.size,
+          color: created?.colorName ?? newVariantLocal.color,
+          colorId: created?.colorId ?? null,
+          amount: created?.amount ?? newVariantLocal.amount,
+          status: (typeof created?.inStock !== 'undefined') ? (created.inStock ? 'available' : 'out_of_stock') : newVariantLocal.status
+        };
 
-    setVariantForm({
-      size: '',
-      color: '',
-      amount: 1,
-      price: '',
-      status: 'available'
-    });
-    setVariantImages([]);
-    setShowVariantForm(false);
+        setProduct(prev => ({ ...prev, details: [...(prev?.details || []), createdVariant] }));
+      } catch (err) {
+        console.error('Create product-detail failed', err);
+        alert('Failed to create product detail. See console for details.');
+      } finally {
+        setVariantForm({ size: '', color: '', amount: 1, status: 'available' });
+        setVariantImages([]);
+        setShowVariantForm(false);
+      }
+    })();
   };
 
   const startEditVariant = (variant) => {
@@ -334,7 +405,6 @@ export default function AdminProductDetails() {
       size: '',
       color: '',
       amount: 1,
-      price: '',
       status: 'available'
     });
     setVariantImages([]);
@@ -354,37 +424,68 @@ export default function AdminProductDetails() {
     // Get updated values or keep existing ones
     const size = variantForm.size || editingVariant.size;
     const color = variantForm.color || editingVariant.color;
-    const price = variantForm.price ? parseFloat(variantForm.price) : editingVariant.price;
 
     // Validate required fields
-    if (!size || !color || !price) {
-      alert('Please fill in all required fields (size, color, price).');
+    if (!size || !color) {
+      alert('Please fill in all required fields (size, color).');
       return;
     }
 
-    const updatedVariant = {
+    const updatedVariantLocal = {
       ...editingVariant,
       img_list: variantImages,
       size: size.trim(),
       color: color.trim(),
       amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
-      price: price,
+      // price removed for variants
       status: variantForm.status || editingVariant.status
     };
 
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const products = JSON.parse(raw);
-    const idx = products.findIndex(p => p.p_id === id);
-    if (idx === -1) return;
+    // Build payload according to backend ProductDetailsDTO
+    const payload = {
+      pdId: editingVariant.pd_id,
+      productId: product?.p_id || null,
+      productName: product?.p_name || null,
+      colorId: editingVariant.colorId || null,
+      colorName: variantForm.color || editingVariant.color || null,
+      colorCode: variantForm.colorCode || editingVariant.colorCode || null,
+      imgList: JSON.stringify(variantImages),
+      size: size.trim(),
+      amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
+      inStock: variantForm.status !== 'out_of_stock'
+    };
 
-    products[idx].details = products[idx].details.map(d =>
-      d.pd_id === editingVariant.pd_id ? updatedVariant : d
-    );
+    (async () => {
+      try {
+        if (!import.meta.env.VITE_API_URL || !editingVariant.pd_id) throw new Error('API URL or pdId missing');
+        const res = await axios.put(`${import.meta.env.VITE_API_URL}/product-details/${editingVariant.pd_id}`, payload, { withCredentials: true });
+        const updated = res?.data;
+        const normalized = {
+          pd_id: updated?.pdId ?? updated?.pd_id ?? editingVariant.pd_id,
+          img_list: (() => {
+            try {
+              if (!updated?.imgList) return variantImages;
+              if (typeof updated.imgList === 'string') return JSON.parse(updated.imgList);
+              if (Array.isArray(updated.imgList)) return updated.imgList;
+              return variantImages;
+            } catch (e) { return variantImages; }
+          })(),
+          size: updated?.size ?? size.trim(),
+          color: updated?.colorName ?? variantForm.color ?? editingVariant.color,
+          colorId: updated?.colorId ?? editingVariant.colorId ?? null,
+          amount: updated?.amount ?? (variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount),
+          // price removed for variants
+          status: (typeof updated?.inStock !== 'undefined') ? (updated.inStock ? 'available' : 'out_of_stock') : updatedVariantLocal.status
+        };
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-    setProduct(products[idx]);
-    cancelEditVariant();
+        setProduct(prev => ({ ...prev, details: (prev?.details || []).map(d => d.pd_id === normalized.pd_id ? normalized : d) }));
+      } catch (err) {
+        console.error('Update product-detail failed', err);
+        alert('Failed to update product detail. See console for details.');
+      } finally {
+        cancelEditVariant();
+      }
+    })();
   };
 
 
@@ -574,19 +675,7 @@ export default function AdminProductDetails() {
                       required
                     />
                   </div>
-                  <div className="col-md-2">
-                    <input
-                      className="form-control"
-                      name="price"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="Price"
-                      value={editingVariant ? (variantForm.price || editingVariant.price) : variantForm.price}
-                      onChange={handleVariantChange}
-                      required
-                    />
-                  </div>
+                  {/* price removed for variants per request */}
                   <div className="col-md-2">
                     <select
                       className="form-select"
@@ -707,9 +796,17 @@ export default function AdminProductDetails() {
                     <p><strong>Detail ID:</strong> {d.pd_id}</p>
                     <p><strong>Size:</strong> {d.size || 'N/A'}</p>
                     <p><strong>Color:</strong> {d.color || 'N/A'}</p>
-                    <p><strong>Price:</strong> {d.price ? `${d.price.toLocaleString()} VND` : 'N/A'}</p>
+
                     <p><strong>Amount:</strong> {d.amount || 0}</p>
-                    <p><strong>Status:</strong> <span className={`badge ${d.status === 'available' ? 'bg-success' : 'bg-danger'}`}>{d.status}</span></p>
+                    {(() => {
+                      const inStock = (d.status === 'available') && (Number(d.amount || 0) > 0);
+                      const statusText = inStock ? 'In Stock' : 'Out of Stock';
+                      return (
+                        <p>
+                          <strong>Stock:</strong> <span className={`badge ${inStock ? 'bg-success' : 'bg-danger'}`}>{statusText}</span>
+                        </p>
+                      );
+                    })()}
                   </div>
                   <div className="col-md-6">
                     <p><strong>Images:</strong></p>

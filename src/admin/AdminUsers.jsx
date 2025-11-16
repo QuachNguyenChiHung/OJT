@@ -29,7 +29,7 @@ export default function AdminUsers() {
   const fetchCurrentUser = async () => {
     try {
       const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN') {
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
@@ -87,49 +87,74 @@ export default function AdminUsers() {
     }
   };
 
-  const addUser = (e) => {
+  const addUser = async (e) => {
     e.preventDefault();
     if (!userForm.email.trim() || !userForm.fullName.trim()) {
       alert('Email and name are required');
       return;
     }
 
-    // Check if email already exists
+    // Check if email already exists locally
     const emailExists = users.some(user => user.email.toLowerCase() === userForm.email.toLowerCase());
     if (emailExists) {
       alert('Email already exists');
       return;
     }
 
-    const newUser = {
+    const payload = {
       email: userForm.email.trim(),
-      phoneNumber: userForm.phoneNumber.trim() || null,
       fullName: userForm.fullName.trim(),
-      address: userForm.address.trim() || null,
-      role: userForm.role,
-      active: Boolean(userForm.active),
+      password: userForm.password.trim(),
+      phoneNumber: userForm.phoneNumber.trim() || null,
+      role: userForm.role || 'USER',
       dateOfBirth: userForm.dateOfBirth || null,
-      password: userForm.password.trim() || 'default_password_123'
+      address: userForm.address.trim() || null
     };
 
-    setUsers((u) => [newUser, ...u]);
-    setUserForm({
-      email: '',
-      phoneNumber: '',
-      fullName: '',
-      address: '',
-      role: 'USER',
-      active: true,
-      dateOfBirth: '',
-      password: ''
-    });
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/users`, payload, { withCredentials: true });
+      // ensure created user has `active: true` by default when server doesn't return it
+      const created = res?.data ? ({ ...res.data, active: typeof res.data.active !== 'undefined' ? res.data.active : true }) : ({ ...payload, active: true });
+      setUsers(u => [created, ...u]);
+      setUserForm({
+        email: '',
+        phoneNumber: '',
+        fullName: '',
+        address: '',
+        role: 'USER',
+        active: true,
+        dateOfBirth: '',
+        password: ''
+      });
+    } catch (err) {
+      console.error('Create user failed', err);
+      // Fallback to local add with the payload (server unavailable or validation failed)
+      setUsers((u) => [{
+        ...payload,
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+        // default to active for local fallback
+        active: true
+      }, ...u]);
+      setUserForm({
+        email: '',
+        phoneNumber: '',
+        fullName: '',
+        address: '',
+        role: 'USER',
+        active: true,
+        dateOfBirth: '',
+        password: ''
+      });
+      // surface error to user
+      alert('Failed to create user on server; added locally');
+    }
   };
 
   const startEditUser = (user) => {
     setEditingUser({ ...user });
   };
 
-  const updateUser = (e) => {
+  const updateUser = async (e) => {
     e.preventDefault();
     if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
       alert('Email and name are required');
@@ -146,24 +171,66 @@ export default function AdminUsers() {
       return;
     }
 
-    setUsers(users =>
-      users.map(u =>
-        u.id === editingUser.id
-          ? {
-            ...u,
-            email: editingUser.email.trim(),
-            phoneNumber: editingUser.phoneNumber?.trim() || null,
-            fullName: editingUser.fullName.trim(),
-            address: editingUser.address?.trim() || null,
-            role: editingUser.role,
-            active: Boolean(editingUser.active),
-            dateOfBirth: editingUser.dateOfBirth || null,
-            password: editingUser.password?.trim() || u.password
-          }
-          : u
-      )
-    );
-    setEditingUser(null);
+    // Build payload matching backend CreateUserRequest
+    const payload = {
+      email: editingUser.email.trim(),
+      fullName: editingUser.fullName.trim(),
+      // include active/boolean field so server can update status
+      isActive: Boolean(editingUser.active),
+      phoneNumber: editingUser.phoneNumber?.trim() || null,
+      role: editingUser.role || 'USER',
+      dateOfBirth: editingUser.dateOfBirth || null,
+      address: editingUser.address?.trim() || null,
+      // only include password when provided (omit to keep current)
+      ...(editingUser.password ? { password: editingUser.password.trim() } : {})
+    };
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/users/${editingUser.id}`, payload, { withCredentials: true });
+      const updated = res?.data;
+      // Update local list from server response if available
+      if (updated) {
+        setUsers(users => users.map(u => u.id === editingUser.id ? ({
+          ...u,
+          email: updated.email ?? u.email,
+          phoneNumber: updated.phoneNumber ?? u.phoneNumber,
+          fullName: updated.fullName ?? u.fullName,
+          address: updated.address ?? u.address,
+          role: updated.role ?? u.role,
+          active: typeof updated.active !== 'undefined' ? updated.active : u.active,
+          dateOfBirth: updated.dateOfBirth ?? u.dateOfBirth
+        }) : u));
+      } else {
+        // fallback: update locally
+        setUsers(users => users.map(u => u.id === editingUser.id ? ({
+          ...u,
+          email: editingUser.email.trim(),
+          phoneNumber: editingUser.phoneNumber?.trim() || null,
+          fullName: editingUser.fullName.trim(),
+          address: editingUser.address?.trim() || null,
+          role: editingUser.role,
+          active: Boolean(editingUser.active),
+          dateOfBirth: editingUser.dateOfBirth || null
+        }) : u));
+      }
+      setEditingUser(null);
+    } catch (err) {
+      console.error('Update user failed', err);
+      alert('Failed to update user on server; updated locally');
+      // fallback: update locally
+      setUsers(users => users.map(u => u.id === editingUser.id ? ({
+        ...u,
+        email: editingUser.email.trim(),
+        phoneNumber: editingUser.phoneNumber?.trim() || null,
+        fullName: editingUser.fullName.trim(),
+        address: editingUser.address?.trim() || null,
+        role: editingUser.role,
+        active: Boolean(editingUser.active),
+        dateOfBirth: editingUser.dateOfBirth || null,
+        password: editingUser.password?.trim() || u.password
+      }) : u));
+      setEditingUser(null);
+    }
   };
 
   const cancelEdit = () => {
@@ -297,23 +364,25 @@ export default function AdminUsers() {
                 <option value="ADMIN">Admin</option>
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="form-label">Status</label>
-              <select
-                className="form-select"
-                name="active"
-                value={editingUser ? String(editingUser.active) : String(userForm.active)}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' }) :
-                  handleUserChange
-                }
-              >
-                <option value={true}>Active</option>
-                <option value={false}>Inactive</option>
-              </select>
-            </div>
+            {editingUser && (
+              <div className="col-md-4">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  name="active"
+                  value={editingUser ? String(editingUser.active) : String(userForm.active)}
+                  onChange={editingUser ?
+                    (e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' }) :
+                    handleUserChange
+                  }
+                >
+                  <option value={true}>Active</option>
+                  <option value={false}>Inactive</option>
+                </select>
+              </div>
+            )}
             <div className="col-md-6">
-              <label className="form-label">Date of Birth</label>
+              <label className="form-label">Date of Birth (18-100 years old)</label>
               <input
                 className="form-control"
                 name="dateOfBirth"

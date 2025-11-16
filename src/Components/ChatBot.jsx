@@ -1,5 +1,5 @@
 import { useState } from 'react';
-
+import axios from 'axios';
 export default function ChatBot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
@@ -7,20 +7,21 @@ export default function ChatBot() {
     ]);
     const [inputValue, setInputValue] = useState('');
 
-    const handleSendMessage = (e) => {
+    const handleSendMessage = async (e) => {
         e.preventDefault();
         if (inputValue.trim() === '') return;
 
         // Add user message
         setMessages([...messages, { text: inputValue, sender: 'user' }]);
 
-        // Simulate bot response
-        setTimeout(() => {
-            setMessages(prev => [...prev, {
-                text: 'Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.',
-                sender: 'bot'
-            }]);
-        }, 1000);
+        try {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/bedrock/ask?q=${inputValue}`, {});
+            const botMessage = res.data || 'Xin lỗi, tôi không hiểu câu hỏi của bạn.';
+            setMessages(prevMessages => [...prevMessages, { text: botMessage, sender: 'bot' }]);
+        } catch (error) {
+            setMessages(prevMessages => [...prevMessages, { text: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.', sender: 'bot' }]);
+            console.log(error);
+        }
 
         setInputValue('');
     };

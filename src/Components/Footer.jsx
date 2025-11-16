@@ -41,23 +41,6 @@ const Footer = () => {
                     </div>
                 </div>
                 <div className="container" style={{ maxWidth: '1200px !important' }}>
-                    <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5">
-                        {[...Array(7)].map((_, index) => (
-                            <div className="col" key={index}>
-                                <div>
-                                    <p className="text-white" style={{ marginBottom: '-1px' }}>
-                                        Quần áo
-                                    </p>
-                                    <ul className="foot-list">
-                                        <li>{index === 1 ? 'Về chúng tôi' : 'Item 1'}</li>
-                                        <li>Item 2</li>
-                                        <li>Item 3</li>
-                                        <li>Item 4</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
                     <p className="text-white">Bản quyền © 2025 FURIOUS FIVE</p>
                 </div>
             </div>
