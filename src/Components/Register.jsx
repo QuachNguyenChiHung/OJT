@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const logoImg = '/img/logo.png';
 
@@ -8,21 +10,74 @@ const Register = () => {
         password: '',
         confirmPassword: ''
     });
-
+    const navigate = useNavigate();
     const handleChange = (e) => {
         setFormData({
             ...formData,
             [e.target.name]: e.target.value
         });
     };
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            console.log(res.data);
+            if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+                navigate('/admin/products');
+                return;
+            } else {
+                navigate('/');
+                return;
+            }
 
-    const handleSubmit = (e) => {
+        } catch (error) {
+        }
+    }
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
+    const [message, setMessage] = useState('');
+    const [messageType, setMessageType] = useState(null); // 'error' | 'success'
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Handle registration logic here
+        setMessage('');
+        setMessageType(null);
+
+        // Client-side validation
         if (formData.password !== formData.confirmPassword) {
-            alert('Mật khẩu không khớp!');
+            setMessage('Mật khẩu không khớp!');
+            setMessageType('error');
             return;
         }
+
+        setIsSubmitting(true);
+        try {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+                email: formData.email,
+                password: formData.password
+            }, { withCredentials: true });
+
+            // Assuming success status codes 2xx
+            setMessage('Đăng ký thành công!, vui lòng đăng nhập.');
+            setMessageType('success');
+            setFormData({ email: '', password: '', confirmPassword: '' });
+            navigate('/login');
+            return;
+        } catch (error) {
+            // Show specific message for HTTP 409 (conflict / already exists)
+            if (error?.response?.status === 409) {
+                setMessage('Email đã được đăng ký');
+            } else {
+                // Show server error message if available
+                const serverMsg = error?.response?.data?.message || error?.message || 'Lỗi máy chủ. Vui lòng thử lại sau.';
+                setMessage(serverMsg);
+            }
+            setMessageType('error');
+        } finally {
+            setIsSubmitting(false);
+        }
+
         console.log('Register attempt:', formData);
     };
 
@@ -89,20 +144,35 @@ const Register = () => {
                                             required
                                         />
                                     </div>
+                                    <div>
+                                        {message && (
+                                            <div
+                                                role="alert"
+                                                style={{
+                                                    color: messageType === 'error' ? '#a94442' : '#155724',
+                                                    backgroundColor: messageType === 'error' ? '#f8d7da' : '#d4edda',
+                                                    border: `1px solid ${messageType === 'error' ? '#f5c6cb' : '#c3e6cb'}`,
+                                                    padding: '0.5rem 0.75rem',
+                                                    borderRadius: '4px',
+                                                    marginBottom: '0.75rem'
+                                                }}
+                                            >
+                                                {message}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="mb-3">
                                         <button
                                             className="btn d-block w-100 btn-warning text-white"
                                             type="submit"
+                                            disabled={isSubmitting}
                                         >
-                                            Đăng Ký
+                                            {isSubmitting ? 'Đang gửi...' : 'Đăng Ký'}
                                         </button>
-                                        <div className="d-flex">
-                                            <p className="text-muted">Quên mật khẩu?&nbsp;</p>
-                                            <a href="#">Nhấp vào đây để cài lại mật khẩu</a>
-                                        </div>
+
                                         <div className="d-flex">
                                             <p className="text-muted">Đã có tài khoản?&nbsp;</p>
-                                            <a href="#">Đăng nhập</a>
+                                            <a href="/login">Đăng nhập</a>
                                         </div>
                                     </div>
                                 </form>

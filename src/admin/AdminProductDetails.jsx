@@ -43,6 +43,29 @@ export default function AdminProductDetails() {
   const imgRef = useRef(null);
   const navigate = useNavigate();
 
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -66,27 +89,28 @@ export default function AdminProductDetails() {
         const res = await axios.get(`${import.meta.env.VITE_API_URL}/product-details/product/${id}`);
         const data = res && res.data ? res.data : null;
         // backend may return an array of detail objects for the product
-        if (Array.isArray(data) && data.length > 0) {
-          // normalize into the product shape used by this component
-          const first = data[0];
-          let p = null;
-          try {
-            p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+        // Always try to fetch the product info so we can display product details
+        // even when `data` is an empty array (no variants yet).
+        let p = null;
+        try {
+          p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+        } catch (error) {
+          // ignore product fetch errors for now; we'll decide fallback below
+        }
 
-          } catch (error) {
-
-          }
+        if (Array.isArray(data)) {
+          // build normalized product using product info when available
+          const first = data.length > 0 ? data[0] : null;
           const normalized = {
-            p_id: first.productId,
-            p_name: first.productName,
+            p_id: first?.productId ?? p?.data?.id ?? p?.data?.productId ?? id,
+            p_name: first?.productName ?? p?.data?.name ?? p?.data?.productName ?? '',
             c_id: p?.data?.categoryId ?? '',
             brand_id: p?.data?.brandID ?? '',
-            // also keep readable names when backend provides them
-            categoryName: p?.data?.categoryName ?? first.categoryName ?? '',
-            brandName: p?.data?.brandName ?? first.brandName ?? '',
+            categoryName: p?.data?.categoryName ?? first?.categoryName ?? '',
+            brandName: p?.data?.brandName ?? first?.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
             price: (p?.data?.price) + " VND" ?? null,
-            details: data.map(d => {
+            details: (data || []).map(d => {
               // imgList may be JSON string or already array
               let imgs = [];
               try {
@@ -107,12 +131,62 @@ export default function AdminProductDetails() {
               };
             })
           };
+
+          // If there are no details but we have product info, still show product
           if (mounted) {
             setProduct(normalized);
+          } else {
+            // fallback to local if we couldn't construct a useful product
+            if (!first && !p) loadFromLocal();
           }
+        } else if (data && typeof data === 'object') {
+          // backend returned a single detail object
+          let imgs = [];
+          try {
+            if (typeof data.imgList === 'string') imgs = JSON.parse(data.imgList);
+            else if (Array.isArray(data.imgList)) imgs = data.imgList;
+          } catch (e) { imgs = []; }
+
+          const normalized = {
+            p_id: data.productId ?? p?.data?.id ?? id,
+            p_name: data.productName ?? p?.data?.name ?? '',
+            c_id: p?.data?.categoryId ?? '',
+            brand_id: p?.data?.brandID ?? '',
+            categoryName: p?.data?.categoryName ?? data.categoryName ?? '',
+            brandName: p?.data?.brandName ?? data.brandName ?? '',
+            desc: p?.data?.desc ?? p?.data?.description ?? '',
+            price: (p?.data?.price) + " VND" ?? null,
+            details: [{
+              pd_id: data.pdId ?? data.pd_id ?? null,
+              img_list: imgs,
+              size: data.size ?? data.sz ?? '',
+              color: data.colorName ?? data.color ?? '',
+              colorId: data.colorId ?? data.color_id ?? null,
+              amount: data.amount ?? data.qty ?? 0,
+              price: data.price ?? null,
+              status: data.inStock === false ? 'out_of_stock' : 'available'
+            }]
+          };
+
+          if (mounted) setProduct(normalized);
         } else {
-          // fallback to local if API returns nothing useful
-          loadFromLocal();
+          // no useful product-details response; if product endpoint succeeded show product, else fallback to local
+          if (p && p.data) {
+            const normalized = {
+              p_id: p.data.id ?? p.data.productId ?? id,
+              p_name: p.data.name ?? p.data.productName ?? '',
+              c_id: p.data.categoryId ?? '',
+              brand_id: p.data.brandID ?? '',
+              categoryName: p.data.categoryName ?? '',
+              brandName: p.data.brandName ?? '',
+              desc: p.data.desc ?? p.data.description ?? '',
+              price: (p?.data?.price) + " VND" ?? null,
+              details: []
+            };
+            if (mounted) setProduct(normalized);
+          } else {
+            loadFromLocal();
+          }
         }
       } catch (err) {
         // network or server error; fallback to local
@@ -128,8 +202,10 @@ export default function AdminProductDetails() {
 
   const removeDetail = (pd_id) => {
     if (!confirm('Xóa chi tiết sản phẩm này?')) return;
-    // Local delete is disabled. Please use the backend API to remove variants.
-    alert('Tính năng xóa chi tiết sản phẩm cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ để xóa biến thể.');
+    // Update UI only; backend deletion can be implemented separately if desired
+    if (!product) return;
+    const newDetails = (product.details || []).filter(d => d.pd_id !== pd_id);
+    setProduct({ ...product, details: newDetails });
   };
 
   const handleVariantChange = (e) => {
@@ -140,7 +216,7 @@ export default function AdminProductDetails() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     if (variantImages.length >= 5) {
-      alert('Cần đúng 5 ảnh. Vui lòng xóa ảnh trước khi thêm.');
+      alert('Exactly 5 images are required. Please remove an image first.');
       return;
     }
 
@@ -203,7 +279,7 @@ export default function AdminProductDetails() {
 
   const saveCroppedImage = () => {
     if (!completedCrop || !imgRef.current) {
-      alert('Vui lòng chọn vùng cắt trước');
+      alert('Please select a crop area first');
       return;
     }
 
@@ -251,18 +327,70 @@ export default function AdminProductDetails() {
 
     // Validate exactly 5 images
     if (variantImages.length !== 5) {
-      alert('Mỗi biến thể yêu cầu đúng 5 ảnh.');
+      alert('Exactly 5 images are required for each product variant.');
       return;
     }
 
     // Validate form fields
     if (!variantForm.size || !variantForm.color) {
-      alert('Vui lòng điền đầy đủ các trường bắt buộc (kích thước, màu sắc).');
+      alert('Please fill in all required fields (size, color).');
       return;
     }
 
-    // Local creation is disabled. Implement server-side API integration to add variants.
-    alert('Tính năng tạo biến thể cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ để thêm biến thể.');
+    const newVariantLocal = {
+      pd_id: generateId(),
+      img_list: variantImages,
+      size: variantForm.size.trim(),
+      color: variantForm.color.trim(),
+      amount: Number(variantForm.amount) || 0,
+      status: variantForm.status || 'available'
+    };
+
+    // Build payload according to backend ProductDetailsDTO
+    const payload = {
+      productId: product?.p_id || null,
+      productName: product?.p_name || null,
+      colorId: variantForm.colorId || null,
+      colorName: variantForm.color || null,
+      colorCode: variantForm.colorCode || null,
+      imgList: JSON.stringify(variantImages),
+      size: variantForm.size.trim(),
+      amount: Number(variantForm.amount) || 0,
+      inStock: variantForm.status !== 'out_of_stock'
+    };
+
+    (async () => {
+      try {
+        if (!import.meta.env.VITE_API_URL) throw new Error('API URL not configured');
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/product-details`, payload, { withCredentials: true });
+        const created = res?.data;
+        const createdVariant = {
+          pd_id: created?.pdId ?? created?.pd_id ?? newVariantLocal.pd_id,
+          img_list: (() => {
+            try {
+              if (!created?.imgList) return variantImages;
+              if (typeof created.imgList === 'string') return JSON.parse(created.imgList);
+              if (Array.isArray(created.imgList)) return created.imgList;
+              return variantImages;
+            } catch (e) { return variantImages; }
+          })(),
+          size: created?.size ?? newVariantLocal.size,
+          color: created?.colorName ?? newVariantLocal.color,
+          colorId: created?.colorId ?? null,
+          amount: created?.amount ?? newVariantLocal.amount,
+          status: (typeof created?.inStock !== 'undefined') ? (created.inStock ? 'available' : 'out_of_stock') : newVariantLocal.status
+        };
+
+        setProduct(prev => ({ ...prev, details: [...(prev?.details || []), createdVariant] }));
+      } catch (err) {
+        console.error('Create product-detail failed', err);
+        alert('Failed to create product detail. See console for details.');
+      } finally {
+        setVariantForm({ size: '', color: '', amount: 1, status: 'available' });
+        setVariantImages([]);
+        setShowVariantForm(false);
+      }
+    })();
   };
 
   const startEditVariant = (variant) => {
@@ -277,7 +405,6 @@ export default function AdminProductDetails() {
       size: '',
       color: '',
       amount: 1,
-      price: '',
       status: 'available'
     });
     setVariantImages([]);
@@ -290,7 +417,7 @@ export default function AdminProductDetails() {
 
     // Validate exactly 5 images
     if (variantImages.length !== 5) {
-      alert('Mỗi biến thể yêu cầu đúng 5 ảnh.');
+      alert('Exactly 5 images are required for each product variant.');
       return;
     }
 
@@ -300,22 +427,65 @@ export default function AdminProductDetails() {
 
     // Validate required fields
     if (!size || !color) {
-      alert('Vui lòng điền đầy đủ các trường bắt buộc (kích thước, màu sắc).');
+      alert('Please fill in all required fields (size, color).');
       return;
     }
 
-    const updatedVariant = {
+    const updatedVariantLocal = {
       ...editingVariant,
       img_list: variantImages,
       size: size.trim(),
       color: color.trim(),
       amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
+      // price removed for variants
       status: variantForm.status || editingVariant.status
     };
 
-    const raw = localStorage.getItem(STORAGE_KEY);
-    // Local update is disabled. Implement server-side API integration to update variants.
-    alert('Tính năng cập nhật biến thể cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ để cập nhật biến thể.');
+    // Build payload according to backend ProductDetailsDTO
+    const payload = {
+      pdId: editingVariant.pd_id,
+      productId: product?.p_id || null,
+      productName: product?.p_name || null,
+      colorId: editingVariant.colorId || null,
+      colorName: variantForm.color || editingVariant.color || null,
+      colorCode: variantForm.colorCode || editingVariant.colorCode || null,
+      imgList: JSON.stringify(variantImages),
+      size: size.trim(),
+      amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
+      inStock: variantForm.status !== 'out_of_stock'
+    };
+
+    (async () => {
+      try {
+        if (!import.meta.env.VITE_API_URL || !editingVariant.pd_id) throw new Error('API URL or pdId missing');
+        const res = await axios.put(`${import.meta.env.VITE_API_URL}/product-details/${editingVariant.pd_id}`, payload, { withCredentials: true });
+        const updated = res?.data;
+        const normalized = {
+          pd_id: updated?.pdId ?? updated?.pd_id ?? editingVariant.pd_id,
+          img_list: (() => {
+            try {
+              if (!updated?.imgList) return variantImages;
+              if (typeof updated.imgList === 'string') return JSON.parse(updated.imgList);
+              if (Array.isArray(updated.imgList)) return updated.imgList;
+              return variantImages;
+            } catch (e) { return variantImages; }
+          })(),
+          size: updated?.size ?? size.trim(),
+          color: updated?.colorName ?? variantForm.color ?? editingVariant.color,
+          colorId: updated?.colorId ?? editingVariant.colorId ?? null,
+          amount: updated?.amount ?? (variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount),
+          // price removed for variants
+          status: (typeof updated?.inStock !== 'undefined') ? (updated.inStock ? 'available' : 'out_of_stock') : updatedVariantLocal.status
+        };
+
+        setProduct(prev => ({ ...prev, details: (prev?.details || []).map(d => d.pd_id === normalized.pd_id ? normalized : d) }));
+      } catch (err) {
+        console.error('Update product-detail failed', err);
+        alert('Failed to update product detail. See console for details.');
+      } finally {
+        cancelEditVariant();
+      }
+    })();
   };
 
 
@@ -331,7 +501,7 @@ export default function AdminProductDetails() {
   };
 
   if (!product) return (
-    <div className="container py-4"><p>Không tìm thấy sản phẩm. <Link to="/admin/products">Quay về danh sách</Link></p></div>
+    <div className="container py-4"><p>Product not found. <Link to="/admin/products">Back to list</Link></p></div>
   );
 
   return (
@@ -349,9 +519,9 @@ export default function AdminProductDetails() {
               }
             }}
           >
-            {editingVariant ? 'Hủy chỉnh sửa' : (showVariantForm ? 'Ẩn biểu mẫu' : 'Thêm biến thể')}
+            {editingVariant ? 'Cancel Edit' : (showVariantForm ? 'Hide Form' : 'Add Variant')}
           </button>
-          <Link to="/admin/products" className="btn btn-outline-secondary">Quay lại</Link>
+          <Link to="/admin/products" className="btn btn-outline-secondary">Back</Link>
         </div>
       </div>
 
@@ -359,33 +529,33 @@ export default function AdminProductDetails() {
         <div className="col-md-8">
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
-              <h4>Thông tin sản phẩm</h4>
+              <h4>Product Information</h4>
             </div>
 
             <table className="table table-bordered">
               <tbody>
                 <tr>
-                  <th style={{ width: '30%' }}>Mã sản phẩm</th>
+                  <th style={{ width: '30%' }}>Product ID</th>
                   <td>{product.p_id}</td>
                 </tr>
                 <tr>
-                  <th>Tên sản phẩm</th>
+                  <th>Product Name</th>
                   <td>{product.p_name}</td>
                 </tr>
                 <tr>
-                  <th>Danh mục</th>
+                  <th>Category</th>
                   <td>{product.categoryName || getCategoryName(product.c_id)}</td>
                 </tr>
                 <tr>
-                  <th>Thương hiệu</th>
+                  <th>Brand</th>
                   <td>{product.brandName || getBrandName(product.brand_id)}</td>
                 </tr>
                 <tr>
-                  <th>Mô tả</th>
+                  <th>Description</th>
                   <td>{product.desc || 'N/A'}</td>
                 </tr>
                 <tr>
-                  <th>Giá</th>
+                  <th>Price</th>
                   <td>{product.price || 'N/A'}</td>
                 </tr>
               </tbody>
@@ -397,11 +567,11 @@ export default function AdminProductDetails() {
             <div className="mb-4 p-3" style={{ border: editingVariant ? '2px solid #ffc107' : '2px solid #28a745', borderRadius: '5px' }}>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h4>{editingVariant ? 'Chỉnh sửa biến thể' : 'Thêm biến thể mới'}</h4>
+                  <h4>{editingVariant ? 'Edit Variant' : 'Add New Variant'}</h4>
                   <div className="alert alert-info py-2 mb-0">
                     <small>
-                      <strong>⚠️ Lưu ý:</strong> Mỗi biến thể phải có đúng 5 ảnh.
-                      Các trường có dấu * là bắt buộc.
+                      <strong>⚠️ Important:</strong> Each variant must have exactly 5 images.
+                      All fields marked with * are required.
                     </small>
                   </div>
                 </div>
@@ -410,14 +580,14 @@ export default function AdminProductDetails() {
                   className="btn btn-sm btn-outline-secondary"
                   onClick={editingVariant ? cancelEditVariant : () => setShowVariantForm(false)}
                 >
-                  Hủy
+                  Cancel
                 </button>
               </div>
               <form onSubmit={editingVariant ? updateVariant : addVariant}>
                 {/* Image Upload Section */}
                 <div className="mb-4">
                   <label className="form-label">
-                    <strong>Ảnh sản phẩm (Cần đúng 5 ảnh, định dạng vuông) *</strong>
+                    <strong>Product Images (Exactly 5 Required, Square format) *</strong>
                   </label>
                   <div className="mb-3">
                     <input
@@ -430,8 +600,8 @@ export default function AdminProductDetails() {
                     />
                     <div className="mt-2">
                       <small className={`${variantImages.length === 5 ? 'text-success' : 'text-warning'}`}>
-                        <strong>{variantImages.length}/5 ảnh đã thêm.</strong>
-                        {variantImages.length < 5 ? ` Còn ${5 - variantImages.length} ảnh cần thêm.` : ' ✓ Sẵn sàng gửi!'}
+                        <strong>{variantImages.length}/5 images added.</strong>
+                        {variantImages.length < 5 ? ` ${5 - variantImages.length} more required.` : ' ✓ Ready to submit!'}
                       </small>
                       <br />
                       <small className="text-muted">
@@ -505,7 +675,7 @@ export default function AdminProductDetails() {
                       required
                     />
                   </div>
-
+                  {/* price removed for variants per request */}
                   <div className="col-md-2">
                     <select
                       className="form-select"
@@ -513,8 +683,8 @@ export default function AdminProductDetails() {
                       value={editingVariant ? (variantForm.status || editingVariant.status) : variantForm.status}
                       onChange={handleVariantChange}
                     >
-                      <option value="available">Còn hàng</option>
-                      <option value="out_of_stock">Hết hàng</option>
+                      <option value="available">Available</option>
+                      <option value="out_of_stock">Out of Stock</option>
                     </select>
                   </div>
                   <div className="col-md-2 d-grid">
@@ -522,9 +692,9 @@ export default function AdminProductDetails() {
                       className={`btn ${editingVariant ? 'btn-warning' : 'btn-success'}`}
                       type="submit"
                       disabled={variantImages.length !== 5}
-                      title={variantImages.length !== 5 ? 'Vui lòng tải đúng 5 ảnh' : ''}
+                      title={variantImages.length !== 5 ? 'Please upload exactly 5 images' : ''}
                     >
-                      {editingVariant ? 'Cập nhật biến thể' : 'Thêm biến thể'}
+                      {editingVariant ? 'Update Variant' : 'Add Variant'}
                     </button>
                     {variantImages.length !== 5 && (
                       <small className="text-warning mt-1">
@@ -590,8 +760,8 @@ export default function AdminProductDetails() {
 
                     <div className="mt-3">
                       <small className="text-muted">
-                        <strong>Mẹo:</strong> Kéo hộp cắt để di chuyển, hoặc kéo góc để thay đổi kích thước.
-                        Tỷ lệ khung hình được khoá 1:1 (hình vuông).
+                        <strong>Tips:</strong> Drag the crop box to reposition, or drag the corners to resize.
+                        The aspect ratio is locked to 1:1 (square).
                       </small>
                     </div>
                   </div>
@@ -617,7 +787,7 @@ export default function AdminProductDetails() {
             </div>
           )}
 
-          <h4>Chi tiết sản phẩm (Biến thể)</h4>
+          <h4>Product Details (Variants)</h4>
           {product.details && product.details.length > 0 ? (
             product.details.map((d) => (
               <div key={d.pd_id} className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
@@ -628,7 +798,15 @@ export default function AdminProductDetails() {
                     <p><strong>Color:</strong> {d.color || 'N/A'}</p>
 
                     <p><strong>Amount:</strong> {d.amount || 0}</p>
-                    <p><strong>Status:</strong> <span className={`badge ${d.status === 'available' ? 'bg-success' : 'bg-danger'}`}>{d.status}</span></p>
+                    {(() => {
+                      const inStock = (d.status === 'available') && (Number(d.amount || 0) > 0);
+                      const statusText = inStock ? 'In Stock' : 'Out of Stock';
+                      return (
+                        <p>
+                          <strong>Stock:</strong> <span className={`badge ${inStock ? 'bg-success' : 'bg-danger'}`}>{statusText}</span>
+                        </p>
+                      );
+                    })()}
                   </div>
                   <div className="col-md-6">
                     <p><strong>Images:</strong></p>
@@ -649,7 +827,7 @@ export default function AdminProductDetails() {
                           />
                         ))
                       ) : (
-                        <p className="text-muted">Không có ảnh</p>
+                        <p className="text-muted">No images</p>
                       )}
                     </div>
                   </div>
@@ -660,16 +838,16 @@ export default function AdminProductDetails() {
                     onClick={() => startEditVariant(d)}
                     disabled={editingVariant && editingVariant.pd_id === d.pd_id}
                   >
-                    Chỉnh sửa biến thể
+                    Edit Variant
                   </button>
                   <button className="btn btn-sm btn-outline-danger" onClick={() => removeDetail(d.pd_id)}>
-                    Xóa biến thể
+                    Remove Variant
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-muted">Không có chi tiết sản phẩm</p>
+            <p className="text-muted">No product details available</p>
           )}
         </div>
       </div>

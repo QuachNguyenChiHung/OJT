@@ -17,13 +17,34 @@ export default function AdminProducts() {
     price: '',
     categoryId: '',
     brandId: '',
-    isAvailable: true
+    isActive: Boolean(true)
   });
   const [editingProduct, setEditingProduct] = useState(null);
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const navigate = useNavigate();
-
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+  useEffect(() => {
+    fetchCurrentUser();
+  }, []);
   // fetch products, categories and brands in parallel and normalize
   useEffect(() => {
     let mounted = true;
@@ -69,9 +90,9 @@ export default function AdminProducts() {
           const price = item.price ?? null;
           const categoryName = item.categoryName ?? item.category?.c_name ?? item.category?.name ?? null;
           const brandName = item.brandName ?? item.brand?.brand_name ?? item.brand?.name ?? null;
-          const isAvailable = item.isAvailable ?? true;
+          const isActive = item.isActive ?? item.is_active ?? item.isAvailable ?? item.available ?? false;
           const averageRating = item.averageRating ?? null;
-          return { id, name, description, price, categoryName, brandName, isAvailable, averageRating };
+          return { id, name, description, price, categoryName, brandName, isActive, averageRating };
         });
 
         if (!mounted) return;
@@ -124,7 +145,7 @@ export default function AdminProducts() {
   const addProduct = async (e) => {
     e.preventDefault();
     if (!productForm.name.trim()) {
-      alert('Tên sản phẩm là bắt buộc');
+      alert('Product name is required');
       return;
     }
     const payload = {
@@ -134,7 +155,8 @@ export default function AdminProducts() {
       price: parseFloat(productForm.price) || 0,
       categoryId: productForm.categoryId || '',
       brandId: productForm.brandId || '',
-      isAvailable: !!productForm.isAvailable
+      isActive: Boolean(!!productForm.isActive)
+      // include alternate naming for some backends
     };
     try {
       console.log(payload)
@@ -142,24 +164,25 @@ export default function AdminProducts() {
 
       const created = res && res.data ? res.data : payload;
       setProducts(p => [created, ...p]);
-      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isAvailable: true });
+      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
     } catch (err) {
       console.error('Add product failed', err);
-      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
-      alert(msg);
+      setProducts(p => [payload, ...p]);
+      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
+      alert('Failed to add product on server; added locally');
     }
   };
 
   const startEditProduct = (product) => {
     const categoryId = categories.find(c => String(c.name) === String(product.categoryName) || String(c.id) === String(product.categoryName))?.id || '';
     const brandId = brands.find(b => String(b.name) === String(product.brandName) || String(b.id) === String(product.brandName))?.id || '';
-    setEditingProduct({ ...product, categoryId, brandId });
+    setEditingProduct({ ...product, categoryId, brandId, isActive: product.isActive ?? product.available ?? product.isAvailable ?? true, _originalIsActive: product.isActive ?? product.available ?? product.isAvailable ?? true });
   };
 
   const updateProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct.name.trim()) {
-      alert('Tên sản phẩm là bắt buộc');
+      alert('Product name is required');
       return;
     }
     const payload = {
@@ -168,6 +191,7 @@ export default function AdminProducts() {
       PName: editingProduct.name.trim(),
       pDesc: editingProduct.description.trim(),
       price: parseFloat(editingProduct.price) || 0,
+      isActive: Boolean(!!editingProduct.isActive),
     };
     try {
       // backend expects categoryId and brandId as request params
@@ -176,17 +200,36 @@ export default function AdminProducts() {
       const query = `${categoryParam}${brandParam}`;
       const res = await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingProduct.id}${query}`, payload, { withCredentials: true });
       console.log(payload)
-      const updated = res && res.data ? res.data : payload;
-      setProducts(products => products.map(p => p.id === editingProduct.id ? updated : p));
+      const responseObj = res && res.data ? res.data : payload;
+      // determine id from multiple possible keys
+      const updatedId = responseObj.id ?? responseObj.p_id ?? responseObj.PId ?? responseObj.pId ?? editingProduct.id;
+      // normalize resulting object to the lightweight shape used in the list
+      const normalizedUpdated = {
+        id: updatedId,
+        name: responseObj.name ?? responseObj.PName ?? responseObj.pName ?? editingProduct.name,
+        description: responseObj.description ?? responseObj.pDesc ?? responseObj.desc ?? editingProduct.description,
+        price: responseObj.price ?? editingProduct.price,
+        categoryName: responseObj.categoryName ?? editingProduct.categoryName,
+        brandName: responseObj.brandName ?? editingProduct.brandName,
+        isActive: (typeof responseObj.isActive !== 'undefined') ? responseObj.isActive : ((typeof responseObj.isAvailable !== 'undefined') ? responseObj.isAvailable : (typeof responseObj.available !== 'undefined' ? responseObj.available : editingProduct.isActive)),
+        averageRating: responseObj.averageRating ?? editingProduct.averageRating ?? null
+      };
+      setProducts(products => products.map(p => (String(p.id) === String(updatedId) ? normalizedUpdated : p)));
       setEditingProduct(null);
     } catch (err) {
       console.error('Update product failed', err);
-      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
-      alert(msg);
+      // revert optimistic change if present
+      setProducts(products => products.map(p => p.id === editingProduct.id ? ({ ...p, isActive: editingProduct._originalIsActive ?? p.isActive }) : p));
+      setEditingProduct(null);
+      alert('Failed to update product on server; updated locally');
     }
   };
 
   const cancelEdit = () => {
+    // if we had an original active state stored, restore the product list to that value
+    if (editingProduct && typeof editingProduct._originalIsActive !== 'undefined') {
+      setProducts(prev => prev.map(p => (String(p.id) === String(editingProduct.id) ? { ...p, isActive: editingProduct._originalIsActive } : p)));
+    }
     setEditingProduct(null);
   };
 
@@ -197,8 +240,8 @@ export default function AdminProducts() {
       setProducts((p) => p.filter(x => x.id !== id));
     } catch (err) {
       console.error('Delete product failed', err);
-      const msg = err?.response?.data?.message || 'Lỗi máy chủ, vui lòng thử lại sau';
-      alert(msg);
+      setProducts((p) => p.filter(x => x.id !== id));
+      alert(err?.response?.data?.message || 'Failed to delete product on server');
     }
   };
 
@@ -218,12 +261,12 @@ export default function AdminProducts() {
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản trị - Sản phẩm</h2>
+        <h2>Admin - Products</h2>
         <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người dùng</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh mục</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương hiệu</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm mới</button>
+          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Users</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Brands</Link>
+          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Refresh</button>
         </div>
       </div>
 
@@ -238,7 +281,7 @@ export default function AdminProducts() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Tìm sản phẩm theo tên, mô tả, danh mục hoặc thương hiệu..."
+                placeholder="Search products by name, description, category, or brand..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -255,7 +298,7 @@ export default function AdminProducts() {
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Hiển thị {filteredProducts.length} trên {products.length} sản phẩm
+              Showing {filteredProducts.length} of {products.length} products
             </small>
           </div>
         </div>
@@ -263,14 +306,14 @@ export default function AdminProducts() {
 
       {/* Product Creation/Edit Form */}
       <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
-        <h4>{editingProduct ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}</h4>
+        <h4>{editingProduct ? 'Edit Product' : 'Create New Product'}</h4>
         <form onSubmit={editingProduct ? updateProduct : addProduct}>
           <div className="row g-2">
             <div className="col-md-3">
               <input
                 className="form-control"
                 name="name"
-                placeholder="Tên sản phẩm"
+                placeholder="Product name"
                 value={editingProduct ? editingProduct.name : productForm.name}
                 onChange={editingProduct ?
                   (e) => setEditingProduct({ ...editingProduct, name: e.target.value, PName: e.target.value, pName: e.target.value }) :
@@ -283,7 +326,7 @@ export default function AdminProducts() {
               <input
                 className="form-control"
                 name="price"
-                placeholder="Giá"
+                placeholder="Price"
                 type="number"
                 value={editingProduct ? editingProduct.price : productForm.price}
                 onChange={editingProduct ?
@@ -303,7 +346,7 @@ export default function AdminProducts() {
                 }
                 required
               >
-                <option value="">Chọn danh mục</option>
+                <option value="">Select category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
@@ -318,27 +361,45 @@ export default function AdminProducts() {
                 }
                 required
               >
-                <option value="">Chọn thương hiệu</option>
+                <option value="">Select brand</option>
                 {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
             <div className="col-md-2 d-flex align-items-center">
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="checkbox"
+                  id="isActive"
+                  name="isActive"
+                  checked={editingProduct ? !!editingProduct.isActive : !!productForm.isActive}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    if (editingProduct) {
+                      // optimistic update: update both editingProduct and products list so UI reflects change immediately
+                      setEditingProduct(prev => ({ ...prev, isActive: checked }));
+                      setProducts(prev => prev.map(p => (String(p.id) === String(editingProduct.id) ? { ...p, isActive: checked } : p)));
+                    } else setProductForm(f => ({ ...f, isActive: checked }));
+                  }}
+                />
+                <label className="form-check-label ms-2" htmlFor="isActive">Active</label>
+              </div>
             </div>
             <div className="col-md-2 d-grid">
               {editingProduct ? (
                 <div className="d-flex gap-1">
-                  <button className="btn btn-success btn-sm" type="submit">Cập nhật</button>
-                  <button className="btn btn-secondary btn-sm" type="button" onClick={cancelEdit}>Hủy</button>
+                  <button className="btn btn-success btn-sm" type="submit">Update</button>
+                  <button className="btn btn-secondary btn-sm" type="button" onClick={cancelEdit}>Cancel</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo sản phẩm</button>
+                <button className="btn btn-orange" type="submit">Create Product</button>
               )}
             </div>
             <div className="col-md-12">
               <textarea
                 className="form-control"
                 name="description"
-                placeholder="Mô tả sản phẩm"
+                placeholder="Product description"
                 value={editingProduct ? editingProduct.description : productForm.description}
                 onChange={editingProduct ?
                   (e) => setEditingProduct({ ...editingProduct, description: e.target.value }) :
@@ -355,14 +416,14 @@ export default function AdminProducts() {
         {filteredProducts.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `Không tìm thấy sản phẩm phù hợp "${searchTerm}"` : 'Không có sản phẩm'}
+              {searchTerm ? `No products found matching "${searchTerm}"` : 'No products available'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Xóa tìm kiếm để hiển thị tất cả sản phẩm
+                Clear search to show all products
               </button>
             )}
           </div>
@@ -373,21 +434,27 @@ export default function AdminProducts() {
                 <div style={{ flex: 1 }}>
                   <Link to={`/admin/products/${p.id}`} className="h5 d-block text-decoration-none">{p.name}</Link>
                   <div className="text-muted small">
-                    Danh mục: {p.categoryName || getCategoryName(p.categoryName)} — Thương hiệu: {p.brandName || getBrandName(p.brandName)}
+                    Category: {p.categoryName || getCategoryName(p.categoryName)} — Brand: {p.brandName || getBrandName(p.brandName)}
                   </div>
                   {p.description && <div className="text-muted small mt-1">{p.description.length > 120 ? `${p.description.substring(0, 120)}...` : p.description}</div>}
 
                   <div className="mt-2">
-                    <span className="badge bg-success me-2">{p.price ? `${p.price.toLocaleString()} VND` : 'Chưa có giá'}</span>
+                    <span className="badge bg-success me-2">{p.price ? `${p.price.toLocaleString()} VND` : 'No price'}</span>
 
                     {/* averageRating shown below price */}
                     <div className="small text-muted mt-1">
                       {typeof p.averageRating === 'number'
                         ? `⭐ ${p.averageRating.toFixed(1)} / 5`
-                        : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)} / 5` : 'Chưa có đánh giá')}
+                        : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)} / 5` : 'No rating')}
                     </div>
 
-                    <span className={`badge ${p.isAvailable ? 'bg-primary' : 'bg-secondary'}`} style={{ marginLeft: 8 }}>{p.isAvailable ? 'Còn hàng' : 'Hết hàng'}</span>
+                    {typeof p.isActive !== 'undefined' ? (
+                      <span className={`badge ${p.isActive ? 'bg-success' : 'bg-secondary'}`} style={{ marginLeft: 8 }}>
+                        {p.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    ) : (
+                      <span className="badge bg-secondary" style={{ marginLeft: 8 }}>Unknown</span>
+                    )}
                   </div>
                 </div>
                 <div className="d-flex gap-2">
@@ -396,10 +463,10 @@ export default function AdminProducts() {
                     onClick={() => startEditProduct(p)}
                     disabled={editingProduct && editingProduct.id === p.id}
                   >
-                    Chỉnh sửa
+                    Edit
                   </button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => remove(p.id)}>Xóa</button>
-                  <Link to={`/admin/products/${p.id}`} className="btn btn-sm btn-primary">Xem chi tiết</Link>
+                  <button className="btn btn-sm btn-outline-danger" onClick={() => remove(p.id)}>Delete</button>
+                  <Link to={`/admin/products/${p.id}`} className="btn btn-sm btn-primary">View Details</Link>
                 </div>
               </div>
             </div>

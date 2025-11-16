@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-
-const STORAGE_KEY = 'admin_users_v1';
-
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -11,55 +8,58 @@ export default function AdminUsers() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userForm, setUserForm] = useState({
     email: '',
-    phone_number: '',
-    u_name: '',
+    phoneNumber: '',
+    fullName: '',
     address: '',
     role: 'USER',
-    status: 'ACTIVE',
-    date_of_birth: '',
+    active: true,
+    dateOfBirth: '',
     password: ''
   });
+
   const [editingUser, setEditingUser] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      setUsers(JSON.parse(raw));
-    } else {
-      // Seed sample data
-      const sampleUsers = [
-        {
-          user_id: generateId(),
-          email: 'john.doe@example.com',
-          phone_number: '0123456789',
-          u_name: 'John Doe',
-          address: '123 Main St, City',
-          role: 'USER',
-          status: 'ACTIVE',
-          date_of_birth: '1990-05-15',
-          password: 'hashed_password_123'
-        },
-        {
-          user_id: generateId(),
-          email: 'admin@example.com',
-          phone_number: '0987654321',
-          u_name: 'Admin User',
-          address: '456 Admin Ave, City',
-          role: 'ADMIN',
-          status: 'ACTIVE',
-          date_of_birth: '1985-03-20',
-          password: 'hashed_admin_pass'
-        }
-      ];
-      setUsers(sampleUsers);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sampleUsers));
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
     }
-  }, []);
-
+  }
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(users));
-  }, [users]);
+    fetchCurrentUser();
+  }, []);
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const base = import.meta.env.VITE_API_URL || '';
+        const res = await axios.get(`${base}/users`, { withCredentials: true });
+        const data = res?.data;
+        if (Array.isArray(data) && data.length > 0) {
+          setUsers(data);
+          return;
+        }
+      } catch (err) {
+        // ignore network/backend errors and fallback to local sample data
+      }
+
+      // Seed sample data as last resort (use fixed ids so generateId is not required here)
+
+    };
+    load();
+  }, []);
 
   // Filter users based on search term
   useEffect(() => {
@@ -67,11 +67,11 @@ export default function AdminUsers() {
       setFilteredUsers(users);
     } else {
       const filtered = users.filter(user =>
-        user.u_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone_number?.includes(searchTerm) ||
+        user.phoneNumber?.includes(searchTerm) ||
         user.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.status?.toLowerCase().includes(searchTerm.toLowerCase())
+        String(user.active).toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -79,61 +79,158 @@ export default function AdminUsers() {
 
   const handleUserChange = (e) => {
     const { name, value } = e.target;
-    setUserForm((f) => ({ ...f, [name]: value }));
+    // Coerce active to boolean when changed via select
+    if (name === 'active') {
+      setUserForm((f) => ({ ...f, [name]: value === 'true' }));
+    } else {
+      setUserForm((f) => ({ ...f, [name]: value }));
+    }
   };
 
-  const addUser = (e) => {
+  const addUser = async (e) => {
     e.preventDefault();
-    if (!userForm.email.trim() || !userForm.u_name.trim()) {
-      alert('Email và tên là bắt buộc');
+    if (!userForm.email.trim() || !userForm.fullName.trim()) {
+      alert('Email and name are required');
       return;
     }
 
-    // Check if email already exists
+    // Check if email already exists locally
     const emailExists = users.some(user => user.email.toLowerCase() === userForm.email.toLowerCase());
     if (emailExists) {
-      alert('Email đã tồn tại');
+      alert('Email already exists');
       return;
     }
 
-    const newUser = {
-      user_id: generateId(),
+    const payload = {
       email: userForm.email.trim(),
-      phone_number: userForm.phone_number.trim() || null,
-      u_name: userForm.u_name.trim(),
-      address: userForm.address.trim() || null,
-      role: userForm.role,
-      status: userForm.status,
-      date_of_birth: userForm.date_of_birth || null,
-      password: userForm.password.trim() || 'default_password_123'
+      fullName: userForm.fullName.trim(),
+      password: userForm.password.trim(),
+      phoneNumber: userForm.phoneNumber.trim() || null,
+      role: userForm.role || 'USER',
+      dateOfBirth: userForm.dateOfBirth || null,
+      address: userForm.address.trim() || null
     };
-    // Local creation disabled - use server API instead
-    alert('Tính năng tạo người dùng cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ.');
+
+    try {
+      const res = await axios.post(`${import.meta.env.VITE_API_URL}/users`, payload, { withCredentials: true });
+      // ensure created user has `active: true` by default when server doesn't return it
+      const created = res?.data ? ({ ...res.data, active: typeof res.data.active !== 'undefined' ? res.data.active : true }) : ({ ...payload, active: true });
+      setUsers(u => [created, ...u]);
+      setUserForm({
+        email: '',
+        phoneNumber: '',
+        fullName: '',
+        address: '',
+        role: 'USER',
+        active: true,
+        dateOfBirth: '',
+        password: ''
+      });
+    } catch (err) {
+      console.error('Create user failed', err);
+      // Fallback to local add with the payload (server unavailable or validation failed)
+      setUsers((u) => [{
+        ...payload,
+        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
+        // default to active for local fallback
+        active: true
+      }, ...u]);
+      setUserForm({
+        email: '',
+        phoneNumber: '',
+        fullName: '',
+        address: '',
+        role: 'USER',
+        active: true,
+        dateOfBirth: '',
+        password: ''
+      });
+      // surface error to user
+      alert('Failed to create user on server; added locally');
+    }
   };
 
   const startEditUser = (user) => {
     setEditingUser({ ...user });
   };
 
-  const updateUser = (e) => {
+  const updateUser = async (e) => {
     e.preventDefault();
-    if (!editingUser.email.trim() || !editingUser.u_name.trim()) {
-      alert('Email và tên là bắt buộc');
+    if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
+      alert('Email and name are required');
       return;
     }
 
     // Check if email already exists (excluding current user)
     const emailExists = users.some(user =>
-      user.user_id !== editingUser.user_id &&
+      user.id !== editingUser.id &&
       user.email.toLowerCase() === editingUser.email.toLowerCase()
     );
     if (emailExists) {
-      alert('Email đã tồn tại');
+      alert('Email already exists');
       return;
     }
 
-    // Local update disabled - use server API instead
-    alert('Tính năng cập nhật người dùng cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ.');
+    // Build payload matching backend CreateUserRequest
+    const payload = {
+      email: editingUser.email.trim(),
+      fullName: editingUser.fullName.trim(),
+      // include active/boolean field so server can update status
+      isActive: Boolean(editingUser.active),
+      phoneNumber: editingUser.phoneNumber?.trim() || null,
+      role: editingUser.role || 'USER',
+      dateOfBirth: editingUser.dateOfBirth || null,
+      address: editingUser.address?.trim() || null,
+      // only include password when provided (omit to keep current)
+      ...(editingUser.password ? { password: editingUser.password.trim() } : {})
+    };
+
+    try {
+      const res = await axios.put(`${import.meta.env.VITE_API_URL}/users/${editingUser.id}`, payload, { withCredentials: true });
+      const updated = res?.data;
+      // Update local list from server response if available
+      if (updated) {
+        setUsers(users => users.map(u => u.id === editingUser.id ? ({
+          ...u,
+          email: updated.email ?? u.email,
+          phoneNumber: updated.phoneNumber ?? u.phoneNumber,
+          fullName: updated.fullName ?? u.fullName,
+          address: updated.address ?? u.address,
+          role: updated.role ?? u.role,
+          active: typeof updated.active !== 'undefined' ? updated.active : u.active,
+          dateOfBirth: updated.dateOfBirth ?? u.dateOfBirth
+        }) : u));
+      } else {
+        // fallback: update locally
+        setUsers(users => users.map(u => u.id === editingUser.id ? ({
+          ...u,
+          email: editingUser.email.trim(),
+          phoneNumber: editingUser.phoneNumber?.trim() || null,
+          fullName: editingUser.fullName.trim(),
+          address: editingUser.address?.trim() || null,
+          role: editingUser.role,
+          active: Boolean(editingUser.active),
+          dateOfBirth: editingUser.dateOfBirth || null
+        }) : u));
+      }
+      setEditingUser(null);
+    } catch (err) {
+      console.error('Update user failed', err);
+      alert('Failed to update user on server; updated locally');
+      // fallback: update locally
+      setUsers(users => users.map(u => u.id === editingUser.id ? ({
+        ...u,
+        email: editingUser.email.trim(),
+        phoneNumber: editingUser.phoneNumber?.trim() || null,
+        fullName: editingUser.fullName.trim(),
+        address: editingUser.address?.trim() || null,
+        role: editingUser.role,
+        active: Boolean(editingUser.active),
+        dateOfBirth: editingUser.dateOfBirth || null,
+        password: editingUser.password?.trim() || u.password
+      }) : u));
+      setEditingUser(null);
+    }
   };
 
   const cancelEdit = () => {
@@ -141,9 +238,8 @@ export default function AdminUsers() {
   };
 
   const removeUser = (user_id) => {
-    if (!confirm('Xóa người dùng này? Hành động này không thể hoàn tác.')) return;
-    // Local delete disabled - use server API instead
-    alert('Tính năng xóa người dùng cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ.');
+    if (!confirm('Delete this user? This action cannot be undone.')) return;
+    setUsers((u) => u.filter(x => x.id !== user_id));
   };
 
   const getRoleColor = (role) => {
@@ -154,24 +250,20 @@ export default function AdminUsers() {
     }
   };
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'ACTIVE': return 'success';
-      case 'INACTIVE': return 'warning';
-      case 'BANNED': return 'danger';
-      default: return 'secondary';
-    }
+  const getStatusColor = (active) => {
+    if (active === true || String(active).toLowerCase() === 'true') return 'success';
+    return 'warning';
   };
 
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản trị - Người dùng</h2>
+        <h2>Admin - Users Management</h2>
         <div>
-          <Link to="/admin/products" className="btn btn-outline-secondary me-2">Sản phẩm</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh mục</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương hiệu</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Làm mới</button>
+          <Link to="/admin/products" className="btn btn-outline-secondary me-2">Products</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Brands</Link>
+          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Refresh</button>
         </div>
       </div>
 
@@ -186,7 +278,7 @@ export default function AdminUsers() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Tìm người dùng theo tên, email, điện thoại, vai trò hoặc trạng thái..."
+                placeholder="Search users by name, email, phone, role, or status..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -203,7 +295,7 @@ export default function AdminUsers() {
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Hiển thị {filteredUsers.length} trên {users.length} người dùng
+              Showing {filteredUsers.length} of {users.length} users
             </small>
           </div>
         </div>
@@ -211,7 +303,7 @@ export default function AdminUsers() {
 
       {/* User Creation/Edit Form */}
       <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
-        <h4>{editingUser ? 'Chỉnh sửa người dùng' : 'Tạo người dùng mới'}</h4>
+        <h4>{editingUser ? 'Edit User' : 'Create New User'}</h4>
         <form onSubmit={editingUser ? updateUser : addUser}>
           <div className="row g-3">
             <div className="col-md-6">
@@ -230,35 +322,35 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Họ và tên *</label>
+              <label className="form-label">Full Name *</label>
               <input
                 className="form-control"
-                name="u_name"
+                name="fullName"
                 placeholder="Full Name"
-                value={editingUser ? editingUser.u_name : userForm.u_name}
+                value={editingUser ? editingUser.fullName : userForm.fullName}
                 onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, u_name: e.target.value }) :
+                  (e) => setEditingUser({ ...editingUser, fullName: e.target.value }) :
                   handleUserChange
                 }
                 required
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Số điện thoại</label>
+              <label className="form-label">Phone Number</label>
               <input
                 className="form-control"
-                name="phone_number"
+                name="phoneNumber"
                 placeholder="0123456789"
                 maxLength="13"
-                value={editingUser ? (editingUser.phone_number || '') : userForm.phone_number}
+                value={editingUser ? (editingUser.phoneNumber || '') : userForm.phoneNumber}
                 onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, phone_number: e.target.value }) :
+                  (e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value }) :
                   handleUserChange
                 }
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Vai trò</label>
+              <label className="form-label">Role</label>
               <select
                 className="form-select"
                 name="role"
@@ -268,41 +360,42 @@ export default function AdminUsers() {
                   handleUserChange
                 }
               >
-                <option value="USER">Người dùng</option>
-                <option value="ADMIN">Quản trị</option>
+                <option value="USER">User</option>
+                <option value="ADMIN">Admin</option>
               </select>
             </div>
-            <div className="col-md-4">
-              <label className="form-label">Trạng thái</label>
-              <select
-                className="form-select"
-                name="status"
-                value={editingUser ? editingUser.status : userForm.status}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, status: e.target.value }) :
-                  handleUserChange
-                }
-              >
-                <option value="ACTIVE">Hoạt động</option>
-                <option value="INACTIVE">Không hoạt động</option>
-                <option value="BANNED">Bị cấm</option>
-              </select>
-            </div>
+            {editingUser && (
+              <div className="col-md-4">
+                <label className="form-label">Status</label>
+                <select
+                  className="form-select"
+                  name="active"
+                  value={editingUser ? String(editingUser.active) : String(userForm.active)}
+                  onChange={editingUser ?
+                    (e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' }) :
+                    handleUserChange
+                  }
+                >
+                  <option value={true}>Active</option>
+                  <option value={false}>Inactive</option>
+                </select>
+              </div>
+            )}
             <div className="col-md-6">
-              <label className="form-label">Date of Birth</label>
+              <label className="form-label">Date of Birth (18-100 years old)</label>
               <input
                 className="form-control"
-                name="date_of_birth"
+                name="dateOfBirth"
                 type="date"
-                value={editingUser ? (editingUser.date_of_birth || '') : userForm.date_of_birth}
+                value={editingUser ? (editingUser.dateOfBirth || '') : userForm.dateOfBirth}
                 onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, date_of_birth: e.target.value }) :
+                  (e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value }) :
                   handleUserChange
                 }
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Mật khẩu {!editingUser && '*'}</label>
+              <label className="form-label">Password {!editingUser && '*'}</label>
               <input
                 className="form-control"
                 name="password"
@@ -317,7 +410,7 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-12">
-              <label className="form-label">Địa chỉ</label>
+              <label className="form-label">Address</label>
               <textarea
                 className="form-control"
                 name="address"
@@ -333,11 +426,11 @@ export default function AdminUsers() {
             <div className="col-md-12">
               {editingUser ? (
                 <div className="d-flex gap-2">
-                  <button className="btn btn-success" type="submit">Cập nhật người dùng</button>
-                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
+                  <button className="btn btn-success" type="submit">Update User</button>
+                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Cancel</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo người dùng</button>
+                <button className="btn btn-orange" type="submit">Create User</button>
               )}
             </div>
           </div>
@@ -349,38 +442,38 @@ export default function AdminUsers() {
         {filteredUsers.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `Không tìm thấy người dùng phù hợp "${searchTerm}"` : 'Không có người dùng'}
+              {searchTerm ? `No users found matching "${searchTerm}"` : 'No users available'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Xóa tìm kiếm để hiển thị tất cả người dùng
+                Clear search to show all users
               </button>
             )}
           </div>
         ) : (
           filteredUsers.map((user) => (
-            <div key={user.user_id} className="list-group-item">
+            <div key={user.id} className="list-group-item">
               <div className="d-flex justify-content-between align-items-start">
                 <div style={{ flex: 1 }}>
                   <div className="d-flex align-items-center mb-2">
-                    <h5 className="mb-0 me-3">{user.u_name}</h5>
+                    <h5 className="mb-0 me-3">{user.fullName || '(No name)'}</h5>
                     <span className={`badge bg-${getRoleColor(user.role)} me-2`}>{user.role}</span>
-                    <span className={`badge bg-${getStatusColor(user.status)}`}>{user.status}</span>
+                    <span className={`badge bg-${getStatusColor(user.active)}`}>{user.active ? 'ACTIVE' : 'INACTIVE'}</span>
                   </div>
                   <div className="text-muted small mb-1">
                     <strong>Email:</strong> {user.email}
                   </div>
-                  {user.phone_number && (
+                  {user.phoneNumber && (
                     <div className="text-muted small mb-1">
-                      <strong>Phone:</strong> {user.phone_number}
+                      <strong>Phone:</strong> {user.phoneNumber}
                     </div>
                   )}
-                  {user.date_of_birth && (
+                  {user.dateOfBirth && (
                     <div className="text-muted small mb-1">
-                      <strong>Birth Date:</strong> {new Date(user.date_of_birth).toLocaleDateString()}
+                      <strong>Birth Date:</strong> {new Date(user.dateOfBirth).toLocaleDateString()}
                     </div>
                   )}
                   {user.address && (
@@ -393,21 +486,21 @@ export default function AdminUsers() {
                   <button
                     className="btn btn-sm btn-outline-secondary"
                     onClick={() => startEditUser(user)}
-                    disabled={editingUser && editingUser.user_id === user.user_id}
+                    disabled={editingUser && editingUser.id === user.id}
                   >
-                    Chỉnh sửa
+                    Edit
                   </button>
                   <button
                     className="btn btn-sm btn-outline-danger"
-                    onClick={() => removeUser(user.user_id)}
+                    onClick={() => removeUser(user.id)}
                   >
-                    Xóa
+                    Delete
                   </button>
                   <Link
-                    to={`/admin/users/${user.user_id}`}
+                    to={`/admin/users/${user.id}`}
                     className="btn btn-sm btn-primary"
                   >
-                    Xem chi tiết
+                    View Details
                   </Link>
                 </div>
               </div>

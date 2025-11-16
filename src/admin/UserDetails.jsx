@@ -13,7 +13,28 @@ export default function UserDetails() {
   const [editingUser, setEditingUser] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const navigate = useNavigate();
-
+  const [currentUser, setCurrentUser] = useState({
+    email: '',
+    fullName: '',
+    role: '',
+    phoneNumber: '',
+    address: ''
+  });
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      if (res?.data.role !== 'ADMIN') {
+        navigate('/login');
+        return;
+      }
+      setCurrentUser(res.data);
+    } catch (error) {
+      navigate('/login');
+    }
+  }
+    useEffect(() => {
+      fetchCurrentUser();
+    }, []);
   useEffect(() => {
     // Load user data
     const usersRaw = localStorage.getItem(USERS_KEY);
@@ -110,11 +131,21 @@ export default function UserDetails() {
   const handleUpdateUser = (e) => {
     e.preventDefault();
     if (!editingUser.email.trim() || !editingUser.u_name.trim()) {
-      alert('Email và tên là bắt buộc');
+      alert('Email and name are required');
       return;
     }
-    // Local update disabled - use server API instead
-    alert('Tính năng cập nhật người dùng cục bộ đã bị vô hiệu hoá. Vui lòng sử dụng API máy chủ.');
+
+    const usersRaw = localStorage.getItem(USERS_KEY);
+    if (!usersRaw) return;
+
+    const users = JSON.parse(usersRaw);
+    const updatedUsers = users.map(u =>
+      u.user_id === editingUser.user_id ? editingUser : u
+    );
+
+    localStorage.setItem(USERS_KEY, JSON.stringify(updatedUsers));
+    setUser(editingUser);
+    setEditingUser(null);
   };
 
   const cancelEdit = () => {
@@ -161,7 +192,7 @@ export default function UserDetails() {
   if (!user) {
     return (
       <div className="container py-4">
-        <p>Không tìm thấy người dùng. <Link to="/admin/users">Quay về danh sách người dùng</Link></p>
+        <p>User not found. <Link to="/admin/users">Back to users list</Link></p>
       </div>
     );
   }
@@ -170,15 +201,15 @@ export default function UserDetails() {
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <h2>Chi tiết người dùng</h2>
+        <h2>User Details</h2>
         <div>
           <button
             className="btn btn-outline-success me-2"
             onClick={editingUser ? cancelEdit : handleEditUser}
           >
-            {editingUser ? 'Hủy chỉnh sửa' : 'Chỉnh sửa người dùng'}
+            {editingUser ? 'Cancel Edit' : 'Edit User'}
           </button>
-          <Link to="/admin/users" className="btn btn-outline-secondary">Quay lại danh sách</Link>
+          <Link to="/admin/users" className="btn btn-outline-secondary">Back to Users</Link>
         </div>
       </div>
 
@@ -187,13 +218,13 @@ export default function UserDetails() {
         <div className="col-md-6">
           <div className="card">
             <div className="card-header">
-              <h5 className="mb-0">Thông tin người dùng</h5>
+              <h5 className="mb-0">User Information</h5>
             </div>
             <div className="card-body">
               {editingUser ? (
                 <form onSubmit={handleUpdateUser}>
                   <div className="mb-3">
-                    <label className="form-label">Họ và tên *</label>
+                    <label className="form-label">Full Name *</label>
                     <input
                       className="form-control"
                       value={editingUser.u_name}
@@ -212,7 +243,7 @@ export default function UserDetails() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Số điện thoại</label>
+                    <label className="form-label">Phone Number</label>
                     <input
                       className="form-control"
                       value={editingUser.phone_number || ''}
@@ -220,30 +251,30 @@ export default function UserDetails() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Vai trò</label>
+                    <label className="form-label">Role</label>
                     <select
                       className="form-select"
                       value={editingUser.role}
                       onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                     >
-                      <option value="USER">Người dùng</option>
-                      <option value="ADMIN">Quản trị</option>
+                      <option value="USER">User</option>
+                      <option value="ADMIN">Admin</option>
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Trạng thái</label>
+                    <label className="form-label">Status</label>
                     <select
                       className="form-select"
                       value={editingUser.status}
                       onChange={(e) => setEditingUser({ ...editingUser, status: e.target.value })}
                     >
-                      <option value="ACTIVE">Hoạt động</option>
-                      <option value="INACTIVE">Không hoạt động</option>
-                      <option value="BANNED">Bị cấm</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="INACTIVE">Inactive</option>
+                      <option value="BANNED">Banned</option>
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Ngày sinh</label>
+                    <label className="form-label">Date of Birth</label>
                     <input
                       className="form-control"
                       type="date"
@@ -252,7 +283,7 @@ export default function UserDetails() {
                     />
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Địa chỉ</label>
+                    <label className="form-label">Address</label>
                     <textarea
                       className="form-control"
                       rows="3"
@@ -261,19 +292,19 @@ export default function UserDetails() {
                     />
                   </div>
                   <div className="d-flex gap-2">
-                    <button type="submit" className="btn btn-success">Lưu thay đổi</button>
-                    <button type="button" className="btn btn-secondary" onClick={cancelEdit}>Hủy</button>
+                    <button type="submit" className="btn btn-success">Save Changes</button>
+                    <button type="button" className="btn btn-secondary" onClick={cancelEdit}>Cancel</button>
                   </div>
                 </form>
               ) : (
                 <table className="table table-borderless">
                   <tbody>
                     <tr>
-                      <th style={{ width: '40%' }}>Mã người dùng:</th>
+                      <th style={{ width: '40%' }}>User ID:</th>
                       <td>{user.user_id}</td>
                     </tr>
                     <tr>
-                      <th>Họ và tên:</th>
+                      <th>Full Name:</th>
                       <td>{user.u_name}</td>
                     </tr>
                     <tr>
@@ -281,23 +312,23 @@ export default function UserDetails() {
                       <td>{user.email}</td>
                     </tr>
                     <tr>
-                      <th>Số điện thoại:</th>
+                      <th>Phone:</th>
                       <td>{user.phone_number || 'N/A'}</td>
                     </tr>
                     <tr>
-                      <th>Vai trò:</th>
+                      <th>Role:</th>
                       <td><span className={`badge bg-${getRoleColor(user.role)}`}>{user.role}</span></td>
                     </tr>
                     <tr>
-                      <th>Trạng thái:</th>
+                      <th>Status:</th>
                       <td><span className={`badge bg-${getUserStatusColor(user.status)}`}>{user.status}</span></td>
                     </tr>
                     <tr>
-                      <th>Ngày sinh:</th>
+                      <th>Date of Birth:</th>
                       <td>{user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : 'N/A'}</td>
                     </tr>
                     <tr>
-                      <th>Địa chỉ:</th>
+                      <th>Address:</th>
                       <td>{user.address || 'N/A'}</td>
                     </tr>
                   </tbody>
@@ -311,12 +342,12 @@ export default function UserDetails() {
         <div className="col-md-6">
           <div className="card">
             <div className="card-header d-flex justify-content-between align-items-center">
-              <h5 className="mb-0">Lịch sử đơn hàng</h5>
-              <span className="badge bg-info">{userOrders.length} đơn</span>
+              <h5 className="mb-0">Order History</h5>
+              <span className="badge bg-info">{userOrders.length} Orders</span>
             </div>
             <div className="card-body">
               {userOrders.length === 0 ? (
-                <p className="text-muted">Không tìm thấy đơn hàng cho người dùng này.</p>
+                <p className="text-muted">No orders found for this user.</p>
               ) : (
                 <div className="list-group list-group-flush">
                   {userOrders.map((order) => (
@@ -328,35 +359,35 @@ export default function UserDetails() {
                             <span className={`badge bg-${getStatusColor(order.status)}`}>{order.status}</span>
                           </div>
                           <div className="small text-muted mb-1">
-                            Ngày: {new Date(order.date_created).toLocaleDateString()}
+                            Date: {new Date(order.date_created).toLocaleDateString()}
                           </div>
                           <div className="small text-muted">
-                            Tổng: <strong>${order.total_price}</strong>
+                            Total: <strong>${order.total_price}</strong>
                           </div>
                         </div>
                         <button
                           className="btn btn-sm btn-outline-primary"
                           onClick={() => toggleOrderDetails(order.o_id)}
                         >
-                          {selectedOrder === order.o_id ? 'Ẩn chi tiết' : 'Xem chi tiết'}
+                          {selectedOrder === order.o_id ? 'Hide Details' : 'Show Details'}
                         </button>
                       </div>
 
                       {/* Order Details */}
                       {selectedOrder === order.o_id && (
                         <div className="mt-3 pt-3 border-top">
-                          <h6 className="mb-3">Chi tiết đơn hàng:</h6>
+                          <h6 className="mb-3">Order Details:</h6>
                           {orderDetails[order.o_id] && orderDetails[order.o_id].length > 0 ? (
                             <div className="table-responsive">
                               <table className="table table-sm">
                                 <thead>
                                   <tr>
-                                    <th>Sản phẩm</th>
-                                    <th>Kích thước</th>
-                                    <th>Màu</th>
-                                    <th>Số</th>
-                                    <th>Giá</th>
-                                    <th>Tạm tính</th>
+                                    <th>Product</th>
+                                    <th>Size</th>
+                                    <th>Color</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th>Subtotal</th>
                                   </tr>
                                 </thead>
                                 <tbody>
@@ -377,14 +408,14 @@ export default function UserDetails() {
                                 </tbody>
                                 <tfoot>
                                   <tr className="table-active">
-                                    <td colSpan="5"><strong>Tổng:</strong></td>
+                                    <td colSpan="5"><strong>Total:</strong></td>
                                     <td><strong>${calculateOrderTotal(order.o_id)}</strong></td>
                                   </tr>
                                 </tfoot>
                               </table>
                             </div>
                           ) : (
-                            <p className="text-muted small">Không có chi tiết đơn hàng.</p>
+                            <p className="text-muted small">No order details available.</p>
                           )}
                         </div>
                       )}
@@ -402,31 +433,31 @@ export default function UserDetails() {
         <div className="col-md-12">
           <div className="card">
             <div className="card-header">
-              <h5 className="mb-0">Thống kê đơn hàng</h5>
+              <h5 className="mb-0">Order Statistics</h5>
             </div>
             <div className="card-body">
               <div className="row text-center">
                 <div className="col-md-3">
                   <h4 className="text-primary">{userOrders.length}</h4>
-                  <p className="text-muted mb-0">Tổng đơn hàng</p>
+                  <p className="text-muted mb-0">Total Orders</p>
                 </div>
                 <div className="col-md-3">
                   <h4 className="text-success">
                     ${userOrders.reduce((sum, order) => sum + parseFloat(order.total_price), 0).toFixed(2)}
                   </h4>
-                  <p className="text-muted mb-0">Tổng chi tiêu</p>
+                  <p className="text-muted mb-0">Total Spent</p>
                 </div>
                 <div className="col-md-3">
                   <h4 className="text-info">
                     {userOrders.filter(order => order.status === 'DELIVERED').length}
                   </h4>
-                  <p className="text-muted mb-0">Đơn đã hoàn thành</p>
+                  <p className="text-muted mb-0">Completed Orders</p>
                 </div>
                 <div className="col-md-3">
                   <h4 className="text-warning">
                     {userOrders.filter(order => ['PENDING', 'PROCESSING', 'SHIPPING'].includes(order.status)).length}
                   </h4>
-                  <p className="text-muted mb-0">Đơn đang xử lý</p>
+                  <p className="text-muted mb-0">Active Orders</p>
                 </div>
               </div>
             </div>

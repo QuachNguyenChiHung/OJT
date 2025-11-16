@@ -1,6 +1,7 @@
 import { Button } from 'react-bootstrap';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const logoImg = '/img/logo.png';
 const magnifierImg = '/img/magnifier.png';
@@ -9,9 +10,44 @@ const userImg = '/img/user.png';
 const shoppingCartImg = '/img/shopping-cart.png';
 
 const Navbar = () => {
+    const navigate = useNavigate();
     const menuItems = Array(7).fill('QUẦN ÁO');
     const [loggedIn, setLoggedIn] = useState(false);
-    const navigate = useNavigate();
+    const [currentUser, setCurrentUser] = useState({
+        email: '',
+        fullName: '',
+        role: '',
+        phoneNumber: '',
+        address: ''
+    });
+    const fetchCurrentUser = async () => {
+        try {
+            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            if (res?.data) {
+                setCurrentUser(res.data);
+                setLoggedIn(true);
+            } else {
+                setLoggedIn(false);
+            }
+        } catch (error) {
+            // not logged in or network error — keep user as not logged in
+            setLoggedIn(false);
+        }
+    }
+
+    const logout = async () => {
+        try {
+            await axios.post(import.meta.env.VITE_API_URL + '/auth/logout', {}, { withCredentials: true });
+        } catch (e) {
+            // ignore errors — still clear client state
+        }
+        setLoggedIn(false);
+        setCurrentUser({ email: '', fullName: '', role: '', phoneNumber: '', address: '' });
+        navigate('/login');
+    }
+    useEffect(() => {
+        fetchCurrentUser();
+    }, []);
     return (
         <>
             <header className="d-flex justify-content-center align-items-center container-fluid">
@@ -110,26 +146,30 @@ const Navbar = () => {
                                     <div className="mx-1">
                                         <div className="dropdown">
                                             <button
-                                                className="btn dropdown-toggle cancel-bg-change"
+                                                className="btn dropdown-toggle cancel-bg-change d-flex align-items-center"
                                                 aria-expanded="false"
                                                 data-bs-toggle="dropdown"
                                                 type="button"
                                                 style={{ paddingRight: '6px', paddingLeft: '6px' }}
                                             >
-                                                <span>
-                                                    <img className="icon" src={userImg} alt="User" />
-                                                </span>
+                                                <img
+                                                    className="icon rounded-circle"
+                                                    src={currentUser.avatarUrl || userImg}
+                                                    alt="User"
+                                                    style={{ width: '34px', height: '34px', objectFit: 'cover' }}
+                                                />
+                                                <span className="ms-2 d-none d-md-inline">{currentUser.fullName || currentUser.email}</span>
                                             </button>
                                             <div className="dropdown-menu">
                                                 <a className="dropdown-item" href="#">
-                                                   Thông Tin Cá Nhân
+                                                    Thông Tin Cá Nhân
                                                 </a>
                                                 <a className="dropdown-item" href="#">
                                                     Lịch Sử Mua Hàng
                                                 </a>
-                                                <a className="dropdown-item" href="#">
+                                                <button className="dropdown-item" type="button" onClick={logout}>
                                                     Đăng Xuất
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -145,7 +185,6 @@ const Navbar = () => {
                                 </>
                             ) : (
                                 <>
-
                                     <div className="mx-1">
                                         <Button variant="orange" className='btn-orange' style={{
                                             borderColor: 'rgb(228, 148, 0)'
