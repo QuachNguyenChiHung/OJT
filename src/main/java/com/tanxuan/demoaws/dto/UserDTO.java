@@ -106,19 +106,25 @@ public class UserDTO {
             regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
             message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt"
         )
+
+        @NotNull
         private String password;
 
         @Pattern(regexp = "^$|^(0|\\+84)[0-9]{9}$",
                 message = "Số điện thoại không hợp lệ. Phải bắt đầu bằng 0 hoặc +84 và có 10 số")
         private String phoneNumber;
 
+        @NotNull
+        private String role;
+
         @NotNull(message = "Ngày sinh không được để trống")
         @Past(message = "Ngày sinh phải là ngày trong quá khứ")
-        @DateTimeFormat(pattern = "yyyy-MM-dd")
+        @DateTimeFormat(pattern = "dd-MM-yyyy")
         private LocalDate dateOfBirth;
 
         private String address;
 
+        private Boolean isActive = true;
         public boolean isValidAge() {
             if (dateOfBirth == null) return false;
             int age = Period.between(dateOfBirth, LocalDate.now()).getYears();

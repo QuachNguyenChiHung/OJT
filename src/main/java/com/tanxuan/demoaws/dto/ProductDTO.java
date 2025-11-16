@@ -28,6 +28,9 @@ public class ProductDTO {
 
         @NotNull(message = "ID thương hiệu không được để trống")
         private UUID brandId;
+
+        @NotNull(message = "Trạng thái sản phẩm không được để trống")
+        private Boolean isActive;
     }
 
     @Data
@@ -40,6 +43,7 @@ public class ProductDTO {
         private BigDecimal price;
         private String categoryName;
         private String brandName;
+        private Boolean isActive;
         private Boolean isAvailable;
         private Double averageRating;
         private Integer ratingsCount;

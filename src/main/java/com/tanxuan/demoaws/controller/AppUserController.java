@@ -3,6 +3,7 @@ package com.tanxuan.demoaws.controller;
 import com.tanxuan.demoaws.dto.UserDTO;
 import com.tanxuan.demoaws.model.AppUser;
 import com.tanxuan.demoaws.service.AppUserService;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,7 @@ public class AppUserController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserDTO.UserResponse> all() {
         return appUserService.findAll().stream()
                 .map(this::convertToDTO)
@@ -29,24 +31,27 @@ public class AppUserController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @appUserService.isOwner(#id, authentication.name)")
     public UserDTO.UserResponse one(@PathVariable UUID id) {
         return convertToDTO(appUserService.findById(id));
     }
 
     @GetMapping("/email/{email}")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserDTO.UserResponse byEmail(@PathVariable String email) {
         return convertToDTO(appUserService.findByEmail(email));
     }
 
     @PostMapping
-    public ResponseEntity<UserDTO.UserResponse> create(@RequestBody AppUser user) {
-        AppUser created = appUserService.create(user);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserDTO.UserResponse> create(@RequestBody UserDTO.CreateUserRequest userDto) {
+        AppUser created = appUserService.create(userDto);
         return ResponseEntity.created(URI.create("/api/users/" + created.getUserId()))
                 .body(convertToDTO(created));
     }
 
     @PutMapping("/{id}")
-    public UserDTO.UserResponse update(@PathVariable UUID id, @RequestBody AppUser user) {
+    public UserDTO.UserResponse update(@PathVariable UUID id, @RequestBody UserDTO.CreateUserRequest user) {
         return convertToDTO(appUserService.update(id, user));
     }
 

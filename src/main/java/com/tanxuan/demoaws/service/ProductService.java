@@ -63,10 +63,19 @@ public class ProductService {
 
     public Product update(UUID id, Product updated, UUID categoryId, UUID brandId) {
         Product existing = findById(id);
-        existing.setPName(updated.getPName());
-        existing.setPDesc(updated.getPDesc());
-        existing.setPrice(updated.getPrice());
-
+        // Only overwrite fields if the client provided them (non-null)
+        if (updated.getPName() != null) {
+            existing.setPName(updated.getPName());
+        }
+        if (updated.getPDesc() != null) {
+            existing.setPDesc(updated.getPDesc());
+        }
+        if (updated.getPrice() != null) {
+            existing.setPrice(updated.getPrice());
+        }
+        if (updated.getIsActive() != null) {
+            existing.setIsActive(updated.getIsActive());
+        }
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new RuntimeException("Category not found"));

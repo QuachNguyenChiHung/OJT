@@ -30,7 +30,7 @@ public class ProductController {
     @GetMapping
     public List<ProductDTO.ProductResponse> all(Authentication authentication) {
         boolean isAdmin = isAdmin(authentication);
-        return productService.findAllForUser(isAdmin).stream()
+        return productService.findAll().stream()
             .map(this::convertToDTO)
             .collect(Collectors.toList());
     }
@@ -47,8 +47,7 @@ public class ProductController {
         product.setPName(productRequest.getName());
         product.setPDesc(productRequest.getDescription());
         product.setPrice(productRequest.getPrice());
-        System.out.println(productRequest.getCategoryId());
-        System.out.println(productRequest.getBrandId());
+        product.setIsActive(productRequest.getIsActive());
         Product created = productService.create(product, productRequest.getCategoryId(), productRequest.getBrandId());
         return ResponseEntity.created(URI.create("/api/products/" + created.getPId()))
             .body(convertToDTO(created));
@@ -64,9 +63,11 @@ public class ProductController {
             System.out.println(entry.getKey() + ": " + entry.getValue());
         }
         Product p=new Product();
+        System.out.println(Boolean.parseBoolean(body.get("isActive").toString()));
             p.setPrice(body.get("price") != null ? new BigDecimal(body.get("price").toString()) : null);
             p.setPName(body.get("PName") != null ? body.get("PName").toString() : null);
             p.setPDesc(body.get("pDesc") != null ? body.get("pDesc").toString() : null);
+            p.setIsActive(body.get("isActive") != null ? Boolean.parseBoolean(body.get("isActive").toString()) : false);
         return convertToDTO(productService.update(id, p, categoryId, brandId));
     }
 
@@ -142,6 +143,7 @@ public class ProductController {
             product.getPrice(),
             product.getCategory() != null ? product.getCategory().getCName() : null,
             product.getBrand() != null ? product.getBrand().getBrandName() : null,
+                product.getIsActive(),
             productService.productIsInStock(product.getPId()), // isAvailable - default value
             averageRating,
             ratingsCount

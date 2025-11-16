@@ -48,7 +48,7 @@ public class AuthController {
     public record AuthResponse(String token, String email, String fullName) {}
 
     // response for /me
-    public record MeResponse(String email, String fullName, String role, String phoneNumber, String address) {}
+    public record   MeResponse(String email, String fullName, String role, String phoneNumber, String address) {}
 
     @PostMapping("/signup")
     public ResponseEntity<Object> signup(@Valid @RequestBody AuthRequest req) {
@@ -62,7 +62,6 @@ public class AuthController {
             AppUser user = new AppUser();
             user.setEmail(req.email());
             user.setPassword(passwordEncoder.encode(req.password()));
-            user.setUName(req.email().split("@")[0]);
             user.setRole("USER");
             user.setIsActive(true);
 
@@ -121,6 +120,18 @@ public class AuthController {
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(ERROR_KEY, "Authentication failed"));
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Boolean> logout() {
+        ResponseCookie deleteCookie = ResponseCookie.from("token", "")
+                .httpOnly(true)
+                .secure(false)
+                .maxAge(0)
+                .path("/")
+                .sameSite("Lax")
+                .build();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, deleteCookie.toString()).body(true);
     }
 
     @GetMapping("/me")

@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Configuration
 public class DataInitializer {
@@ -253,8 +252,8 @@ public class DataInitializer {
                 pd.setProduct(products.get(i));
                 // cycle colors so we have variety across the 50 details
                 pd.setColor(colors.get((i * 5 + j) % colors.size()));
-                // Ensure at least 4 images and they must be "/img/clothes.png"
-                pd.setImgList("[\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\"]");
+                // Ensure at least 5 images and they must be "/img/clothes.png"
+                pd.setImgList("[\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\"]");
                 pd.setSize(sizes[j % sizes.length]);
                 // amount decreases with j to create variety
                 pd.setAmount(10 - j);
@@ -279,7 +278,7 @@ public class DataInitializer {
             u.setUName("User " + (i+1));
             u.setAddress((123 + i) + " Main St");
             u.setRole(i == 2 || i == 7 ? "ADMIN" : (i == 1 || i == 5 ? "EMPLOYEE" : "USER"));
-            u.setIsActive(i == 4 ? false : true);
+            u.setIsActive(i != 4);
             u.setPassword(passwordEncoder.encode("password" + (i+1)));
             users.add(u);
         }
