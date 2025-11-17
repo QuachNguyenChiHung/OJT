@@ -3,15 +3,15 @@ package com.tanxuan.demoaws.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.bedrock.BedrockClient;
-import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeClient;
+import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
+import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeClient;
 @Configuration
 public class BedrockConfig {
 
     @Bean
-    public BedrockRuntimeClient bedrockClient() {
-        return BedrockRuntimeClient.builder()
-                .region(Region.US_EAST_1)
+    public BedrockAgentRuntimeAsyncClient bedrockClient() {
+        return BedrockAgentRuntimeAsyncClient.builder()
+                .region(Region.AP_SOUTHEAST_1)
                 .build();
     }
 }
