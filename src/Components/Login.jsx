@@ -46,7 +46,7 @@ const Login = () => {
     }, []);
     const [alertType, setAlert] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const success_login_alert = () => {
         return (
             <Alert variant="success" dismissible>
@@ -54,7 +54,7 @@ const Login = () => {
             </Alert>
         )
     }
-    
+
     const failed_login_alert = () => {
         return (
             <>
@@ -85,12 +85,12 @@ const Login = () => {
         e.preventDefault();
         setIsLoading(true);
         setAlert(''); // Clear any previous alerts
-        
+
         try {
             const response = await axios.post(import.meta.env.VITE_API_URL + '/auth/login', formData, {
                 withCredentials: true
             });
-            
+
             // If login successful, show success message
             if (response.status === 200) {
                 setAlert('success_login');
