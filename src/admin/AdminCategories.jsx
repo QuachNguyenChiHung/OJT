@@ -18,7 +18,7 @@ export default function AdminCategories() {
     }
     catch (error) {
       console.error('Failed to fetch categories', error);
-      alert('Failed to fetch categories');
+      alert('Không thể tải danh mục');
     }
   }
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function AdminCategories() {
       setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
     } catch (error) {
       console.error('Add category failed', error);
-      alert('Failed to add category');
+      alert('Không thể thêm danh mục');
     }
     setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
     setName('');
@@ -82,7 +82,7 @@ export default function AdminCategories() {
       setCats((c) => c.filter(x => x.id !== id));
     } catch (error) {
       console.error('Delete category failed', error);
-      alert(error?.response?.data?.message || 'Failed to delete category');
+      alert(error?.response?.data?.message || 'Không thể xóa danh mục');
     }
 
   };
@@ -98,14 +98,14 @@ export default function AdminCategories() {
   };
 
   const saveEdit = async (id) => {
-    if (!editingName.trim()) return alert('Tên không được rỗng');
+    if (!editingName.trim()) return alert('Tên danh mục không được để trống');
     try {
       const res = await axios.put(`${import.meta.env.VITE_API_URL}/categories/${id}`, { name: editingName.trim() }, { withCredentials: true });
       setCats(c => c.map(item => item.id === id ? { ...item, name: editingName.trim() } : item));
     } catch (error) {
       console.error('Update category failed', error);
       if (!error.response || !error.response.data || !error.response.data.message)
-        alert('Failed to update category');
+        alert('Không thể cập nhật danh mục');
       else
         alert(error.response.data.message);
     }
@@ -116,11 +116,11 @@ export default function AdminCategories() {
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Admin - Categories</h2>
+        <h2>Quản Trị - Danh Mục</h2>
         <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Users</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Brands</Link>
-          <Link to="/admin/products" className="btn btn-outline-secondary">Products</Link>
+          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
         </div>
       </div>
 
@@ -135,7 +135,7 @@ export default function AdminCategories() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search categories by name or ID..."
+                placeholder="Tìm kiếm danh mục theo tên hoặc ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -145,14 +145,14 @@ export default function AdminCategories() {
                   type="button"
                   onClick={() => setSearchTerm('')}
                 >
-                  Clear
+                  Xóa
                 </button>
               )}
             </div>
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Showing {filteredCats.length} of {cats.length} categories
+              Hiển thị {filteredCats.length} trong tổng số {cats.length} danh mục
             </small>
           </div>
         </div>
@@ -161,26 +161,26 @@ export default function AdminCategories() {
       <form onSubmit={add} className="mb-3 d-flex gap-2">
         <input
           className="form-control"
-          placeholder="New category name"
+          placeholder="Tên danh mục mới"
           value={name}
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Add Category</button>
+        <button className="btn btn-orange" type="submit">Thêm Danh Mục</button>
       </form>
 
       <div className="list-group">
         {filteredCats.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `No categories found matching "${searchTerm}"` : 'No categories available'}
+              {searchTerm ? `Không tìm thấy danh mục nào khớp với "${searchTerm}"` : 'Không có danh mục nào'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Clear search to show all categories
+                Xóa tìm kiếm để hiển thị tất cả danh mục
               </button>
             )}
           </div>
@@ -206,18 +206,18 @@ export default function AdminCategories() {
               <div className="d-flex gap-2">
                 {editingId === c.id ? (
                   <>
-                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(c.id)}>Save</button>
-                    <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Cancel</button>
+                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(c.id)}>Lưu</button>
+                    <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Hủy</button>
                   </>
                 ) : (
                   <>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(c)}>Edit</button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(c)}>Sửa</button>
                     <button
                       className="btn btn-sm btn-outline-danger"
                       onClick={() => remove(c.id)}
-                      title="Delete category"
+                      title="Xóa danh mục"
                     >
-                      Delete
+                      Xóa
                     </button>
                   </>
                 )}

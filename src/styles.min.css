@@ -7,6 +7,27 @@
     color: #fff
 }
 
+.form-control {
+    border: #E49400 1px solid;
+}
+
+.list-group-item {
+    border: #E49400 1px solid !important;
+    margin-bottom: 1rem;
+}
+
+.form-select {
+    border: #E49400 1px solid;
+}
+
+tr {
+    border: #E49400 1px solid;
+}
+
+th {
+    border: #E49400 1px solid;
+}
+
 .foot-list {
     color: #fff
 }

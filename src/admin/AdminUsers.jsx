@@ -90,14 +90,14 @@ export default function AdminUsers() {
   const addUser = async (e) => {
     e.preventDefault();
     if (!userForm.email.trim() || !userForm.fullName.trim()) {
-      alert('Email and name are required');
+      alert('Email và tên là bắt buộc');
       return;
     }
 
     // Check if email already exists locally
     const emailExists = users.some(user => user.email.toLowerCase() === userForm.email.toLowerCase());
     if (emailExists) {
-      alert('Email already exists');
+      alert('Email đã tồn tại');
       return;
     }
 
@@ -128,13 +128,7 @@ export default function AdminUsers() {
       });
     } catch (err) {
       console.error('Create user failed', err);
-      // Fallback to local add with the payload (server unavailable or validation failed)
-      setUsers((u) => [{
-        ...payload,
-        id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`,
-        // default to active for local fallback
-        active: true
-      }, ...u]);
+      alert('Không thể tạo người dùng');
       setUserForm({
         email: '',
         phoneNumber: '',
@@ -146,7 +140,7 @@ export default function AdminUsers() {
         password: ''
       });
       // surface error to user
-      alert('Failed to create user on server; added locally');
+      alert('Không thể tạo người dùng');
     }
   };
 
@@ -157,7 +151,7 @@ export default function AdminUsers() {
   const updateUser = async (e) => {
     e.preventDefault();
     if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
-      alert('Email and name are required');
+      alert('Email và tên là bắt buộc');
       return;
     }
 
@@ -167,7 +161,7 @@ export default function AdminUsers() {
       user.email.toLowerCase() === editingUser.email.toLowerCase()
     );
     if (emailExists) {
-      alert('Email already exists');
+      alert('Email đã tồn tại');
       return;
     }
 
@@ -200,23 +194,11 @@ export default function AdminUsers() {
           active: typeof updated.active !== 'undefined' ? updated.active : u.active,
           dateOfBirth: updated.dateOfBirth ?? u.dateOfBirth
         }) : u));
-      } else {
-        // fallback: update locally
-        setUsers(users => users.map(u => u.id === editingUser.id ? ({
-          ...u,
-          email: editingUser.email.trim(),
-          phoneNumber: editingUser.phoneNumber?.trim() || null,
-          fullName: editingUser.fullName.trim(),
-          address: editingUser.address?.trim() || null,
-          role: editingUser.role,
-          active: Boolean(editingUser.active),
-          dateOfBirth: editingUser.dateOfBirth || null
-        }) : u));
       }
       setEditingUser(null);
     } catch (err) {
       console.error('Update user failed', err);
-      alert('Failed to update user on server; updated locally');
+      alert('Không thể cập nhật người dùng');
       // fallback: update locally
       setUsers(users => users.map(u => u.id === editingUser.id ? ({
         ...u,
@@ -238,7 +220,7 @@ export default function AdminUsers() {
   };
 
   const removeUser = (user_id) => {
-    if (!confirm('Delete this user? This action cannot be undone.')) return;
+    if (!confirm('Xóa người dùng này? Hành động này không thể hoàn tác.')) return;
     setUsers((u) => u.filter(x => x.id !== user_id));
   };
 
@@ -258,12 +240,12 @@ export default function AdminUsers() {
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Admin - Users Management</h2>
+        <h2>Quản Trị - Quản Lý Người Dùng</h2>
         <div>
-          <Link to="/admin/products" className="btn btn-outline-secondary me-2">Products</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Brands</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Refresh</button>
+          <Link to="/admin/products" className="btn btn-outline-secondary me-2">Sản Phẩm</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Làm Mới</button>
         </div>
       </div>
 
@@ -278,7 +260,7 @@ export default function AdminUsers() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search users by name, email, phone, role, or status..."
+                placeholder="Tìm kiếm người dùng theo tên, email, số điện thoại, vai trò hoặc trạng thái..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -288,14 +270,14 @@ export default function AdminUsers() {
                   type="button"
                   onClick={() => setSearchTerm('')}
                 >
-                  Clear
+                  Xóa
                 </button>
               )}
             </div>
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Showing {filteredUsers.length} of {users.length} users
+              Hiển thị {filteredUsers.length} trong tổng số {users.length} người dùng
             </small>
           </div>
         </div>
@@ -303,7 +285,7 @@ export default function AdminUsers() {
 
       {/* User Creation/Edit Form */}
       <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
-        <h4>{editingUser ? 'Edit User' : 'Create New User'}</h4>
+        <h4>{editingUser ? 'Chỉnh Sửa Người Dùng' : 'Tạo Người Dùng Mới'}</h4>
         <form onSubmit={editingUser ? updateUser : addUser}>
           <div className="row g-3">
             <div className="col-md-6">
@@ -322,11 +304,11 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Full Name *</label>
+              <label className="form-label">Họ Tên *</label>
               <input
                 className="form-control"
                 name="fullName"
-                placeholder="Full Name"
+                placeholder="Họ Tên"
                 value={editingUser ? editingUser.fullName : userForm.fullName}
                 onChange={editingUser ?
                   (e) => setEditingUser({ ...editingUser, fullName: e.target.value }) :
@@ -336,7 +318,7 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Phone Number</label>
+              <label className="form-label">Số Điện Thoại</label>
               <input
                 className="form-control"
                 name="phoneNumber"
@@ -350,7 +332,7 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-4">
-              <label className="form-label">Role</label>
+              <label className="form-label">Vai Trò</label>
               <select
                 className="form-select"
                 name="role"
@@ -360,13 +342,13 @@ export default function AdminUsers() {
                   handleUserChange
                 }
               >
-                <option value="USER">User</option>
-                <option value="ADMIN">Admin</option>
+                <option value="USER">Người Dùng</option>
+                <option value="ADMIN">Quản Trị Viên</option>
               </select>
             </div>
             {editingUser && (
               <div className="col-md-4">
-                <label className="form-label">Status</label>
+                <label className="form-label">Trạng Thái</label>
                 <select
                   className="form-select"
                   name="active"
@@ -376,13 +358,13 @@ export default function AdminUsers() {
                     handleUserChange
                   }
                 >
-                  <option value={true}>Active</option>
-                  <option value={false}>Inactive</option>
+                  <option value={true}>Hoạt Động</option>
+                  <option value={false}>Không Hoạt Động</option>
                 </select>
               </div>
             )}
             <div className="col-md-6">
-              <label className="form-label">Date of Birth (18-100 years old)</label>
+              <label className="form-label">Ngày Sinh (18-100 tuổi)</label>
               <input
                 className="form-control"
                 name="dateOfBirth"
@@ -395,12 +377,12 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Password {!editingUser && '*'}</label>
+              <label className="form-label">Mật Khẩu {!editingUser && '*'}</label>
               <input
                 className="form-control"
                 name="password"
                 type="password"
-                placeholder={editingUser ? "Leave blank to keep current password" : "Enter password"}
+                placeholder={editingUser ? "Để trống để giữ mật khẩu hiện tại" : "Nhập mật khẩu"}
                 value={editingUser ? (editingUser.password || '') : userForm.password}
                 onChange={editingUser ?
                   (e) => setEditingUser({ ...editingUser, password: e.target.value }) :
@@ -410,11 +392,11 @@ export default function AdminUsers() {
               />
             </div>
             <div className="col-md-12">
-              <label className="form-label">Address</label>
+              <label className="form-label">Địa Chỉ</label>
               <textarea
                 className="form-control"
                 name="address"
-                placeholder="Full address"
+                placeholder="Địa chỉ đầy đủ"
                 rows="2"
                 value={editingUser ? (editingUser.address || '') : userForm.address}
                 onChange={editingUser ?
@@ -426,11 +408,11 @@ export default function AdminUsers() {
             <div className="col-md-12">
               {editingUser ? (
                 <div className="d-flex gap-2">
-                  <button className="btn btn-success" type="submit">Update User</button>
-                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Cancel</button>
+                  <button className="btn btn-success" type="submit">Cập Nhật Người Dùng</button>
+                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Create User</button>
+                <button className="btn btn-orange" type="submit">Tạo Người Dùng</button>
               )}
             </div>
           </div>
@@ -442,14 +424,14 @@ export default function AdminUsers() {
         {filteredUsers.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `No users found matching "${searchTerm}"` : 'No users available'}
+              {searchTerm ? `Không tìm thấy người dùng nào với từ khóa "${searchTerm}"` : 'Không có người dùng nào'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Clear search to show all users
+                Xóa tìm kiếm để hiển thị tất cả người dùng
               </button>
             )}
           </div>
@@ -459,26 +441,26 @@ export default function AdminUsers() {
               <div className="d-flex justify-content-between align-items-start">
                 <div style={{ flex: 1 }}>
                   <div className="d-flex align-items-center mb-2">
-                    <h5 className="mb-0 me-3">{user.fullName || '(No name)'}</h5>
-                    <span className={`badge bg-${getRoleColor(user.role)} me-2`}>{user.role}</span>
-                    <span className={`badge bg-${getStatusColor(user.active)}`}>{user.active ? 'ACTIVE' : 'INACTIVE'}</span>
+                    <h5 className="mb-0 me-3">{user.fullName || '(Chưa có tên)'}</h5>
+                    <span className={`badge bg-${getRoleColor(user.role)} me-2`}>{user.role === 'ADMIN' ? 'QUẢN TRỊ' : 'NGƯÒI DÙNG'}</span>
+                    <span className={`badge bg-${getStatusColor(user.active)}`}>{user.active ? 'HOẠT ĐỔNG' : 'KHÔNG HOẠT ĐỔNG'}</span>
                   </div>
                   <div className="text-muted small mb-1">
                     <strong>Email:</strong> {user.email}
                   </div>
                   {user.phoneNumber && (
                     <div className="text-muted small mb-1">
-                      <strong>Phone:</strong> {user.phoneNumber}
+                      <strong>Điện thoại:</strong> {user.phoneNumber}
                     </div>
                   )}
                   {user.dateOfBirth && (
                     <div className="text-muted small mb-1">
-                      <strong>Birth Date:</strong> {new Date(user.dateOfBirth).toLocaleDateString()}
+                      <strong>Ngày sinh:</strong> {new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}
                     </div>
                   )}
                   {user.address && (
                     <div className="text-muted small">
-                      <strong>Address:</strong> {user.address.length > 100 ? `${user.address.substring(0, 100)}...` : user.address}
+                      <strong>Địa chỉ:</strong> {user.address.length > 100 ? `${user.address.substring(0, 100)}...` : user.address}
                     </div>
                   )}
                 </div>
@@ -488,20 +470,24 @@ export default function AdminUsers() {
                     onClick={() => startEditUser(user)}
                     disabled={editingUser && editingUser.id === user.id}
                   >
-                    Edit
+                    Sửa
                   </button>
                   <button
                     className="btn btn-sm btn-outline-danger"
                     onClick={() => removeUser(user.id)}
                   >
-                    Delete
+                    Xóa
                   </button>
-                  <Link
-                    to={`/admin/users/${user.id}`}
+                  <button
+                    type="button"
                     className="btn btn-sm btn-primary"
+                    onClick={() => {
+                      navigate(`/admin/users/${user.id}`);
+                      return;
+                    }}
                   >
-                    View Details
-                  </Link>
+                    Xem Chi Tiết
+                  </button>
                 </div>
               </div>
             </div>

@@ -17,7 +17,7 @@ export default function AdminBrands() {
       setBrands(response.data);
     }
     catch (error) {
-      alert('Failed to fetch brands');
+      alert('Không thể tải thương hiệu');
     }
   }
   useEffect(() => {
@@ -69,10 +69,10 @@ export default function AdminBrands() {
       // assume API returns created brand
       setBrands(b => [res.data, ...b]);
       setName('');
-      alert('Brand added');
+      alert('Thêm thương hiệu thành công');
     } catch (err) {
       console.error('Add brand failed', err);
-      alert('Failed to add brand');
+      alert('Không thể thêm thương hiệu');
     }
   };
 
@@ -81,9 +81,9 @@ export default function AdminBrands() {
     try {
       await axios.delete(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { withCredentials: true });
       setBrands((b) => b.filter(x => x.brandId !== brandId));
-      alert('Brand deleted');
+      alert('Xóa thương hiệu thành công');
     } catch (err) {
-      alert(err?.response?.data?.message || 'Failed to delete brand');
+      alert(err?.response?.data?.message || 'Không thể xóa thương hiệu');
       console.error('Delete brand failed', err);
     }
   };
@@ -99,26 +99,26 @@ export default function AdminBrands() {
   };
 
   const saveEdit = async (brandId) => {
-    if (!editingName.trim()) return alert('Tên không được rỗng');
+    if (!editingName.trim()) return alert('Tên thương hiệu không được để trống');
     try {
       const res = await axios.put(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { brandName: editingName.trim() }, { withCredentials: true });
       setBrands(b => b.map(item => item.brandId === brandId ? res.data : item));
       cancelEdit();
-      alert('Brand updated');
+      alert('Cập nhật thương hiệu thành công');
     } catch (err) {
       console.error('Update brand failed', err);
-      alert('Failed to update brand');
+      alert('Không thể cập nhật thương hiệu');
     }
   };
 
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Admin - Brands</h2>
+        <h2>Quản Trị - Thương Hiệu</h2>
         <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Users</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
-          <Link to="/admin/products" className="btn btn-outline-secondary">Products</Link>
+          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
+          <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
         </div>
       </div>
       {/* inline editing (Edit toggles row into input) */}
@@ -134,7 +134,7 @@ export default function AdminBrands() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search brands by name or ID..."
+                placeholder="Tìm kiếm thương hiệu theo tên hoặc ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -144,14 +144,14 @@ export default function AdminBrands() {
                   type="button"
                   onClick={() => setSearchTerm('')}
                 >
-                  Clear
+                  Xóa
                 </button>
               )}
             </div>
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Showing {filteredBrands.length} of {brands.length} brands
+              Hiển thị {filteredBrands.length} trong tổng số {brands.length} thương hiệu
             </small>
           </div>
         </div>
@@ -160,26 +160,26 @@ export default function AdminBrands() {
       <form onSubmit={add} className="mb-3 d-flex gap-2">
         <input
           className="form-control"
-          placeholder="New brand name"
+          placeholder="Tên thương hiệu mới"
           value={name}
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Add Brand</button>
+        <button className="btn btn-orange" type="submit">Thêm Thương Hiệu</button>
       </form>
 
       <div className="list-group">
         {filteredBrands.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `No brands found matching "${searchTerm}"` : 'No brands available'}
+              {searchTerm ? `Không tìm thấy thương hiệu nào khớp với "${searchTerm}"` : 'Không có thương hiệu nào'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Clear search to show all brands
+                Xóa tìm kiếm để hiển thị tất cả thương hiệu
               </button>
             )}
           </div>
@@ -205,18 +205,18 @@ export default function AdminBrands() {
               <div className="d-flex gap-2">
                 {editingId === b.brandId ? (
                   <>
-                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(b.brandId)}>Save</button>
-                    <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Cancel</button>
+                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(b.brandId)}>Lưu</button>
+                    <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Hủy</button>
                   </>
                 ) : (
                   <>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(b)}>Edit</button>
+                    <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(b)}>Sửa</button>
                     <button
                       className="btn btn-sm btn-outline-danger"
                       onClick={() => remove(b.brandId)}
-                      title="Delete brand"
+                      title="Xóa thương hiệu"
                     >
-                      Delete
+                      Xóa
                     </button>
                   </>
                 )}

@@ -13,6 +13,7 @@ const Navbar = () => {
     const navigate = useNavigate();
     const menuItems = Array(7).fill('QUẦN ÁO');
     const [loggedIn, setLoggedIn] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [currentUser, setCurrentUser] = useState({
         email: '',
         fullName: '',
@@ -70,6 +71,9 @@ const Navbar = () => {
                                     className="form-control search-control"
                                     type="text"
                                     placeholder="Tìm kiếm từ khóa"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') navigate('/search?q=' + encodeURIComponent(searchQuery)); }}
                                     style={{
                                         borderWidth: '2px',
                                         borderColor: 'rgb(228, 148, 0)',
@@ -77,6 +81,7 @@ const Navbar = () => {
                                     }}
                                 />
                                 <button
+                                    onClick={() => navigate("/search?q=" + encodeURIComponent(searchQuery))}
                                     className="btn"
                                     type="button"
                                     style={{
@@ -118,6 +123,9 @@ const Navbar = () => {
                                             className="form-control search-control"
                                             type="text"
                                             placeholder="Tìm kiếm từ khóa"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') navigate('/search?q=' + encodeURIComponent(searchQuery)); }}
                                             style={{
                                                 borderWidth: '2px',
                                                 borderColor: 'rgb(228, 148, 0)',
@@ -127,6 +135,7 @@ const Navbar = () => {
                                         <button
                                             className="btn"
                                             type="button"
+                                            onClick={() => navigate("/search?q=" + encodeURIComponent(searchQuery))}
                                             style={{
                                                 background: 'rgb(228, 148, 0)',
                                                 padding: '0px 14px',
@@ -161,12 +170,13 @@ const Navbar = () => {
                                                 <span className="ms-2 d-none d-md-inline">{currentUser.fullName || currentUser.email}</span>
                                             </button>
                                             <div className="dropdown-menu">
-                                                <a className="dropdown-item" href="#">
+                                                <button
+                                                    className="dropdown-item"
+                                                    type="button"
+                                                    onClick={() => navigate('/profile')}
+                                                >
                                                     Thông Tin Cá Nhân
-                                                </a>
-                                                <a className="dropdown-item" href="#">
-                                                    Lịch Sử Mua Hàng
-                                                </a>
+                                                </button>
                                                 <button className="dropdown-item" type="button" onClick={logout}>
                                                     Đăng Xuất
                                                 </button>
@@ -174,13 +184,17 @@ const Navbar = () => {
                                         </div>
                                     </div>
                                     <div className="mx-1">
-                                        <a className="d-block" href="#">
+                                        <button
+                                            className="btn p-0 border-0 bg-transparent"
+                                            onClick={() => navigate('/orders')}
+                                            style={{ cursor: 'pointer' }}
+                                        >
                                             <img
                                                 className="icon shopping"
                                                 src={shoppingCartImg}
                                                 alt="Shopping Cart"
                                             />
-                                        </a>
+                                        </button>
                                     </div>
                                 </>
                             ) : (

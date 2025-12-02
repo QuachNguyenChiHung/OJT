@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-const Filter = () => {
+const Filter = ({ onFilterChange }) => {
+    const [searchQuery, setSearchQuery] = useState('');
     const [sortBy, setSortBy] = useState('newest');
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedBrands, setSelectedBrands] = useState([]);
@@ -18,6 +20,32 @@ const Filter = () => {
         }
     };
 
+    useEffect(() => {
+        if (typeof onFilterChange === 'function') {
+            onFilterChange({
+                q: searchQuery,
+                sortBy,
+                sizes: selectedSizes,
+                brands: selectedBrands,
+                colors: selectedColors
+            });
+        }
+    }, [searchQuery, sortBy, selectedSizes, selectedBrands, selectedColors, onFilterChange]);
+
+    const navigate = useNavigate();
+
+    const handleApply = () => {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('q', searchQuery);
+        if (sortBy) params.set('sort', sortBy);
+        if (selectedSizes.length) params.set('sizes', selectedSizes.join(','));
+        if (selectedBrands.length) params.set('brands', selectedBrands.join(','));
+        if (selectedColors.length) params.set('colors', selectedColors.join(','));
+
+        // Navigate to /search with the query string
+        navigate(`/search?${params.toString()}`);
+    };
+
     return (
         <section className="d-flex justify-content-center mt-3">
             <div
@@ -32,6 +60,16 @@ const Filter = () => {
                         <option value="popular">Phố biến</option>
                         <option value="newest">Mới nhất</option>
                     </select>
+                </div>
+                <div className="d-flex align-items-center ms-3">
+                    <input
+                        type="text"
+                        className="form-control"
+                        placeholder="Tìm kiếm..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ maxWidth: '240px' }}
+                    />
                 </div>
                 <div>
                     <p style={{ marginBottom: 0 }}>Theo kích cỡ</p>
@@ -113,6 +151,11 @@ const Filter = () => {
                             Hồng
                         </label>
                     </div>
+                </div>
+                <div className="d-flex align-items-center">
+                    <button type="button" className="btn btn-primary ms-3" onClick={handleApply}>
+                        Áp dụng
+                    </button>
                 </div>
             </div>
         </section>

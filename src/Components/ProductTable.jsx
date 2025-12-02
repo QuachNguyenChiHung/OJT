@@ -4,7 +4,7 @@ import { Button } from 'react-bootstrap';
 const clothesImg = '/img/clothes.png';
 
 const ProductTable = ({ title, data, pagination }) => {
-    // Sample product data - in a real app, this would come from props or state
+    // Sample product data - used as a fallback when `data` prop is empty
     const products = Array(6).fill({
         id: 1,
         name: 'Áo đen Gucci Deluxe',
@@ -13,8 +13,10 @@ const ProductTable = ({ title, data, pagination }) => {
         onSale: true
     });
 
+    const items = Array.isArray(data) && data.length ? data : products;
+
     const pageNumbers = [1, 2, 3, 4, 5];
-    
+
     return (
         <div className="container py-4 py-xl-5" style={{ maxWidth: '1200px' }}>
             <div className="row mb-5">
@@ -23,7 +25,7 @@ const ProductTable = ({ title, data, pagination }) => {
                 </div>
             </div>
             <div className="row gy-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
-                {products.map((product, index) => (
+                {items.map((product, index) => (
 
                     <div key={index} className="col">
                         {/** Replace products with data prop when available */}
