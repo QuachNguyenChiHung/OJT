@@ -37,25 +37,25 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
 
     public record AuthRequest(
-        @Email(message = "Please provide a valid email address")
-        @NotBlank(message = "Email is required")
-        String email,
+            @Email(message = "Please provide a valid email address")
+            @NotBlank(message = "Email is required")
+            String email,
 
-        @NotBlank(message = "Password is required")
-        String password
+            @NotBlank(message = "Password is required")
+            String password
     ) {}
 
     public record AuthResponse(String token, String email, String fullName) {}
 
     // response for /me
-    public record   MeResponse(String email, String fullName, String role, String phoneNumber, String address) {}
+    public record   MeResponse(String u_id ,String email, String fullName, String role, String phoneNumber, String address) {}
 
     @PostMapping("/signup")
     public ResponseEntity<Object> signup(@Valid @RequestBody AuthRequest req) {
         if (appUserRepository.findByEmail(req.email()).isPresent()) {
             return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(Map.of(ERROR_KEY, "Email already registered"));
+                    .status(HttpStatus.CONFLICT)
+                    .body(Map.of(ERROR_KEY, "Email already registered"));
         }
 
         try {
@@ -74,8 +74,8 @@ public class AuthController {
         } catch (Exception e) {
 
             return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(ERROR_KEY, "Failed to create user account"));
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(ERROR_KEY, "Failed to create user account"));
         }
     }
 
@@ -85,17 +85,17 @@ public class AuthController {
         try {
             // First check if user exists and is active
             AppUser user = appUserRepository.findByEmail(req.email())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+                    .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
             // Check if user is active
             if (user.getIsActive() == null || !user.getIsActive()) {
                 return ResponseEntity
-                    .status(HttpStatus.FORBIDDEN)
-                    .body(Map.of(ERROR_KEY, "Account is inactive. Please contact administrator."));
+                        .status(HttpStatus.FORBIDDEN)
+                        .body(Map.of(ERROR_KEY, "Account is inactive. Please contact administrator."));
             }
 
             authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.email(), req.password())
+                    new UsernamePasswordAuthenticationToken(req.email(), req.password())
             );
 
             UserDetails ud = userDetailsService.loadUserByUsername(req.email());
@@ -112,13 +112,13 @@ public class AuthController {
             return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE,jwtCookie.toString()).body(new AuthResponse(token, user.getEmail(), user.getUName()));
         } catch (BadCredentialsException e) {
             return ResponseEntity
-                .status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of(ERROR_KEY, "Invalid email or password"));
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of(ERROR_KEY, "Invalid email or password"));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(ERROR_KEY, "Authentication failed"));
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of(ERROR_KEY, "Authentication failed"));
         }
     }
 
@@ -144,7 +144,7 @@ public class AuthController {
         AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        MeResponse resp = new MeResponse(user.getEmail(), user.getUName(), user.getRole(), user.getPhoneNumber(), user.getAddress());
+        MeResponse resp = new MeResponse(user.getUserId().toString(),user.getEmail(), user.getUName(), user.getRole(), user.getPhoneNumber(), user.getAddress());
         return ResponseEntity.ok(resp);
     }
 }

@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -147,5 +148,70 @@ public class ProductService {
             return productRepository.findByPNameContainingIgnoreCase(name);
         }
         return productRepository.findByPNameContainingIgnoreCaseAndIsActive(name, true);
+    }
+
+    public String getRepresentativeImageUrl(UUID productId) {
+        List<ProductDetails> productDetails = productDetailsRepository.findByProductPId(productId);
+        if (productDetails != null && !productDetails.isEmpty()) {
+            for (ProductDetails pd : productDetails) {
+                if (pd.getImgList() != null && !pd.getImgList().trim().isEmpty()) {
+                    // Get the first image URL from the imgList
+                    String imgList = pd.getImgList().trim();
+
+                    // Remove all brackets and backslashes
+                    imgList = imgList.replaceAll("[\\[\\]\\\\]", "");
+
+                    // If images are separated by comma, semicolon, or pipe, get the first one
+                    String[] images = imgList.split("[,;|]");
+                    if (images.length > 0 && !images[0].trim().isEmpty()) {
+                        String cleanUrl = images[0].trim();
+                        // Final cleanup: remove any remaining special characters
+                        cleanUrl = cleanUrl.replaceAll("\\\\", "");
+                        return cleanUrl;
+                    }
+                }
+            }
+        }
+        return null; // No image found
+    }
+
+    public List<String> getExactlyFiveImages(String imgList) {
+        List<String> images = new ArrayList<>();
+
+        // Parse the image list
+        if (imgList != null && !imgList.trim().isEmpty()) {
+            // Remove all brackets and backslashes from the entire string first
+            String cleanedImgList = imgList.trim().replaceAll("[\\[\\]\\\\]", "");
+
+            String[] imageArray = cleanedImgList.split("[,;|]");
+            for (String img : imageArray) {
+                String trimmed = img.trim();
+                if (!trimmed.isEmpty()) {
+                    // Final cleanup: remove any remaining backslashes
+                    trimmed = trimmed.replaceAll("\\\\", "");
+                    images.add(trimmed);
+                }
+            }
+        }
+
+        // Ensure exactly 5 images
+        while (images.size() < 5) {
+            // Add placeholder image if less than 5
+            images.add("https://via.placeholder.com/500x500?text=No+Image");
+        }
+
+        // Trim to exactly 5 if more than 5
+        if (images.size() > 5) {
+            images = images.subList(0, 5);
+        }
+
+        return images;
+    }
+
+    public List<Product> findBestSellingProducts(boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findBestSellingProducts();
+        }
+        return productRepository.findBestSellingProductsByActiveStatus(true);
     }
 }

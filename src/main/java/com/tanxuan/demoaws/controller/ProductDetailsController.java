@@ -40,12 +40,6 @@ public class ProductDetailsController {
         return ResponseEntity.ok(productDetails);
     }
 
-    // Get product details by color ID
-    @GetMapping("/color/{colorId}")
-    public ResponseEntity<List<ProductDetailsDTO>> getProductDetailsByColorId(@PathVariable UUID colorId) {
-        List<ProductDetailsDTO> productDetails = productDetailsService.getProductDetailsByColorId(colorId);
-        return ResponseEntity.ok(productDetails);
-    }
 
     // Create product details
     @PostMapping

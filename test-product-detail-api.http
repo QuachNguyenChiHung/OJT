@@ -1,0 +1,74 @@
+### API Chi tiết Sản phẩm - Test Cases
+
+### 1. Lấy chi tiết sản phẩm theo ID (thay YOUR_PRODUCT_ID bằng ID thật)
+GET http://localhost:8080/api/products/detail/YOUR_PRODUCT_ID
+Content-Type: application/json
+
+###
+
+### 2. Test với một product ID cụ thể (cần thay bằng ID thực tế từ database)
+GET http://localhost:8080/api/products/detail/123e4567-e89b-12d3-a456-426614174000
+Content-Type: application/json
+
+###
+
+### 3. Lấy chi tiết sản phẩm - Example 2
+GET http://localhost:8080/api/products/detail/223e4567-e89b-12d3-a456-426614174001
+Content-Type: application/json
+
+###
+
+### 4. Test với ID không tồn tại (sẽ trả về lỗi)
+GET http://localhost:8080/api/products/detail/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+###
+
+### 5. Test với ID format sai (sẽ trả về lỗi)
+GET http://localhost:8080/api/products/detail/invalid-uuid
+Content-Type: application/json
+
+###
+
+### Kết quả mong đợi cho request thành công:
+# Status: 200 OK
+# Response Body:
+# {
+#   "id": "uuid-string",
+#   "name": "Tên sản phẩm",
+#   "price": 299000.00,
+#   "productDetails": [
+#     {
+#       "pdId": "uuid-string",
+#       "colorName": "Đỏ",
+#       "colorCode": "#FF0000",
+#       "size": "M",
+#       "amount": 100,
+#       "inStock": true,
+#       "images": [
+#         "image1.jpg",
+#         "image2.jpg",
+#         "image3.jpg",
+#         "image4.jpg",
+#         "image5.jpg"
+#       ]
+#     }
+#   ]
+# }
+
+###
+
+### LƯU Ý:
+# - Mỗi product detail LUÔN có đúng 5 hình ảnh
+# - Nếu database có ít hơn 5 ảnh, sẽ thêm placeholder
+# - Nếu database có nhiều hơn 5 ảnh, chỉ lấy 5 ảnh đầu tiên
+# - Placeholder: https://via.placeholder.com/500x500?text=No+Image
+
+###
+
+### Để lấy danh sách product IDs có sẵn, dùng API list:
+GET http://localhost:8080/api/products/list
+Content-Type: application/json
+
+###
+

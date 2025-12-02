@@ -20,7 +20,6 @@ public class DataInitializer {
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
             ProductDetailsRepository productDetailsRepository,
-            ColorRepository colorRepository,
             AppUserRepository appUserRepository,
             CustomerOrderRepository orderRepository,
             OrderDetailsRepository orderDetailsRepository,
@@ -34,7 +33,6 @@ public class DataInitializer {
                         categoryRepository,
                         productRepository,
                         productDetailsRepository,
-                        colorRepository,
                         appUserRepository,
                         orderRepository,
                         orderDetailsRepository,
@@ -51,7 +49,6 @@ public class DataInitializer {
             CategoryRepository categoryRepository,
             ProductRepository productRepository,
             ProductDetailsRepository productDetailsRepository,
-            ColorRepository colorRepository,
             AppUserRepository appUserRepository,
             CustomerOrderRepository orderRepository,
             OrderDetailsRepository orderDetailsRepository,
@@ -213,19 +210,6 @@ public class DataInitializer {
         }
         brandRepository.saveAll(brands);
 
-        // --- Create Colors ---
-        String[] colorNames = {"Red 1","Green 1","Blue 1","Black 1","White 1","Yellow 1","Purple 1","Orange 1","Gray 1","Cyan 1"};
-        String[] colorCodes = {"#FF0001","#00FF01","#0000FF","#000000","#FFFFFF","#FFFF00","#800080","#FFA500","#808080","#00FFFF"};
-        List<Color> colors = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
-            Color col = new Color();
-            // DO NOT set ID manually
-            col.setColorName(colorNames[i]);
-            col.setColorCode(colorCodes[i]);
-            colors.add(col);
-        }
-        colorRepository.saveAll(colors);
-
         // --- Create Products ---
         List<Product> products = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
@@ -242,6 +226,8 @@ public class DataInitializer {
         productRepository.saveAll(products);
 
         // --- Create ProductDetails ---
+        String[] colorNames = {"Red 1","Green 1","Blue 1","Black 1","White 1","Yellow 1","Purple 1","Orange 1","Gray 1","Cyan 1"};
+        String[] colorCodes = {"#FF0001","#00FF01","#0000FF","#000000","#FFFFFF","#FFFF00","#800080","#FFA500","#808080","#00FFFF"};
         List<ProductDetails> pds = new ArrayList<>();
         String[] sizes = {"S","M","L","XL","XXL"}; // 5 sizes for product details
         // We'll create 5 product details per product
@@ -251,7 +237,9 @@ public class DataInitializer {
                 // DO NOT set ID manually
                 pd.setProduct(products.get(i));
                 // cycle colors so we have variety across the 50 details
-                pd.setColor(colors.get((i * 5 + j) % colors.size()));
+                int colorIndex = (i * 5 + j) % colorNames.length;
+                pd.setColorName(colorNames[colorIndex]);
+                pd.setColorCode(colorCodes[colorIndex]);
                 // Ensure at least 5 images and they must be "/img/clothes.png"
                 pd.setImgList("[\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\",\"/img/clothes.png\"]");
                 pd.setSize(sizes[j % sizes.length]);

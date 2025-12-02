@@ -112,6 +112,40 @@ public class ProductController {
             .collect(Collectors.toList());
     }
 
+    @GetMapping("/list")
+    public List<ProductDTO.ProductSearchResponse> listProducts(
+            @RequestParam(required = false) String search,
+            Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+
+        List<Product> products;
+        if (search != null && !search.trim().isEmpty()) {
+            // Search by name if search parameter is provided
+            products = productService.findByNameContainingForUser(search, isAdmin);
+        } else {
+            // Return all products if no search parameter
+            products = productService.findAllForUser(isAdmin);
+        }
+
+        return products.stream()
+            .map(this::convertToSearchDTO)
+            .collect(Collectors.toList());
+    }
+
+    @GetMapping("/detail/{id}")
+    public ProductDTO.ProductDetailResponse getProductDetail(@PathVariable UUID id) {
+        Product product = productService.findById(id);
+        return convertToDetailDTO(product);
+    }
+
+    @GetMapping("/best-selling")
+    public List<ProductDTO.ProductSearchResponse> getBestSellingProducts(Authentication authentication) {
+        boolean isAdmin = isAdmin(authentication);
+        return productService.findBestSellingProducts(isAdmin).stream()
+            .map(this::convertToSearchDTO)
+            .collect(Collectors.toList());
+    }
+
     // Helper method to check if user is admin
     private boolean isAdmin(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
@@ -147,6 +181,45 @@ public class ProductController {
             productService.productIsInStock(product.getPId()), // isAvailable - default value
             averageRating,
             ratingsCount
+        );
+    }
+
+    // Helper method to convert Entity to ProductSearchResponse DTO
+    private ProductDTO.ProductSearchResponse convertToSearchDTO(Product product) {
+        String imageUrl = productService.getRepresentativeImageUrl(product.getPId());
+
+        return new ProductDTO.ProductSearchResponse(
+            product.getPId(),
+            product.getPName(),
+            product.getPrice(),
+            imageUrl
+        );
+    }
+
+    // Helper method to convert Entity to ProductDetailResponse DTO
+    private ProductDTO.ProductDetailResponse convertToDetailDTO(Product product) {
+        List<ProductDTO.ProductDetailVariant> variants = product.getProductDetails().stream()
+            .map(pd -> {
+                // Get exactly 5 images for this product detail
+                List<String> images = productService.getExactlyFiveImages(pd.getImgList());
+
+                return new ProductDTO.ProductDetailVariant(
+                    pd.getPdId(),
+                    pd.getColorName(),
+                    pd.getColorCode(),
+                    pd.getSize(),
+                    pd.getAmount(),
+                    pd.getInStock(),
+                    images
+                );
+            })
+            .collect(Collectors.toList());
+
+        return new ProductDTO.ProductDetailResponse(
+            product.getPId(),
+            product.getPName(),
+            product.getPrice(),
+            variants
         );
     }
 }
