@@ -37,6 +37,7 @@ public class SecurityConfig {
             "/api/brands/**",
             "/api/products",
             "/api/products/**",
+            "/api/ratings/product/**",
             "api/categories",
             "/api/categories/**",
             "/api/colors",

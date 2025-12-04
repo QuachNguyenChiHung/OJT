@@ -24,8 +24,8 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final ProductDetailsRepository productDetailsRepository;
     public ProductService(ProductRepository productRepository,
-                        CategoryRepository categoryRepository,
-                        BrandRepository brandRepository, ProductDetailsRepository productDetailsRepository) {
+                          CategoryRepository categoryRepository,
+                          BrandRepository brandRepository, ProductDetailsRepository productDetailsRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -45,18 +45,18 @@ public class ProductService {
 
     public Product findById(UUID id) {
         return productRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
 
     public Product create(Product product, UUID categoryId, UUID brandId) {
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
             product.setCategory(category);
         }
         if (brandId != null) {
             Brand brand = brandRepository.findById(brandId)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+                    .orElseThrow(() -> new RuntimeException("Brand not found"));
             product.setBrand(brand);
         }
         return productRepository.save(product);
@@ -79,12 +79,12 @@ public class ProductService {
         }
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
             existing.setCategory(category);
         }
         if (brandId != null) {
             Brand brand = brandRepository.findById(brandId)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+                    .orElseThrow(() -> new RuntimeException("Brand not found"));
             existing.setBrand(brand);
         }
         return productRepository.save(existing);
@@ -155,40 +155,74 @@ public class ProductService {
         if (productDetails != null && !productDetails.isEmpty()) {
             for (ProductDetails pd : productDetails) {
                 if (pd.getImgList() != null && !pd.getImgList().trim().isEmpty()) {
-                    // Get the first image URL from the imgList
                     String imgList = pd.getImgList().trim();
 
-                    // Remove all brackets and backslashes
-                    imgList = imgList.replaceAll("[\\[\\]\\\\]", "");
+                    // Aggressive cleanup - remove all special characters
+                    // Remove quotes (both single and double, escaped or not)
+                    imgList = imgList.replace("\\\"", "");
+                    imgList = imgList.replace("\"", "");
+                    imgList = imgList.replace("\\'", "");
+                    imgList = imgList.replace("'", "");
 
-                    // If images are separated by comma, semicolon, or pipe, get the first one
+                    // Remove escaped forward slash
+                    imgList = imgList.replace("\\/", "/");
+
+                    // Remove brackets
+                    imgList = imgList.replace("[", "");
+                    imgList = imgList.replace("]", "");
+
+                    // Replace all backslashes with forward slash
+                    imgList = imgList.replace("\\", "/");
+
+                    // Split by comma, semicolon, or pipe to get first image
                     String[] images = imgList.split("[,;|]");
                     if (images.length > 0 && !images[0].trim().isEmpty()) {
                         String cleanUrl = images[0].trim();
-                        // Final cleanup: remove any remaining special characters
-                        cleanUrl = cleanUrl.replaceAll("\\\\", "");
+
+                        // Ensure format starts with /
+                        if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
+                            cleanUrl = "/" + cleanUrl;
+                        }
+
                         return cleanUrl;
                     }
                 }
             }
         }
-        return null; // No image found
+        return null;
     }
 
     public List<String> getExactlyFiveImages(String imgList) {
         List<String> images = new ArrayList<>();
 
-        // Parse the image list
         if (imgList != null && !imgList.trim().isEmpty()) {
-            // Remove all brackets and backslashes from the entire string first
-            String cleanedImgList = imgList.trim().replaceAll("[\\[\\]\\\\]", "");
+            String cleanedImgList = imgList.trim();
+
+            // Aggressive cleanup - remove all special characters
+            // Remove quotes (both single and double, escaped or not)
+            cleanedImgList = cleanedImgList.replace("\\\"", "");
+            cleanedImgList = cleanedImgList.replace("\"", "");
+            cleanedImgList = cleanedImgList.replace("\\'", "");
+            cleanedImgList = cleanedImgList.replace("'", "");
+
+            // Remove escaped forward slash
+            cleanedImgList = cleanedImgList.replace("\\/", "/");
+
+            // Remove brackets
+            cleanedImgList = cleanedImgList.replace("[", "");
+            cleanedImgList = cleanedImgList.replace("]", "");
+
+            // Replace all backslashes with forward slash
+            cleanedImgList = cleanedImgList.replace("\\", "/");
 
             String[] imageArray = cleanedImgList.split("[,;|]");
             for (String img : imageArray) {
                 String trimmed = img.trim();
                 if (!trimmed.isEmpty()) {
-                    // Final cleanup: remove any remaining backslashes
-                    trimmed = trimmed.replaceAll("\\\\", "");
+                    // Ensure format starts with /
+                    if (!trimmed.startsWith("/") && !trimmed.startsWith("http")) {
+                        trimmed = "/" + trimmed;
+                    }
                     images.add(trimmed);
                 }
             }
@@ -196,11 +230,9 @@ public class ProductService {
 
         // Ensure exactly 5 images
         while (images.size() < 5) {
-            // Add placeholder image if less than 5
             images.add("https://via.placeholder.com/500x500?text=No+Image");
         }
 
-        // Trim to exactly 5 if more than 5
         if (images.size() > 5) {
             images = images.subList(0, 5);
         }

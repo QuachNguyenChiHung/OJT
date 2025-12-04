@@ -78,6 +78,18 @@ public class CustomerOrderController {
             .body(toOrderResponse(created));
     }
 
+    /**
+     * Create COD Order Endpoint
+     * POST /api/orders/create-cod
+     */
+    @PostMapping("/create-cod")
+    public ResponseEntity<OrderDTO.OrderResponseDTO> createOrderCOD(@Valid @RequestBody OrderDTO.CreateOrderRequest request) {
+        OrderDTO.OrderResponseDTO response = orderService.createOrderCOD(request);
+        return ResponseEntity
+            .created(URI.create("/api/orders/" + response.getOrderId()))
+            .body(response);
+    }
+
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderDTO.OrderResponse> updateOrderStatus(
             @PathVariable UUID id,

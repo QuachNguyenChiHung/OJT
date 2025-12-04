@@ -24,6 +24,8 @@ public class OrderDTO {
         private List<OrderItemRequest> items;
 
         private String shippingAddress;
+        private String phone;
+        private String paymentMethod;
         private String note;
     }
 
@@ -104,6 +106,36 @@ public class OrderDTO {
         @NotNull(message = "Ngày kết thúc không được để trống")
         @PastOrPresent(message = "Ngày kết thúc không được ở tương lai")
         private Instant endDate;
+    }
+
+    // DTO for COD Order Creation
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CreateOrderRequest {
+        @NotNull(message = "User ID is required")
+        private UUID userId;
+
+        @NotNull(message = "Shipping address is required")
+        private String shippingAddress;
+
+        @NotNull(message = "Phone is required")
+        @Pattern(regexp = "^[0-9]{10,13}$", message = "Phone number must be 10-13 digits")
+        private String phone;
+
+        @NotEmpty(message = "Order items cannot be empty")
+        private List<OrderItemRequest> items;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class OrderResponseDTO {
+        private UUID orderId;
+        private String status;
+        private BigDecimal totalPrice;
+        private String paymentMethod;
+        private String message;
     }
 }
 
