@@ -73,7 +73,7 @@ const Navbar = () => {
                                     placeholder="Tìm kiếm từ khóa"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') navigate('/search?q=' + encodeURIComponent(searchQuery)); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { navigate('/search?q=' + encodeURIComponent(searchQuery)); return; } }}
                                     style={{
                                         borderWidth: '2px',
                                         borderColor: 'rgb(228, 148, 0)',
@@ -81,7 +81,7 @@ const Navbar = () => {
                                     }}
                                 />
                                 <button
-                                    onClick={() => navigate("/search?q=" + encodeURIComponent(searchQuery))}
+                                    onClick={() => { navigate("/search?q=" + encodeURIComponent(searchQuery)); return; }}
                                     className="btn"
                                     type="button"
                                     style={{
@@ -167,7 +167,7 @@ const Navbar = () => {
                                                     alt="User"
                                                     style={{ width: '34px', height: '34px', objectFit: 'cover' }}
                                                 />
-                                                <span className="ms-2 d-none d-md-inline">{currentUser.fullName || currentUser.email}</span>
+
                                             </button>
                                             <div className="dropdown-menu">
                                                 <button
@@ -176,6 +176,13 @@ const Navbar = () => {
                                                     onClick={() => navigate('/profile')}
                                                 >
                                                     Thông Tin Cá Nhân
+                                                </button>
+                                                <button
+                                                    className="dropdown-item"
+                                                    type="button"
+                                                    onClick={() => navigate('/orders')}
+                                                >
+                                                    Đơn Hàng Của Tôi
                                                 </button>
                                                 <button className="dropdown-item" type="button" onClick={logout}>
                                                     Đăng Xuất
@@ -186,7 +193,7 @@ const Navbar = () => {
                                     <div className="mx-1">
                                         <button
                                             className="btn p-0 border-0 bg-transparent"
-                                            onClick={() => navigate('/orders')}
+                                            onClick={() => navigate('/cart')}
                                             style={{ cursor: 'pointer' }}
                                         >
                                             <img
@@ -202,7 +209,7 @@ const Navbar = () => {
                                     <div className="mx-1">
                                         <Button variant="orange" className='btn-orange' style={{
                                             borderColor: 'rgb(228, 148, 0)'
-                                        }} onClick={() => navigate('/login')}>
+                                        }} onClick={() => {navigate('/login');}}>
                                             Đăng Nhập
                                         </Button>
                                         <Button variant="orange" className='btn-orange mx-3' style={{

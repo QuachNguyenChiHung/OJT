@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const Filter = ({ onFilterChange }) => {
     const [searchQuery, setSearchQuery] = useState('');
@@ -7,6 +7,18 @@ const Filter = ({ onFilterChange }) => {
     const [selectedSizes, setSelectedSizes] = useState([]);
     const [selectedBrands, setSelectedBrands] = useState([]);
     const [selectedColors, setSelectedColors] = useState([]);
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    // Initialize filter values from URL parameters
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchQuery(params.get('q') || '');
+        setSortBy(params.get('sort') || 'newest');
+        setSelectedSizes(params.get('sizes') ? params.get('sizes').split(',') : []);
+        setSelectedBrands(params.get('brands') ? params.get('brands').split(',') : []);
+        setSelectedColors(params.get('colors') ? params.get('colors').split(',') : []);
+    }, [location.search]);
 
     const handleSortChange = (e) => {
         setSortBy(e.target.value);
@@ -30,9 +42,7 @@ const Filter = ({ onFilterChange }) => {
                 colors: selectedColors
             });
         }
-    }, [searchQuery, sortBy, selectedSizes, selectedBrands, selectedColors, onFilterChange]);
-
-    const navigate = useNavigate();
+    }, [searchQuery, sortBy, selectedSizes, selectedBrands, selectedColors]); // Removed onFilterChange from dependencies
 
     const handleApply = () => {
         const params = new URLSearchParams();
@@ -47,116 +57,52 @@ const Filter = ({ onFilterChange }) => {
     };
 
     return (
-        <section className="d-flex justify-content-center mt-3">
-            <div
-                className="d-block d-md-flex justify-content-around"
-                style={{ maxWidth: '1200px', width: '100%' }}
-            >
-                <div className="d-flex align-items-center ">
-                    <p style={{ marginBottom: 0 }}>Sắp xếp theo&nbsp;</p>
-                    <select value={sortBy} onChange={handleSortChange}>
-                        <option value="desc">Giá từ cao đến thấp</option>
-                        <option value="asc">Giá từ thấp đến cao</option>
-                        <option value="popular">Phố biến</option>
-                        <option value="newest">Mới nhất</option>
-                    </select>
-                </div>
-                <div className="d-flex align-items-center ms-3">
-                    <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Tìm kiếm..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ maxWidth: '240px' }}
-                    />
-                </div>
-                <div>
-                    <p style={{ marginBottom: 0 }}>Theo kích cỡ</p>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="size-s"
-                            checked={selectedSizes.includes('S')}
-                            onChange={() => handleCheckboxChange('S', setSelectedSizes, selectedSizes)}
-                        />
-                        <label className="form-check-label" htmlFor="size-s">
-                            S
-                        </label>
+        <section className="bg-light py-3">
+            <div className="container">
+                <div className="row">
+
+                    {/* Sort */}
+                    <div className="col-md-2 mb-3">
+                        <label className="form-label fw-bold">Sắp xếp theo</label>
+                        <select className="form-select" value={sortBy} onChange={handleSortChange}>
+                            <option value="newest">Mới nhất</option>
+                            <option value="popular">Phổ biến</option>
+                            <option value="asc">Giá từ thấp đến cao</option>
+                            <option value="desc">Giá từ cao đến thấp</option>
+                        </select>
                     </div>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="size-xl"
-                            checked={selectedSizes.includes('XL')}
-                            onChange={() => handleCheckboxChange('XL', setSelectedSizes, selectedSizes)}
-                        />
-                        <label className="form-check-label" htmlFor="size-xl">
-                            XL
-                        </label>
-                    </div>
+
+
                 </div>
-                <div>
-                    <p style={{ marginBottom: 0 }}>Theo thương hiệu</p>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="brand-nike"
-                            checked={selectedBrands.includes('Nike')}
-                            onChange={() => handleCheckboxChange('Nike', setSelectedBrands, selectedBrands)}
-                        />
-                        <label className="form-check-label" htmlFor="brand-nike">
-                            Nike
-                        </label>
+
+                {/* Active Filters Display */}
+                {(selectedSizes.length > 0 || selectedBrands.length > 0 || selectedColors.length > 0) && (
+                    <div className="row mt-2">
+                        <div className="col-12">
+                            <small className="text-muted">Bộ lọc đang áp dụng: </small>
+                            {selectedSizes.length > 0 && (
+                                <span className="badge bg-secondary me-1">Size: {selectedSizes.join(', ')}</span>
+                            )}
+                            {selectedBrands.length > 0 && (
+                                <span className="badge bg-secondary me-1">Thương hiệu: {selectedBrands.join(', ')}</span>
+                            )}
+                            {selectedColors.length > 0 && (
+                                <span className="badge bg-secondary me-1">Màu: {selectedColors.join(', ')}</span>
+                            )}
+                            <button
+                                className="btn btn-link btn-sm p-0 ms-2"
+                                onClick={() => {
+                                    setSelectedSizes([]);
+                                    setSelectedBrands([]);
+                                    setSelectedColors([]);
+                                    navigate('/search' + (searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : ''));
+                                }}
+                            >
+                                Xóa bộ lọc
+                            </button>
+                        </div>
                     </div>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="brand-nintendo"
-                            checked={selectedBrands.includes('Nintendo')}
-                            onChange={() => handleCheckboxChange('Nintendo', setSelectedBrands, selectedBrands)}
-                        />
-                        <label className="form-check-label" htmlFor="brand-nintendo">
-                            Nintendo
-                        </label>
-                    </div>
-                </div>
-                <div>
-                    <p style={{ marginBottom: 0 }}>Theo màu sắc</p>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="color-red"
-                            checked={selectedColors.includes('Đỏ')}
-                            onChange={() => handleCheckboxChange('Đỏ', setSelectedColors, selectedColors)}
-                        />
-                        <label className="form-check-label" htmlFor="color-red">
-                            Đỏ
-                        </label>
-                    </div>
-                    <div className="form-check">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            id="color-pink"
-                            checked={selectedColors.includes('Hồng')}
-                            onChange={() => handleCheckboxChange('Hồng', setSelectedColors, selectedColors)}
-                        />
-                        <label className="form-check-label" htmlFor="color-pink">
-                            Hồng
-                        </label>
-                    </div>
-                </div>
-                <div className="d-flex align-items-center">
-                    <button type="button" className="btn btn-primary ms-3" onClick={handleApply}>
-                        Áp dụng
-                    </button>
-                </div>
+                )}
             </div>
         </section>
     );
