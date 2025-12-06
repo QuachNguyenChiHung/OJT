@@ -11,6 +11,7 @@ import com.tanxuan.demoaws.service.CustomerOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -33,6 +34,7 @@ public class CustomerOrderController {
     private final AppUserRepository appUserRepository;
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<OrderDTO.OrderSummary>> getAllOrders() {
         return ResponseEntity.ok(orderService.findAll().stream()
             .map(this::toOrderSummary)

@@ -26,7 +26,8 @@ public class DataInitializer {
             OrderDetailsRepository orderDetailsRepository,
             BannerRepository bannerRepository,
             BrandRepository brandRepository,
-            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            CartRepository cartRepository // added cart repository
     ) {
         return args -> {
             if (categoryRepository.count() == 0) {
@@ -39,7 +40,8 @@ public class DataInitializer {
                         orderDetailsRepository,
                         bannerRepository,
                         brandRepository,
-                        passwordEncoder
+                        passwordEncoder,
+                        cartRepository // pass through
                 );
             }
         };
@@ -55,7 +57,8 @@ public class DataInitializer {
             OrderDetailsRepository orderDetailsRepository,
             BannerRepository bannerRepository,
             BrandRepository brandRepository,
-            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            CartRepository cartRepository // added
     ) {
         // We'll create 10 of each entity and wire relations similar to sample.sql
 
@@ -358,6 +361,23 @@ public class DataInitializer {
                 productRepository.save(p);
             }
         }
+
+        // --- Create Carts: add 5 carts per user ---
+        List<Cart> carts = new ArrayList<>();
+        // We'll pick random productDetails for each cart entry
+        for (AppUser u : users) {
+            for (int i = 0; i < 5; i++) {
+                Cart cart = new Cart();
+                cart.setUser(u);
+                // choose a random product detail across all pds
+                ProductDetails randomPd = pds.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(0, pds.size()));
+                cart.setProductDetails(randomPd);
+                // random quantity between 1 and 5
+                cart.setQuantity(java.util.concurrent.ThreadLocalRandom.current().nextInt(1, 6));
+                carts.add(cart);
+            }
+        }
+        cartRepository.saveAll(carts);
 
     }
 }

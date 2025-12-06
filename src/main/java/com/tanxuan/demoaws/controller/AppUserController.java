@@ -55,6 +55,13 @@ public class AppUserController {
         return convertToDTO(appUserService.update(id, user));
     }
 
+    @PutMapping("/profile/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @appUserService.isOwner(#id, authentication.name)")
+    public UserDTO.UserResponse updateProfile(@PathVariable UUID id, @RequestBody @jakarta.validation.Valid UserDTO.UserUpdateRequest user) {
+        System.out.println("user received in controller: " + user.getDateOfBirth());
+        return convertToDTO(appUserService.updateProfile(id, user));
+    }
+
     @PatchMapping("/{id}/status")
     public UserDTO.UserResponse updateStatus(@PathVariable UUID id, @RequestParam boolean isActive) {
         return convertToDTO(appUserService.updateStatus(id, isActive));
