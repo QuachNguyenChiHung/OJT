@@ -1,0 +1,143 @@
+### Update User Profile API Test
+
+### 1. Update Profile - Valid Request (must be authenticated as the user or admin)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Nguyen Van A",
+  "phoneNumber": "0123456789",
+  "address": "123 Nguyen Hue Street, District 1, Ho Chi Minh City",
+  "dateOfBirth": "1990-01-15"
+}
+
+### 2. Update Profile - Minimal Required Fields (only fullName and dateOfBirth are required)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Tran Thi B",
+  "dateOfBirth": "1995-05-20"
+}
+
+### 3. Update Profile - With Optional Phone and Address
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Le Van C",
+  "phoneNumber": "+84987654321",
+  "address": "456 Le Loi Street, Da Nang",
+  "dateOfBirth": "1988-12-10"
+}
+
+### 4. Update Profile - Invalid Full Name (too short)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "AB",
+  "dateOfBirth": "1990-01-15"
+}
+
+### 5. Update Profile - Invalid Phone Number Format
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Nguyen Van D",
+  "phoneNumber": "123",
+  "dateOfBirth": "1990-01-15"
+}
+
+### 6. Update Profile - Invalid Date of Birth (under 18)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Nguyen Van E",
+  "dateOfBirth": "2015-01-15"
+}
+
+### 7. Update Profile - Invalid Date of Birth (future date)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Nguyen Van F",
+  "dateOfBirth": "2030-01-15"
+}
+
+### 8. Update Profile - Empty Phone and Address (clearing optional fields)
+PUT http://localhost:8080/api/users/profile/{{userId}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "fullName": "Nguyen Van G",
+  "phoneNumber": "",
+  "address": "",
+  "dateOfBirth": "1992-03-25"
+}
+
+### Variables to set:
+# {{userId}} - The UUID of the user to update (e.g., "3738c911-5806-4110-a2b4-4df317f44d2d")
+# {{token}} - JWT authentication token
+
+### Expected Response (Success - 200 OK):
+# {
+#   "id": "3738c911-5806-4110-a2b4-4df317f44d2d",
+#   "email": "user@example.com",
+#   "fullName": "Nguyen Van A",
+#   "phoneNumber": "0123456789",
+#   "address": "123 Nguyen Hue Street, District 1, Ho Chi Minh City",
+#   "dateOfBirth": "1990-01-15",
+#   "role": "USER",
+#   "active": true
+# }
+
+### Expected Response (Validation Error - 400 Bad Request):
+# {
+#   "timestamp": "2024-12-06T10:30:00",
+#   "status": 400,
+#   "error": "Bad Request",
+#   "message": "Validation failed",
+#   "errors": [
+#     {
+#       "field": "fullName",
+#       "message": "Họ và tên phải từ 3 đến 255 ký tự"
+#     }
+#   ]
+# }
+
+### Expected Response (Unauthorized - 401 Unauthorized):
+# {
+#   "timestamp": "2024-12-06T10:30:00",
+#   "status": 401,
+#   "error": "Unauthorized",
+#   "message": "Full authentication is required to access this resource"
+# }
+
+### Expected Response (Forbidden - 403 Forbidden):
+# {
+#   "timestamp": "2024-12-06T10:30:00",
+#   "status": 403,
+#   "error": "Forbidden",
+#   "message": "Access Denied"
+# }
+
+### Expected Response (Not Found - 404 Not Found):
+# {
+#   "timestamp": "2024-12-06T10:30:00",
+#   "status": 404,
+#   "error": "Not Found",
+#   "message": "User not found"
+# }
+
