@@ -16,6 +16,10 @@
     margin-bottom: 1rem;
 }
 
+.card {
+    border: #E49400 2px solid;
+}
+
 .form-select {
     border: #E49400 1px solid;
 }

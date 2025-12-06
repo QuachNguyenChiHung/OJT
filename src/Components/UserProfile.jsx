@@ -23,7 +23,7 @@ export default function UserProfile() {
       }
 
       // Then get user details
-      const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/users/${authRes.data.id}`, { withCredentials: true });
+      const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/users/${authRes.data.u_id}`, { withCredentials: true });
       setUser(userRes.data);
       setError(null);
     } catch (error) {
@@ -182,7 +182,7 @@ export default function UserProfile() {
                 <p className="text-muted">Chỉnh sửa thông tin cá nhân của bạn</p>
                 <button
                   className="btn btn-success"
-                  onClick={() => navigate('/enter-info')}
+                  onClick={() => navigate('/update-profile')}
                 >
                   Chỉnh Sửa
                 </button>

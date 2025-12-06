@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 
 const EnterInfo = () => {
     const [formData, setFormData] = useState({
-        date_of_birth: '',
+        u_id: '',
+        dateOfBirth: '',
         phone_number: '',
         address: '',
         u_name: '',
@@ -21,6 +22,7 @@ const EnterInfo = () => {
                 const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
                 const u = res.data || {};
                 setFormData({
+                    u_id: u.u_id || u.id || '',
                     date_of_birth: u.date_of_birth || u.dateOfBirth || '',
                     phone_number: u.phoneNumber || u.phone_number || u.phone || '',
                     address: u.address || '',
@@ -28,7 +30,7 @@ const EnterInfo = () => {
                     age: u.age || ''
                 });
             } catch (err) {
-                // ignore - user may not be logged in
+                navigate('/login');
             }
         };
         load();
@@ -41,14 +43,31 @@ const EnterInfo = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setAlert(null);
+
+        // Validate age if dateOfBirth is provided
+        if (formData.dateOfBirth && formData.dateOfBirth.trim() !== '') {
+            const birthDate = new Date(formData.dateOfBirth);
+            const today = new Date();
+            const age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+
+            // Adjust age if birthday hasn't occurred this year
+            const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
+                ? age - 1 : age;
+
+            if (actualAge < 18 || actualAge > 100) {
+                setAlert({ type: 'danger', message: 'Tuổi phải từ 18 đến 100 tuổi.' });
+                return;
+            }
+        }
+
         try {
             // Update profile - using PATCH on /auth/me (adjust if your API differs)
-            await axios.put(import.meta.env.VITE_API_URL + 'users/' + formData.u_id, {
-                date_of_birth: formData.date_of_birth,
+            await axios.put(import.meta.env.VITE_API_URL + '/users/profile/' + formData.u_id, {
                 phoneNumber: formData.phone_number,
                 address: formData.address,
-                u_name: formData.u_name,
-                age: formData.age
+                fullName: formData.u_name,
+                dateOfBirth: formData.dateOfBirth
             }, { withCredentials: true });
 
             // Re-fetch user to determine role and redirect
@@ -89,26 +108,15 @@ const EnterInfo = () => {
                                         />
                                     </div>
                                     <div className="mb-3">
-                                        <label className="form-label">Ngày sinh</label>
+                                        <label className="form-label">Ngày sinh (18-100 tuổi)</label>
                                         <input
                                             className="form-control"
                                             type="date"
                                             name="date_of_birth"
                                             value={formData.date_of_birth}
                                             onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label className="form-label">Tuổi</label>
-                                        <input
-                                            className="form-control"
-                                            type="number"
-                                            name="age"
-                                            value={formData.age}
-                                            onChange={handleChange}
-                                            min="1"
-                                            max="150"
+                                            min={new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split('T')[0]}
+                                            max={new Date(new Date().getFullYear() - 18, 11, 31).toISOString().split('T')[0]}
                                             required
                                         />
                                     </div>

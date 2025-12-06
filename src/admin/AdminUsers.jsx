@@ -94,6 +94,23 @@ export default function AdminUsers() {
       return;
     }
 
+    // Validate age if dateOfBirth is provided
+    if (userForm.dateOfBirth && userForm.dateOfBirth.trim() !== '') {
+      const birthDate = new Date(userForm.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      // Adjust age if birthday hasn't occurred this year
+      const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
+        ? age - 1 : age;
+
+      if (actualAge < 18 || actualAge > 100) {
+        alert('Tuổi phải từ 18 đến 100 tuổi.');
+        return;
+      }
+    }
+
     // Check if email already exists locally
     const emailExists = users.some(user => user.email.toLowerCase() === userForm.email.toLowerCase());
     if (emailExists) {
@@ -153,6 +170,23 @@ export default function AdminUsers() {
     if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
       alert('Email và tên là bắt buộc');
       return;
+    }
+
+    // Validate age if dateOfBirth is provided
+    if (editingUser.dateOfBirth && editingUser.dateOfBirth.trim() !== '') {
+      const birthDate = new Date(editingUser.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      // Adjust age if birthday hasn't occurred this year
+      const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
+        ? age - 1 : age;
+
+      if (actualAge < 18 || actualAge > 100) {
+        alert('Tuổi phải từ 18 đến 100 tuổi.');
+        return;
+      }
     }
 
     // Check if email already exists (excluding current user)
@@ -245,6 +279,7 @@ export default function AdminUsers() {
           <Link to="/admin/products" className="btn btn-outline-secondary me-2">Sản Phẩm</Link>
           <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
           <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
           <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Làm Mới</button>
         </div>
       </div>
@@ -374,6 +409,8 @@ export default function AdminUsers() {
                   (e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value }) :
                   handleUserChange
                 }
+                min={new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split('T')[0]}
+                max={new Date(new Date().getFullYear() - 18, 11, 31).toISOString().split('T')[0]}
               />
             </div>
             <div className="col-md-6">

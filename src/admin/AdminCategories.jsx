@@ -120,6 +120,7 @@ export default function AdminCategories() {
         <div>
           <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
           <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
           <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
         </div>
       </div>

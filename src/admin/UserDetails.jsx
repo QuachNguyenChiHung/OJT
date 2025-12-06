@@ -70,6 +70,23 @@ export default function UserDetails() {
       return;
     }
 
+    // Validate age if dateOfBirth is provided
+    if (editingUser.dateOfBirth && editingUser.dateOfBirth.trim() !== '') {
+      const birthDate = new Date(editingUser.dateOfBirth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+
+      // Adjust age if birthday hasn't occurred this year
+      const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
+        ? age - 1 : age;
+
+      if (actualAge < 18 || actualAge > 100) {
+        alert('Tuổi phải từ 18 đến 100 tuổi.');
+        return;
+      }
+    }
+
     try {
       const payload = {
         email: editingUser.email.trim(),
@@ -243,12 +260,14 @@ export default function UserDetails() {
                     </select>
                   </div>
                   <div className="mb-3">
-                    <label className="form-label">Ngày Sinh</label>
+                    <label className="form-label">Ngày Sinh (18-100 tuổi)</label>
                     <input
                       className="form-control"
                       type="date"
                       value={editingUser.dateOfBirth || ''}
                       onChange={(e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value })}
+                      min={new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split('T')[0]}
+                      max={new Date(new Date().getFullYear() - 18, 11, 31).toISOString().split('T')[0]}
                     />
                   </div>
                   <div className="mb-3">

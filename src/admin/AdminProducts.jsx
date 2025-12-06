@@ -249,6 +249,7 @@ export default function AdminProducts() {
           <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
           <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
           <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
           <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm Mới</button>
         </div>
       </div>

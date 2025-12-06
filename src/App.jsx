@@ -24,9 +24,12 @@ import BrandPage from './pages/BrandPage'
 import AdminBrands from './admin/AdminBrands'
 import AdminUsers from './admin/AdminUsers'
 import UserDetails from './admin/UserDetails'
+import AdminOrders from './admin/AdminOrders'
 import ChatBot from './Components/ChatBot';
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
+import UpdateProfile from './Components/UpdateProfile';
+import CartPage from './pages/CartPage';
 
 function Layout() {
   const location = useLocation()
@@ -69,13 +72,16 @@ function Layout() {
         <Route path="/register" element={<Register />} />
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/cart" element={<CartPage />} />
         <Route path="/orders" element={<OrderPage />} />
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/brands" element={<BrandPage />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/products/:id" element={<AdminProductDetails />} />
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/brands" element={<AdminBrands />} />
+        <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/users/:id" element={<UserDetails />} />
         <Route path="*" element={<h2 className="text-center my-5">404 - Page Not Found</h2>} />
