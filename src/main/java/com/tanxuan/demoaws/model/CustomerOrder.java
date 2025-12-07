@@ -31,6 +31,15 @@ public class CustomerOrder {
     @Column(name = "total_price", precision = 10, scale = 2, nullable = false)
     private BigDecimal totalPrice;
 
+    @Column(name = "payment_method", length = 50)
+    private String paymentMethod;
+
+    @Column(name = "shipping_address", columnDefinition = "nvarchar(500)")
+    private String shippingAddress;
+
+    @Column(name = "phone", length = 20)
+    private String phone;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderDetails> orderDetails = new ArrayList<>();
 
@@ -46,6 +55,15 @@ public class CustomerOrder {
 
     public AppUser getUser() { return user; }
     public void setUser(AppUser user) { this.user = user; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public String getShippingAddress() { return shippingAddress; }
+    public void setShippingAddress(String shippingAddress) { this.shippingAddress = shippingAddress; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

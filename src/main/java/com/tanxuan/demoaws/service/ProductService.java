@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,8 +24,8 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final ProductDetailsRepository productDetailsRepository;
     public ProductService(ProductRepository productRepository,
-                        CategoryRepository categoryRepository,
-                        BrandRepository brandRepository, ProductDetailsRepository productDetailsRepository) {
+                          CategoryRepository categoryRepository,
+                          BrandRepository brandRepository, ProductDetailsRepository productDetailsRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.brandRepository = brandRepository;
@@ -44,18 +45,18 @@ public class ProductService {
 
     public Product findById(UUID id) {
         return productRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
 
     public Product create(Product product, UUID categoryId, UUID brandId) {
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
             product.setCategory(category);
         }
         if (brandId != null) {
             Brand brand = brandRepository.findById(brandId)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+                    .orElseThrow(() -> new RuntimeException("Brand not found"));
             product.setBrand(brand);
         }
         return productRepository.save(product);
@@ -78,12 +79,12 @@ public class ProductService {
         }
         if (categoryId != null) {
             Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
             existing.setCategory(category);
         }
         if (brandId != null) {
             Brand brand = brandRepository.findById(brandId)
-                .orElseThrow(() -> new RuntimeException("Brand not found"));
+                    .orElseThrow(() -> new RuntimeException("Brand not found"));
             existing.setBrand(brand);
         }
         return productRepository.save(existing);
@@ -147,5 +148,120 @@ public class ProductService {
             return productRepository.findByPNameContainingIgnoreCase(name);
         }
         return productRepository.findByPNameContainingIgnoreCaseAndIsActive(name, true);
+    }
+
+    public String getRepresentativeImageUrl(UUID productId) {
+        List<ProductDetails> productDetails = productDetailsRepository.findByProductPId(productId);
+        if (productDetails != null && !productDetails.isEmpty()) {
+            for (ProductDetails pd : productDetails) {
+                if (pd.getImgList() != null && !pd.getImgList().trim().isEmpty()) {
+                    String imgList = pd.getImgList().trim();
+
+                    // Aggressive cleanup - remove all special characters
+                    // Remove quotes (both single and double, escaped or not)
+                    imgList = imgList.replace("\\\"", "");
+                    imgList = imgList.replace("\"", "");
+                    imgList = imgList.replace("\\'", "");
+                    imgList = imgList.replace("'", "");
+
+                    // Remove escaped forward slash
+                    imgList = imgList.replace("\\/", "/");
+
+                    // Remove brackets
+                    imgList = imgList.replace("[", "");
+                    imgList = imgList.replace("]", "");
+
+                    // Replace all backslashes with forward slash
+                    imgList = imgList.replace("\\", "/");
+
+                    // Split by comma, semicolon, or pipe to get first image
+                    String[] images = imgList.split("[,;|]");
+                    if (images.length > 0 && !images[0].trim().isEmpty()) {
+                        String cleanUrl = images[0].trim();
+
+                        // Ensure format starts with /
+                        if (!cleanUrl.startsWith("/") && !cleanUrl.startsWith("http")) {
+                            cleanUrl = "/" + cleanUrl;
+                        }
+
+                        return cleanUrl;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public List<String> getExactlyFiveImages(String imgList) {
+        List<String> images = new ArrayList<>();
+
+        if (imgList != null && !imgList.trim().isEmpty()) {
+            String cleanedImgList = imgList.trim();
+
+            // Aggressive cleanup - remove all special characters
+            // Remove quotes (both single and double, escaped or not)
+            cleanedImgList = cleanedImgList.replace("\\\"", "");
+            cleanedImgList = cleanedImgList.replace("\"", "");
+            cleanedImgList = cleanedImgList.replace("\\'", "");
+            cleanedImgList = cleanedImgList.replace("'", "");
+
+            // Remove escaped forward slash
+            cleanedImgList = cleanedImgList.replace("\\/", "/");
+
+            // Remove brackets
+            cleanedImgList = cleanedImgList.replace("[", "");
+            cleanedImgList = cleanedImgList.replace("]", "");
+
+            // Replace all backslashes with forward slash
+            cleanedImgList = cleanedImgList.replace("\\", "/");
+
+            String[] imageArray = cleanedImgList.split("[,;|]");
+            for (String img : imageArray) {
+                String trimmed = img.trim();
+                if (!trimmed.isEmpty()) {
+                    // Ensure format starts with /
+                    if (!trimmed.startsWith("/") && !trimmed.startsWith("http")) {
+                        trimmed = "/" + trimmed;
+                    }
+                    images.add(trimmed);
+                }
+            }
+        }
+
+        // Ensure exactly 5 images
+        while (images.size() < 5) {
+            images.add("https://via.placeholder.com/500x500?text=No+Image");
+        }
+
+        if (images.size() > 5) {
+            images = images.subList(0, 5);
+        }
+
+        return images;
+    }
+
+    public List<Product> findBestSellingProducts(boolean isAdmin) {
+        List<UUID> productIds;
+        if (isAdmin) {
+            productIds = productRepository.findBestSellingProductIds();
+        } else {
+            productIds = productRepository.findBestSellingProductIdsByActiveStatus(true);
+        }
+
+        return productIds.stream()
+                .limit(12)
+                .map(this::findById)
+                .toList();
+    }
+
+    public List<Product> findNewestProducts(boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findNewestProducts().stream()
+                    .limit(12)
+                    .toList();
+        }
+        return productRepository.findNewestProductsByActiveStatus(true).stream()
+                .limit(12)
+                .toList();
     }
 }

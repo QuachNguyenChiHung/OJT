@@ -1,0 +1,86 @@
+### Upload 5 Images to Product Details (Initial Upload)
+POST http://localhost:8080/api/product-details/YOUR-PRODUCT-DETAILS-UUID-HERE/images
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image1.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image2.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image2.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image3.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image3.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image4.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image4.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image5.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image5.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### Update Product Images - Replace All 5 Images
+POST http://localhost:8080/api/product-details/550e8400-e29b-41d4-a716-446655440000/images
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="new-image1.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/new-image1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="new-image2.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/new-image2.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="new-image3.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/new-image3.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="new-image4.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/new-image4.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="new-image5.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/new-image5.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+###
+
+### Error Test - Wrong Number of Images (Should Fail)
+POST http://localhost:8080/api/product-details/550e8400-e29b-41d4-a716-446655440000/images
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image1.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image1.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="files"; filename="image2.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/your/image2.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+# Expected Error: "Exactly 5 images are required. Received: 2"
+
+###
+

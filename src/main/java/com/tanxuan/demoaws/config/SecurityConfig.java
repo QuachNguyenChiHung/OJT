@@ -37,6 +37,8 @@ public class SecurityConfig {
             "/api/brands/**",
             "/api/products",
             "/api/products/**",
+
+            "/api/ratings/product/**",
             "api/categories",
             "/api/categories/**",
             "/api/colors",
@@ -67,6 +69,7 @@ public class SecurityConfig {
                 .requestMatchers(WHITE_LIST_URL).permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET,WHITE_LIST_URL_GET).permitAll()
+                    .requestMatchers(HttpMethod.POST,"/api/images/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

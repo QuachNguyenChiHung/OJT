@@ -27,7 +27,7 @@ public class AppUserService {
 
     public AppUser findById(UUID id) {
         return appUserRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
     public AppUser create(UserDTO.CreateUserRequest userDto) {
@@ -49,7 +49,17 @@ public class AppUserService {
         user.setUName(userDto.getFullName());
         user.setPhoneNumber(userDto.getPhoneNumber());
         user.setAddress(userDto.getAddress());
-        user.setDateOfBirth(userDto.getDateOfBirth());
+        
+        // Parse dateOfBirth from String to LocalDate
+        if (userDto.getDateOfBirth() != null && !userDto.getDateOfBirth().trim().isEmpty()) {
+            try {
+                java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                user.setDateOfBirth(java.time.LocalDate.parse(userDto.getDateOfBirth(), formatter));
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new RuntimeException("Invalid date format: please use dd/MM/yyyy format");
+            }
+        }
+        
         user.setRole(userDto.getRole() != null ? userDto.getRole() : "USER");
         user.setIsActive(userDto.getIsActive() != null ? userDto.getIsActive() : true);
 
@@ -91,11 +101,54 @@ public class AppUserService {
         }
 
         // New: update dateOfBirth when provided and validate age
-        if (updatedUser.getDateOfBirth() != null) {
-            if (!updatedUser.isValidAge()) {
-                throw new RuntimeException("Invalid age: user must be between 18 and 100 years old");
+        if (updatedUser.getDateOfBirth() != null && !updatedUser.getDateOfBirth().trim().isEmpty()) {
+            try {
+                java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                java.time.LocalDate birthDate = java.time.LocalDate.parse(updatedUser.getDateOfBirth(), formatter);
+                int age = java.time.Period.between(birthDate, java.time.LocalDate.now()).getYears();
+                if (age < 18 || age > 100) {
+                    throw new RuntimeException("Invalid age: user must be between 18 and 100 years old");
+                }
+                existingUser.setDateOfBirth(birthDate);
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new RuntimeException("Invalid date format: please use dd/MM/yyyy format");
             }
-            existingUser.setDateOfBirth(updatedUser.getDateOfBirth());
+        }
+                
+        return appUserRepository.save(existingUser);
+    }
+
+    public AppUser updateProfile(UUID id, UserDTO.UserUpdateRequest updateRequest) {
+        AppUser existingUser = findById(id);
+
+        // Validate age if dateOfBirth is provided
+        if (updateRequest.getDateOfBirth() != null && !updateRequest.getDateOfBirth().trim().isEmpty()) {
+            try {
+                java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                java.time.LocalDate birthDate = java.time.LocalDate.parse(updateRequest.getDateOfBirth(), formatter);
+                int age = java.time.Period.between(birthDate, java.time.LocalDate.now()).getYears();
+                if (age < 18 || age > 100) {
+                    throw new RuntimeException("Invalid age: user must be between 18 and 100 years old");
+                }
+                existingUser.setDateOfBirth(birthDate);
+            } catch (java.time.format.DateTimeParseException e) {
+                throw new RuntimeException("Invalid date format: please use dd/MM/yyyy format");
+            }
+        }
+
+        // Update name
+        if (updateRequest.getFullName() != null && !updateRequest.getFullName().trim().isEmpty()) {
+            existingUser.setUName(updateRequest.getFullName());
+        }
+
+        // Update phone number (can be null or empty)
+        if (updateRequest.getPhoneNumber() != null) {
+            existingUser.setPhoneNumber(updateRequest.getPhoneNumber().trim().isEmpty() ? null : updateRequest.getPhoneNumber());
+        }
+
+        // Update address (can be null or empty)
+        if (updateRequest.getAddress() != null) {
+            existingUser.setAddress(updateRequest.getAddress().trim().isEmpty() ? null : updateRequest.getAddress());
         }
 
         return appUserRepository.save(existingUser);

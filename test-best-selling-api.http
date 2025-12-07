@@ -1,0 +1,62 @@
+### API Sản phẩm Bán chạy nhất - Test Cases
+
+### 1. Lấy danh sách sản phẩm bán chạy (không cần authentication)
+GET http://localhost:8080/api/products/best-selling
+Content-Type: application/json
+
+###
+
+### 2. Lấy danh sách sản phẩm bán chạy với token Admin
+GET http://localhost:8080/api/products/best-selling
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+###
+
+### 3. Lấy danh sách sản phẩm bán chạy với token User thường
+GET http://localhost:8080/api/products/best-selling
+Content-Type: application/json
+Authorization: Bearer USER_JWT_TOKEN
+
+###
+
+### Kết quả mong đợi:
+# Status: 200 OK
+# Response Body: Array of ProductSearchResponse
+# [
+#   {
+#     "id": "uuid-string",
+#     "name": "Sản phẩm bán chạy nhất",
+#     "price": 299000.00,
+#     "imageUrl": "https://example.com/image.jpg"
+#   },
+#   {
+#     "id": "uuid-string",
+#     "name": "Sản phẩm thứ 2",
+#     "price": 399000.00,
+#     "imageUrl": "https://example.com/image2.jpg"
+#   }
+# ]
+
+###
+
+### Kiểm tra:
+# - Danh sách được sắp xếp từ bán chạy nhất đến ít nhất
+# - Mỗi sản phẩm có: id, name, price, imageUrl
+# - User thường chỉ xem sản phẩm active
+# - Admin xem tất cả sản phẩm
+
+###
+
+### So sánh với API /list
+GET http://localhost:8080/api/products/list
+Content-Type: application/json
+
+###
+
+### Note:
+# /list: Không sắp xếp theo lượng bán
+# /best-selling: Sắp xếp theo lượng bán giảm dần (best-seller first)
+
+###
+

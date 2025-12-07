@@ -2,10 +2,8 @@ package com.tanxuan.demoaws.service;
 
 import com.tanxuan.demoaws.dto.ProductDetailsDTO;
 import com.tanxuan.demoaws.exception.ResourceNotFoundException;
-import com.tanxuan.demoaws.model.Color;
 import com.tanxuan.demoaws.model.Product;
 import com.tanxuan.demoaws.model.ProductDetails;
-import com.tanxuan.demoaws.repository.ColorRepository;
 import com.tanxuan.demoaws.repository.ProductDetailsRepository;
 import com.tanxuan.demoaws.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +21,6 @@ public class ProductDetailsService {
 
     private final ProductDetailsRepository productDetailsRepository;
     private final ProductRepository productRepository;
-    private final ColorRepository colorRepository;
 
     // Get all product details
     public List<ProductDetailsDTO> getAllProductDetails() {
@@ -46,13 +43,6 @@ public class ProductDetailsService {
                 .collect(Collectors.toList());
     }
 
-    // Get product details by color ID
-    public List<ProductDetailsDTO> getProductDetailsByColorId(UUID colorId) {
-        return productDetailsRepository.findByColorColorId(colorId).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
-    }
-
     // Create product details
     public ProductDetailsDTO createProductDetails(ProductDetailsDTO dto) {
         Product product = productRepository.findById(dto.getProductId())
@@ -60,13 +50,8 @@ public class ProductDetailsService {
 
         ProductDetails productDetails = new ProductDetails();
         productDetails.setProduct(product);
-
-        if (dto.getColorId() != null) {
-            Color color = colorRepository.findById(dto.getColorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Color not found with id: " + dto.getColorId()));
-            productDetails.setColor(color);
-        }
-
+        productDetails.setColorName(dto.getColorName());
+        productDetails.setColorCode(dto.getColorCode());
         productDetails.setImgList(dto.getImgList());
         productDetails.setSize(dto.getSize());
         productDetails.setAmount(dto.getAmount());
@@ -87,12 +72,12 @@ public class ProductDetailsService {
             productDetails.setProduct(product);
         }
 
-        if (dto.getColorId() != null) {
-            Color color = colorRepository.findById(dto.getColorId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Color not found with id: " + dto.getColorId()));
-            productDetails.setColor(color);
+        if (dto.getColorName() != null) {
+            productDetails.setColorName(dto.getColorName());
         }
-
+        if (dto.getColorCode() != null) {
+            productDetails.setColorCode(dto.getColorCode());
+        }
         if (dto.getImgList() != null) {
             productDetails.setImgList(dto.getImgList());
         }
@@ -131,13 +116,8 @@ public class ProductDetailsService {
         dto.setPdId(productDetails.getPdId());
         dto.setProductId(productDetails.getProduct().getPId());
         dto.setProductName(productDetails.getProduct().getPName());
-
-        if (productDetails.getColor() != null) {
-            dto.setColorId(productDetails.getColor().getColorId());
-            dto.setColorName(productDetails.getColor().getColorName());
-            dto.setColorCode(productDetails.getColor().getColorCode());
-        }
-
+        dto.setColorName(productDetails.getColorName());
+        dto.setColorCode(productDetails.getColorCode());
         dto.setImgList(productDetails.getImgList());
         dto.setSize(productDetails.getSize());
         dto.setAmount(productDetails.getAmount());

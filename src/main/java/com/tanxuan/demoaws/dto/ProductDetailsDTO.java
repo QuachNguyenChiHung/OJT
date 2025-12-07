@@ -11,7 +11,6 @@ public class ProductDetailsDTO {
 
     private String productName;
 
-    private UUID colorId;
 
     private String colorName;
 
@@ -29,13 +28,12 @@ public class ProductDetailsDTO {
     // Constructors
     public ProductDetailsDTO() {}
 
-    public ProductDetailsDTO(UUID pdId, UUID productId, String productName, UUID colorId,
+    public ProductDetailsDTO(UUID pdId, UUID productId, String productName,
                             String colorName, String colorCode, String size,
                             Integer amount, Boolean inStock) {
         this.pdId = pdId;
         this.productId = productId;
         this.productName = productName;
-        this.colorId = colorId;
         this.colorName = colorName;
         this.colorCode = colorCode;
         this.size = size;
@@ -68,13 +66,6 @@ public class ProductDetailsDTO {
         this.productName = productName;
     }
 
-    public UUID getColorId() {
-        return colorId;
-    }
-
-    public void setColorId(UUID colorId) {
-        this.colorId = colorId;
-    }
 
     public String getColorName() {
         return colorName;

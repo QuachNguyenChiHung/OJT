@@ -19,9 +19,11 @@ public class ProductDetails {
     @JoinColumn(name = "p_id", nullable = false)
     private Product product;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "color_id")
-    private Color color;
+    @Column(name = "color_name", length = 64, columnDefinition = "nvarchar(64)")
+    private String colorName;
+
+    @Column(name = "color_code", length = 64, columnDefinition = "nvarchar(64)")
+    private String colorCode;
 
     @Column(name = "img_list", columnDefinition = "nvarchar(MAX)")
     private String imgList;
@@ -39,9 +41,10 @@ public class ProductDetails {
     // Constructors
     public ProductDetails() {}
 
-    public ProductDetails(Product product, Color color, String size, Integer amount, Boolean inStock) {
+    public ProductDetails(Product product, String colorName, String colorCode, String size, Integer amount, Boolean inStock) {
         this.product = product;
-        this.color = color;
+        this.colorName = colorName;
+        this.colorCode = colorCode;
         this.size = size;
         this.amount = amount;
         this.inStock = inStock;
@@ -64,12 +67,20 @@ public class ProductDetails {
         this.product = product;
     }
 
-    public Color getColor() {
-        return color;
+    public String getColorName() {
+        return colorName;
     }
 
-    public void setColor(Color color) {
-        this.color = color;
+    public void setColorName(String colorName) {
+        this.colorName = colorName;
+    }
+
+    public String getColorCode() {
+        return colorCode;
+    }
+
+    public void setColorCode(String colorCode) {
+        this.colorCode = colorCode;
     }
 
     public String getImgList() {

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public class ProductDTO {
@@ -57,5 +58,39 @@ public class ProductDTO {
         private String name;
         private BigDecimal price;
         private Boolean isAvailable;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductSearchResponse {
+        private UUID id;
+        private String name;
+        private BigDecimal price;
+        private String imageUrl;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductDetailResponse {
+        private UUID id;
+        private String name;
+        private BigDecimal price;
+        private String description;
+        private List<ProductDetailVariant> productDetails;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ProductDetailVariant {
+        private UUID pdId;
+        private String colorName;
+        private String colorCode;
+        private String size;
+        private Integer amount;
+        private Boolean inStock;
+        private List<String> images; // Exactly 5 images
     }
 }
