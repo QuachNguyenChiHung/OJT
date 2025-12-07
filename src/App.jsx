@@ -30,6 +30,7 @@ import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
 import UpdateProfile from './Components/UpdateProfile';
 import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
 
 function Layout() {
   const location = useLocation()
@@ -73,6 +74,7 @@ function Layout() {
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrderPage />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/update-profile" element={<UpdateProfile />} />

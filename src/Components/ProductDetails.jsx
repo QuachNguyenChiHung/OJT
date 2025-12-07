@@ -9,6 +9,7 @@ const ProductDetails = () => {
     const [product_details, setProductDetails] = useState({
         id: '',
         name: '',
+        description: '',
         price: 0.0,
         productDetails: [
             {
@@ -117,9 +118,18 @@ const ProductDetails = () => {
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [mainImage, setMainImage] = useState(clothesImg);
     const [thumbnails, setThumbnails] = useState([clothesImg, clothesImg, clothesImg, clothesImg]);
-    const [quantity, setQuantity] = useState(0);
+    const [quantity, setQuantity] = useState(1);
     const [rating, setRating] = useState(0);
-    const [currentUser, setCurrentUser] = useState(null);
+    const [userRating, setUserRating] = useState(0); // User's actual submitted rating
+    const [hasUserRated, setHasUserRated] = useState(false);
+    const [submittingRating, setSubmittingRating] = useState(false);
+    const [currentUser, setCurrentUser] = useState({
+        email: '',
+        fullName: '',
+        role: '',
+        phoneNumber: '',
+        address: ''
+    });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const id = useParams().id;
 
@@ -144,8 +154,49 @@ const ProductDetails = () => {
                 alert(error);
             }
         };
+
+        const checkUserRating = async () => {
+            if (currentUser) {
+                // Check for user ID in various possible fields
+                const userId = currentUser?.id || currentUser?.userId || currentUser?.u_id || currentUser?.email;
+                if (userId) {
+                    try {
+                        // Check if user has rated this product
+                        const checkRes = await axios.get(
+                            `${import.meta.env.VITE_API_URL}/ratings/check?userId=${userId}&productId=${id}`,
+                            { withCredentials: true }
+                        );
+                        setHasUserRated(checkRes.data.hasRated);
+
+                        // If user has rated, get their rating
+                        if (checkRes.data.hasRated) {
+                            const userRatingsRes = await axios.get(
+                                `${import.meta.env.VITE_API_URL}/ratings/user/${userId}`,
+                                { withCredentials: true }
+                            );
+                            console.log('User ratings response:', userRatingsRes.data);
+                            const userProductRating = userRatingsRes.data.find(r => r.productId === id);
+                            console.log('Found user product rating:', userProductRating);
+                            if (userProductRating) {
+                                // Try different possible field names for rating value
+                                const ratingValue = userProductRating.ratingValue || userProductRating.rating || userProductRating.rate;
+                                console.log('Extracted rating value:', ratingValue);
+                                setUserRating(ratingValue);
+                                setRating(ratingValue);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error checking user rating:', error);
+                    }
+                }
+            }
+        };
+
         fetchRatings();
-    }, []);
+        if (currentUser) {
+            checkUserRating();
+        }
+    }, [id, currentUser]);
 
     useEffect(() => {
         const fetchdetails = async () => {
@@ -228,7 +279,7 @@ const ProductDetails = () => {
     // Handle thumbnail click
     const handleThumbnailClick = (index) => {
         const clickedImage = thumbnails[index];
-        if (clickedImage && clickedImage !== clothesImg) {
+        if (clickedImage) {
             setMainImage(clickedImage);
         }
     };
@@ -262,15 +313,105 @@ const ProductDetails = () => {
     };
 
     const decrementQuantity = () => {
-        setQuantity(prev => Math.max(0, prev - 1));
+        setQuantity(prev => Math.max(1, prev - 1));
     };
 
-    const handleStarClick = (starValue) => {
+    const handleStarClick = async (starValue) => {
         if (!isLoggedIn) {
             alert('Vui lòng đăng nhập để đánh giá sản phẩm');
             return;
         }
-        setRating(starValue);
+
+        // Check for user ID in various possible fields
+        const userId = currentUser?.id || currentUser?.userId || currentUser?.u_id || currentUser?.email;
+        if (!currentUser || !userId) {
+            alert('Không thể xác định thông tin người dùng. Vui lòng đăng nhập lại.');
+            console.log('Current user object:', currentUser);
+            return;
+        }
+
+        setSubmittingRating(true);
+        try {
+            // Submit rating to server
+            const ratingData = {
+                userId: userId,
+                productId: id,
+                ratingValue: starValue, // Changed from 'rating' to 'ratingValue'
+                comment: '' // You can add comment functionality later
+            };
+
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/ratings`,
+                ratingData,
+                { withCredentials: true }
+            );
+
+            if (response.data) {
+                setRating(starValue);
+                setUserRating(starValue);
+                setHasUserRated(true);
+
+                // Refresh ratings stats
+                const statsRes = await axios.get(`${import.meta.env.VITE_API_URL}/ratings/product/${id}/stats`);
+                setRatings(statsRes.data);
+
+                alert(`Cảm ơn bạn đã đánh giá ${starValue} sao cho sản phẩm!`);
+            }
+        } catch (error) {
+            console.error('Error submitting rating:', error);
+            alert(error.response?.data?.message || 'Không thể gửi đánh giá. Vui lòng thử lại.');
+        } finally {
+            setSubmittingRating(false);
+        }
+    };    // Add to cart function
+    const addToCart = async () => {
+        if (!isLoggedIn) {
+            alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+            return;
+        }
+
+        if (!selectedVariant) {
+            alert('Vui lòng chọn kích thước và màu sắc');
+            return;
+        }
+
+        if (quantity <= 0) {
+            alert('Vui lòng chọn số lượng');
+            return;
+        }
+
+        if (quantity > selectedVariant.amount) {
+            alert(`Chỉ còn ${selectedVariant.amount} sản phẩm trong kho`);
+            return;
+        }
+
+        try {
+            const cartData = {
+                productDetailsId: selectedVariant.pdId,
+                quantity: quantity
+            };
+
+            const response = await axios.post(
+                `${import.meta.env.VITE_API_URL}/cart`,
+                cartData,
+                { withCredentials: true }
+            );
+
+            if (response.data.success) {
+                alert('Đã thêm sản phẩm vào giỏ hàng!');
+                // Reset quantity after successful add
+                setQuantity(1);
+            } else {
+                alert(response.data.message || 'Không thể thêm sản phẩm vào giỏ hàng');
+            }
+        } catch (error) {
+            console.error('Error adding to cart:', error);
+            if (error.response?.status === 401) {
+                alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+            } else {
+                alert(error.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng');
+            }
+        }
     };
 
     // Render star with full, half, or empty based on rating
@@ -321,8 +462,12 @@ const ProductDetails = () => {
                                 {thumbnails.map((img, index) => (
                                     <div
                                         key={index}
-                                        className={`w-25 border-orange`}
-                                        style={{ cursor: 'pointer' }}
+                                        className={`w-25 ${mainImage === img ? 'border-primary' : 'border-orange'}`}
+                                        style={{
+                                            cursor: 'pointer',
+                                            borderWidth: mainImage === img ? '3px' : '1px',
+                                            transition: 'border 0.3s'
+                                        }}
                                         onClick={() => handleThumbnailClick(index)}
                                     >
                                         <div className="w-100">
@@ -331,9 +476,7 @@ const ProductDetails = () => {
                                                 src={img}
                                                 style={{
                                                     aspectRatio: '1/1',
-                                                    objectFit: 'fit',
-                                                    opacity: mainImage === img ? 0.6 : 1,
-                                                    transition: 'opacity 0.3s'
+                                                    objectFit: 'fit'
                                                 }}
                                                 alt={`Product thumbnail ${index + 1}`}
                                             />
@@ -444,12 +587,17 @@ const ProductDetails = () => {
                     </div>
                     <div className="d-flex justify-content-center my-4">
                         <button
-                            className={`btn w-75 ${selectedVariant?.amount > 0 ? 'btn-orange' : 'btn-secondary'}`}
+                            className={`btn w-75 ${selectedVariant?.amount > 0 && quantity > 0 ? 'btn-orange' : 'btn-secondary'}`}
                             type="button"
                             style={{ borderRadius: 0 }}
-                            disabled={!selectedVariant || selectedVariant?.amount === 0}
+                            onClick={addToCart}
+                            disabled={!selectedVariant || selectedVariant?.amount === 0 || quantity <= 0}
                         >
-                            {selectedVariant?.amount > 0 ? 'Đặt Hàng Ngay !' : 'Đã Hết Hàng'}
+                            {!isLoggedIn ? 'Đăng nhập để thêm vào giỏ' :
+                                !selectedVariant ? 'Chọn size và màu' :
+                                    selectedVariant?.amount === 0 ? 'Hết hàng' :
+                                        quantity <= 0 ? 'Chọn số lượng' :
+                                            'Thêm vào giỏ hàng'}
                         </button>
                     </div>
                     <div>
@@ -503,7 +651,10 @@ const ProductDetails = () => {
                             Đã có {ratings.totalRatings} đánh giá
                         </p>
                         <p className="fw-bolder text-center" style={{ marginBottom: '-13px' }}>
-                            Đánh giá sản phẩm {!isLoggedIn && <small className="text-muted">(Vui lòng đăng nhập)</small>}
+                            Đánh giá sản phẩm
+                            {!isLoggedIn && <small className="text-muted">(Vui lòng đăng nhập)</small>}
+                            {hasUserRated && <small className="text-success">(Đã đánh giá: {userRating} sao)</small>}
+                            {submittingRating && <small className="text-info">(Đang gửi...)</small>}
                         </p>
                         <div className="stars">
                             {stars.map((star) => (
@@ -511,16 +662,16 @@ const ProductDetails = () => {
                                     key={star}
                                     className="star"
                                     data-value={star}
-                                    onClick={() => handleStarClick(star)}
+                                    onClick={() => !submittingRating && handleStarClick(star)}
                                     style={{
-                                        cursor: isLoggedIn ? 'pointer' : 'not-allowed',
+                                        cursor: (isLoggedIn && !submittingRating) ? 'pointer' : 'not-allowed',
                                         color: star <= rating ? 'orange' : '#ddd',
                                         fontSize: '30px',
                                         transition: 'color 0.2s',
-                                        opacity: isLoggedIn ? 1 : 0.5
+                                        opacity: (isLoggedIn && !submittingRating) ? 1 : 0.5
                                     }}
-                                    onMouseEnter={(e) => isLoggedIn && (e.target.style.color = 'orange')}
-                                    onMouseLeave={(e) => isLoggedIn && (e.target.style.color = star <= rating ? 'orange' : '#ddd')}
+                                    onMouseEnter={(e) => (isLoggedIn && !submittingRating) && (e.target.style.color = 'orange')}
+                                    onMouseLeave={(e) => (isLoggedIn && !submittingRating) && (e.target.style.color = star <= rating ? 'orange' : '#ddd')}
                                 >
                                     ★
                                 </span>
@@ -528,7 +679,10 @@ const ProductDetails = () => {
                         </div>
                     </div>
                     <p className="fw-bolder text-center" style={{ marginBottom: '-13px' }}>
-                        {rating > 0 ? `${rating}.00 trên 5` : 'Chưa có đánh giá'}
+                        {hasUserRated ?
+                            `Bạn đã đánh giá ${userRating}.0 trên 5` :
+                            (rating > 0 ? `${rating}.0 trên 5 (chưa gửi)` : 'Chưa có đánh giá')
+                        }
                     </p>
                 </div>
                 <div className="col-12">
@@ -538,7 +692,7 @@ const ProductDetails = () => {
                             className="text-break"
                             style={{ textAlign: 'justify', hyphens: 'auto' }}
                         >
-                            Commodo nostra eget lacus tincidunt, aenean vulputate hendrerit aenean etiam. Vivamus quisque pulvinar donec condimentum vivamus venenatis id, aenean adipiscing pharetra. Mi fusce interdum ligula amet bibendum eu vitae a, non aenean. Augue augue consequat volutpat est. In maecenas elementum diam, magna enim erat ut metus netus. Volutpat pellentesque amet porttitor, dapibus cursus. Scelerisque suscipit leo aenean vehicula. Bibendum semper elementum leo posuere. Consequat fringilla et ut, lacinia augue porta class. Tortor urna dapibus nunc, sem amet iaculis conubia. Sagittis conubia nunc fringilla tincidunt, mattis curabitur malesuada volutpat consectetur quisque. Morbi vehicula phasellus, a cras rhoncus convallis curabitur habitant taciti. Platea luctus lorem habitasse, felis aptent quisque. Egestas leo fames, per libero ante. Euismod ipsum sit senectus primis. Rutrum id blandit ornare ultrices, eget placerat habitasse ligula sem eu. Aliquam pulvinar porta gravida litora, bibendum vivamus pulvinar sollicitudin. Diam rutrum senectus libero conubia ac, curae consequat. Eu viverra volutpat faucibus nunc turpis, hac convallis ad. Amet accumsan auctor rhoncus vehicula semper erat taciti, curabitur duis. Potenti euismod nisl, rutrum vitae pharetra scelerisque. Felis nullam aptent, at elementum vel blandit. Ligula curabitur aenean erat congue condimentum nec, etiam ornare proin. Placerat curabitur felis mi, aliquam curabitur purus ad. Vitae sapien aenean.
+                            {product_details.description || 'Chưa có mô tả sản phẩm'}
                         </p>
                     </div>
                 </div>

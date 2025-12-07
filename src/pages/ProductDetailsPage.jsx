@@ -6,7 +6,6 @@ const ProductDetailsPage = () => {
     return (
         <>
             <ProductDetails />
-            <ProductTable title="Các Sản Phẩm Tương Tự" data={[]} pagination={false} />
         </>
     );
 };

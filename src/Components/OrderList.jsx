@@ -7,7 +7,13 @@ export default function OrderList() {
     const [orderDetails, setOrderDetails] = useState({});
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState(null);
+    const [currentUser, setCurrentUser] = useState({
+        email: '',
+        fullName: '',
+        role: '',
+        phoneNumber: '',
+        address: ''
+    });
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -155,7 +161,7 @@ export default function OrderList() {
                                 <div className="card-body">
                                     <div className="mb-2">
                                         <small className="text-muted">
-                                            Ngày đặt: {formatDate(order.createdAt || order.orderDate)}
+                                            Ngày đặt: {formatDate(order.dateCreated)}
                                         </small>
                                     </div>
 
@@ -166,7 +172,7 @@ export default function OrderList() {
                                     <div className="mb-3">
                                         <small className="text-muted">
                                             <strong>Địa chỉ giao hàng:</strong><br />
-                                            {order.shippingAddress || 'Chưa có thông tin'}
+                                            {order.shippingAddress  || 'Chưa có thông tin'}
                                         </small>
                                     </div>
 

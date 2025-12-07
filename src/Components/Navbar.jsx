@@ -209,7 +209,7 @@ const Navbar = () => {
                                     <div className="mx-1">
                                         <Button variant="orange" className='btn-orange' style={{
                                             borderColor: 'rgb(228, 148, 0)'
-                                        }} onClick={() => {navigate('/login');}}>
+                                        }} onClick={() => { navigate('/login'); }}>
                                             Đăng Nhập
                                         </Button>
                                         <Button variant="orange" className='btn-orange mx-3' style={{
@@ -237,72 +237,10 @@ const Navbar = () => {
                                 paddingLeft: '0px'
                             }}
                         >
-                            <nav
-                                className="navbar navbar-expand-md mt-2 navbar-dark"
-                                style={{ backgroundColor: 'rgb(228, 148, 0)', padding: 0 }}
-                            >
-                                <div className="container-fluid navbar-light p-0">
-                                    <button
-                                        data-bs-toggle="collapse"
-                                        className="navbar-toggler"
-                                        data-bs-target="#navcol-2"
-                                        style={{
-                                            height: '3rem',
-                                            border: 'none',
-                                            padding: 0,
-                                            paddingRight: 0
-                                        }}
-                                    >
-                                        <span
-                                            className="navbar-toggler-icon"
-                                            style={{ width: '37px' }}
-                                        ></span>
-                                    </button>
-                                    <div
-                                        className="collapse navbar-collapse"
-                                        id="navcol-2"
-                                        style={{ height: '3rem' }}
-                                    >
-                                        <ul className="navbar-nav">
-                                            {menuItems.map((item, index) => (
-                                                <li key={index} className="nav-item dropdown">
-                                                    <a
-                                                        className="dropdown-toggle nav-link"
-                                                        aria-expanded="false"
-                                                        data-bs-toggle="dropdown"
-                                                        href="#"
-                                                        style={{ color: 'rgb(255,255,255)' }}
-                                                    >
-                                                        {item}
-                                                    </a>
-                                                    <div
-                                                        className="dropdown-menu"
-                                                        style={{
-                                                            borderStyle: 'none',
-                                                            background: 'rgb(228, 148, 0)'
-                                                        }}
-                                                    >
-                                                        <a
-                                                            className="dropdown-item"
-                                                            href="#"
-                                                            style={{ color: 'rgb(255,255,255)' }}
-                                                        >
-                                                            Second Item
-                                                        </a>
-                                                        <a
-                                                            className="dropdown-item"
-                                                            href="#"
-                                                            style={{ color: 'rgb(255,255,255)' }}
-                                                        >
-                                                            Third Item
-                                                        </a>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-                            </nav>
+                            {/*  */}
+                            <div style={{ backgroundColor: 'rgb(228, 148, 0)', height: '3rem', padding: 0 }}>
+
+                            </div>
                         </div>
                     </div>
                 </div>

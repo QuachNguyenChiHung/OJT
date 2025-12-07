@@ -23,6 +23,9 @@ export default function AdminProductDetails() {
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState(null);
 
+  // Separate image management state
+  const [showImageManager, setShowImageManager] = useState(false);
+  const [selectedVariantForImages, setSelectedVariantForImages] = useState(null);
   const [variantImages, setVariantImages] = useState([]);
   const [cropperData, setCropperData] = useState({
     show: false,
@@ -219,32 +222,48 @@ export default function AdminProductDetails() {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    if (variantImages.length >= 5) {
+    console.log(files);
+    // Count existing images (both from server and newly added)
+    const totalImages = variantImages.length;
+    if (totalImages >= 5) {
       alert('Cần đúng 5 hình ảnh. Vui lòng xóa hình ảnh trước.');
       return;
     }
 
-    if (files.length > 0 && files[0].type.startsWith('image/')) {
+    if (files.length > 0) {
+      const file = files[0];
+
+      // Validate image format
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+      if (!allowedTypes.includes(file.type)) {
+        alert('Chỉ cho phép tải lên các định dạng hình ảnh: JPG, PNG, GIF');
+        return;
+      }
+
+      // Validate file size (optional - e.g., max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        alert('Kích thước file không được vượt quá 5MB');
+        return;
+      }
+
+      // Store file locally for preview
       const reader = new FileReader();
       reader.onload = (event) => {
-        setCropperData({
-          show: true,
-          originalImage: event.target.result,
-          croppedImage: null,
-          imageIndex: variantImages.length
-        });
-        // Reset crop to center square
-        setCrop({
-          unit: '%',
-          width: 50,
-          height: 50,
-          x: 25,
-          y: 25,
-          aspect: 1
-        });
-        setCompletedCrop(null);
+        const newImages = [...variantImages, {
+          file: file, // Store the actual file for later upload
+          preview: event.target.result, // Store preview URL
+          name: file.name,
+          isExisting: false // Flag to identify new uploads
+        }];
+        setVariantImages(newImages);
+        console.log(newImages);
+        // Reset file input
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
       };
-      reader.readAsDataURL(files[0]);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -323,18 +342,27 @@ export default function AdminProductDetails() {
   };
 
   const removeImage = (index) => {
-    setVariantImages(variantImages.filter((_, i) => i !== index));
+    console.log(variantImages);
+    const imageToRemove = variantImages[index];
+
+    // If it's an existing image from server, you might want to handle deletion differently
+    if (imageToRemove.isExisting) {
+      if (!confirm('Bạn có chắc muốn xóa hình ảnh này? Thao tác này sẽ xóa vĩnh viễn hình ảnh khỏi server.')) {
+        return;
+      }
+      // Here you could call an API to delete the image from server
+      // For now, we'll just remove it from the UI
+    }
+
+    const updatedImages = variantImages.filter((_, i) => i !== index);
+    console.log("yo:" + updatedImages);
+    setVariantImages(updatedImages);
   };
 
   const addVariant = async (e) => {
     e.preventDefault();
 
-    // Validate exactly 5 images
-    if (variantImages.length !== 5) {
-      alert('Exactly 5 images are required for each product variant.');
-      return;
-    }
-
+    // For basic variant addition, don't require images
     // Validate form fields
     if (!variantForm.size || !variantForm.colorName) {
       alert('Please fill in all required fields (size, color name).');
@@ -344,7 +372,7 @@ export default function AdminProductDetails() {
     try {
       const newVariantLocal = {
         pd_id: generateId(),
-        img_list: variantImages,
+        img_list: [], // Empty initially
         size: variantForm.size.trim(),
         color: variantForm.colorName.trim(),
         colorCode: variantForm.colorCode || '#000000',
@@ -358,7 +386,7 @@ export default function AdminProductDetails() {
         productName: product?.p_name || null,
         colorName: variantForm.colorName.trim(),
         colorCode: variantForm.colorCode || '#000000',
-        imgList: JSON.stringify(variantImages),
+        imgList: JSON.stringify([]), // Empty initially
         size: variantForm.size.trim(),
         amount: Number(variantForm.amount) || 0,
         inStock: variantForm.status !== 'out_of_stock'
@@ -371,11 +399,11 @@ export default function AdminProductDetails() {
         pd_id: created?.pdId ?? created?.pd_id ?? newVariantLocal.pd_id,
         img_list: (() => {
           try {
-            if (!created?.imgList) return variantImages;
+            if (!created?.imgList) return [];
             if (typeof created.imgList === 'string') return JSON.parse(created.imgList);
             if (Array.isArray(created.imgList)) return created.imgList;
-            return variantImages;
-          } catch (e) { return variantImages; }
+            return [];
+          } catch (e) { return []; }
         })(),
         size: created?.size ?? newVariantLocal.size,
         color: created?.colorName ?? newVariantLocal.color,
@@ -388,7 +416,6 @@ export default function AdminProductDetails() {
 
       // Reset form
       setVariantForm({ size: '', colorName: '', colorCode: '', amount: 1, status: 'available' });
-      setVariantImages([]);
       setShowVariantForm(false);
     } catch (err) {
       console.error('Create product-detail failed', err);
@@ -397,9 +424,173 @@ export default function AdminProductDetails() {
   };
 
   const startEditVariant = (variant) => {
+    // Close image manager if it's open
+    setShowImageManager(false);
+    setSelectedVariantForImages(null);
+    setVariantImages([]);
+
+    // Set variant editing state
     setEditingVariant({ ...variant });
-    setVariantImages([...variant.img_list]);
     setShowVariantForm(true);
+
+    // Scroll to top automatically
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0; // For Safari
+      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+    }, 100);
+  };
+
+  // Separate function for managing images
+  const openImageManager = (variant) => {
+    // Close variant form if it's open
+    setShowVariantForm(false);
+    setEditingVariant(null);
+    setVariantForm({
+      size: '',
+      colorName: '',
+      colorCode: '',
+      amount: 1,
+      status: 'available'
+    });
+
+    // Set image manager state - show existing images plus space for new uploads
+    setSelectedVariantForImages(variant);
+
+    // Backend requires exactly 5 images, so prepare 5 slots
+    const existingImageUrls = variant.img_list || [];
+    const imageSlots = Array(5).fill(null).map((_, index) => {
+      if (index < existingImageUrls.length && existingImageUrls[index]) {
+        return {
+          preview: existingImageUrls[index],
+          url: existingImageUrls[index],
+          isExisting: true,
+          name: `existing_image_${index + 1}.jpg`,
+          id: `existing_${index}_${Date.now()}`,
+          position: index
+        };
+      } else {
+        return {
+          preview: null,
+          url: null,
+          isExisting: false,
+          file: null,
+          name: null,
+          id: `empty_${index}_${Date.now()}`,
+          position: index
+        };
+      }
+    });
+
+    setVariantImages(imageSlots);
+    setShowImageManager(true);
+
+    // Scroll to top automatically
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 100);
+  };
+
+  const closeImageManager = () => {
+    setSelectedVariantForImages(null);
+    setVariantImages([]);
+    setShowImageManager(false);
+  };
+
+  // Close all editing modes
+  const closeAllEditingModes = () => {
+    if (showVariantForm) {
+      cancelEditVariant();
+    }
+    if (showImageManager) {
+      closeImageManager();
+    }
+  };
+
+  // Update variant images separately - backend expects exactly 5 files
+  const updateVariantImages = async () => {
+    if (!selectedVariantForImages) {
+      alert('Không tìm thấy phân loại sản phẩm.');
+      return;
+    }
+
+    if (!selectedVariantForImages?.pd_id) {
+      alert('Không tìm thấy ID phân loại sản phẩm');
+      return;
+    }
+
+    // Check that we have exactly 5 slots and ALL slots must have images
+    if (variantImages.length !== 5) {
+      alert('Lỗi: Phải có đúng chính xác 5 hình ảnh.');
+      return;
+    }
+
+    // Check if ALL 5 positions have images (existing or new)
+    const allSlotsFilled = variantImages.every(img =>
+      (img.isExisting && img.url) || (!img.isExisting && img.file)
+    );
+
+    if (!allSlotsFilled) {
+      alert('Bắt buộc phải có đúng 5 hình ảnh. Vui lòng thêm hình ảnh cho tất cả vị trí trống.');
+      return;
+    }
+
+    try {
+      // Prepare exactly 5 files for backend (null for empty positions)
+      const formData = new FormData();
+
+      // Backend expects exactly 5 files in the array
+      for (let i = 0; i < 5; i++) {
+        const imageData = variantImages[i];
+
+        if (imageData && !imageData.isExisting && imageData.file) {
+          // New file to upload
+          formData.append('files', imageData.file);
+        } else {
+          // Existing image or empty position - send empty file
+          formData.append('files', new File([], '', { type: 'application/octet-stream' }));
+        }
+      }
+
+      console.log('Sending image update for variant:', selectedVariantForImages.pd_id);
+      console.log('Image slots:', variantImages);
+
+      // Upload images using backend API
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/product-details/${selectedVariantForImages.pd_id}/images`,
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      if (res?.data?.success) {
+        const updatedImageUrls = res.data.imageUrls || [];
+
+        // Update the product state with the new image URLs
+        setProduct(prev => ({
+          ...prev,
+          details: (prev?.details || []).map(d =>
+            d.pd_id === selectedVariantForImages.pd_id
+              ? { ...d, img_list: updatedImageUrls.filter(url => url != null) }
+              : d
+          )
+        }));
+
+        closeImageManager();
+        alert(`Cập nhật hình ảnh thành công! ${res.data.message}`);
+      } else {
+        alert('Lỗi: ' + (res?.data?.message || 'Không thể cập nhật hình ảnh'));
+      }
+    } catch (err) {
+      console.error('Update variant images failed', err);
+      alert('Không thể cập nhật hình ảnh. Xem console để biết thêm chi tiết.');
+    }
   };
 
   const cancelEditVariant = () => {
@@ -411,19 +602,12 @@ export default function AdminProductDetails() {
       amount: 1,
       status: 'available'
     });
-    setVariantImages([]);
     setShowVariantForm(false);
   };
 
   const updateVariant = async (e) => {
     e.preventDefault();
     if (!editingVariant) return;
-
-    // Validate exactly 5 images
-    if (variantImages.length !== 5) {
-      alert('Exactly 5 images are required for each product variant.');
-      return;
-    }
 
     // Get updated values or keep existing ones
     const size = variantForm.size || editingVariant.size;
@@ -439,7 +623,6 @@ export default function AdminProductDetails() {
     try {
       const updatedVariantLocal = {
         ...editingVariant,
-        img_list: variantImages,
         size: size.trim(),
         color: colorName.trim(),
         colorCode: colorCode,
@@ -447,13 +630,13 @@ export default function AdminProductDetails() {
         status: variantForm.status || editingVariant.status
       };
 
-      // Build payload according to backend ProductDetailsDTO
+      // Build payload according to backend ProductDetailsDTO - keep existing images
       const payload = {
         productId: product?.p_id || null,
         productName: product?.p_name || null,
         colorName: colorName.trim(),
         colorCode: colorCode,
-        imgList: JSON.stringify(variantImages),
+        imgList: JSON.stringify(editingVariant.img_list || []), // Keep existing images
         size: size.trim(),
         amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
         inStock: (variantForm.status || editingVariant.status) !== 'out_of_stock'
@@ -467,17 +650,16 @@ export default function AdminProductDetails() {
         pd_id: updated?.pdId ?? updated?.pd_id ?? editingVariant.pd_id,
         img_list: (() => {
           try {
-            if (!updated?.imgList) return variantImages;
+            if (!updated?.imgList) return editingVariant.img_list || [];
             if (typeof updated.imgList === 'string') return JSON.parse(updated.imgList);
             if (Array.isArray(updated.imgList)) return updated.imgList;
-            return variantImages;
-          } catch (e) { return variantImages; }
+            return editingVariant.img_list || [];
+          } catch (e) { return editingVariant.img_list || []; }
         })(),
         size: updated?.size ?? size.trim(),
         color: updated?.colorName ?? colorName.trim(),
         colorCode: updated?.colorCode ?? colorCode,
         amount: updated?.amount ?? (variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount),
-        // price removed for variants
         status: (typeof updated?.inStock !== 'undefined') ? (updated.inStock ? 'available' : 'out_of_stock') : updatedVariantLocal.status
       };
 
@@ -515,8 +697,15 @@ export default function AdminProductDetails() {
             onClick={() => {
               if (editingVariant) {
                 cancelEditVariant();
+              } else if (showVariantForm) {
+                // Close all editing modes
+                closeAllEditingModes();
               } else {
-                setShowVariantForm(!showVariantForm);
+                // Close any open image manager before opening variant form
+                if (showImageManager) {
+                  closeImageManager();
+                }
+                setShowVariantForm(true);
               }
             }}
           >
@@ -563,16 +752,16 @@ export default function AdminProductDetails() {
             </table>
           </div>
 
-          {/* Add/Edit Variant Form */}
+          {/* Add/Edit Variant Form - Basic Info Only */}
           {showVariantForm && (
             <div className="mb-4 p-3" style={{ border: editingVariant ? '2px solid #ffc107' : '2px solid #28a745', borderRadius: '5px' }}>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <h4>{editingVariant ? 'Chỉnh Sửa Phân Loại' : 'Thêm Phân Loại Mới'}</h4>
+                  <h4>{editingVariant ? 'Chỉnh Sửa Thông Tin Cơ Bản' : 'Thêm Phân Loại Mới'}</h4>
                   <div className="alert alert-info py-2 mb-0">
                     <small>
-                      <strong>⚠️ Quan trọng:</strong> Mỗi phân loại phải có đúng 5 hình ảnh.
-                      Tất cả các trường có dấu * là bắt buộc.
+                      <strong>ℹ️ Lưu ý:</strong> Chỉ cập nhật thông tin cơ bản (size, màu sắc, số lượng).
+                      Hình ảnh sẽ được quản lý riêng biệt.
                     </small>
                   </div>
                 </div>
@@ -581,114 +770,60 @@ export default function AdminProductDetails() {
                   className="btn btn-sm btn-outline-secondary"
                   onClick={editingVariant ? cancelEditVariant : () => setShowVariantForm(false)}
                 >
-                  Cancel
+                  Hủy
                 </button>
               </div>
               <form onSubmit={editingVariant ? updateVariant : addVariant}>
-                {/* Image Upload Section */}
-                <div className="mb-4">
-                  <label className="form-label">
-                    <strong>Hình ảnh Sản Phẩm (Đúng 5 Hình Bắt Buộc, Định Dạng Vuông) *</strong>
-                  </label>
-                  <div className="mb-3">
+                <div className="row g-3">
+                  <div className="col-md-3">
+                    <label className="form-label">Kích Cỡ *</label>
                     <input
-                      ref={fileInputRef}
-                      type="file"
                       className="form-control"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      disabled={variantImages.length >= 5}
-                    />
-                    <div className="mt-2">
-                      <small className={`${variantImages.length === 5 ? 'text-success' : 'text-warning'}`}>
-                        <strong>{variantImages.length}/5 hình ảnh đã thêm.</strong>
-                        {variantImages.length < 5 ? ` Cần thêm ${5 - variantImages.length} hình nữa.` : ' ✓ Sẵn sàng gửi!'}
-                      </small>
-                      <br />
-                      <small className="text-muted">
-                        Mỗi hình ảnh sẽ được cắt thành định dạng vuông. Tải hình ảnh từng cái một.
-                      </small>
-                    </div>
-                  </div>
-
-                  {/* Image Preview */}
-                  {variantImages.length > 0 && (
-                    <div className="row g-2 mb-3">
-                      {variantImages.map((img, index) => (
-                        <div key={index} className="col-md-2">
-                          <div className="position-relative">
-                            <img
-                              src={img}
-                              alt={`Variant ${index + 1}`}
-                              className="img-fluid rounded"
-                              style={{
-                                width: '100%',
-                                height: '120px',
-                                objectFit: 'cover',
-                                border: '2px solid #28a745'
-                              }}
-                            />
-                            <button
-                              type="button"
-                              className="btn btn-danger btn-sm position-absolute top-0 end-0"
-                              style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0' }}
-                              onClick={() => removeImage(index)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="row g-2">
-                  <div className="col-md-2">
-                    <input
-                      className="form-control h-100"
                       name="size"
-                      placeholder="Kích Cỡ (S, M, L, XL)"
+                      placeholder="S, M, L, XL"
                       value={editingVariant ? (variantForm.size || editingVariant.size) : variantForm.size}
                       onChange={handleVariantChange}
                       required
                     />
                   </div>
-                  <div className="col-md-2">
+                  <div className="col-md-3">
+                    <label className="form-label">Tên Màu *</label>
                     <input
-                      className="form-control h-100"
+                      className="form-control"
                       name="colorName"
-                      placeholder="Tên Màu"
+                      placeholder="Đỏ, Xanh, Vàng..."
                       value={editingVariant ? (variantForm.colorName || editingVariant.color) : variantForm.colorName}
                       onChange={handleVariantChange}
                       required
                     />
                   </div>
                   <div className="col-md-2">
+                    <label className="form-label">Mã Màu</label>
                     <input
-                      className="form-control h-100"
+                      className="form-control"
                       name="colorCode"
                       type="color"
-                      title="Mã Màu"
                       value={editingVariant ? (variantForm.colorCode || editingVariant.colorCode || '#000000') : (variantForm.colorCode || '#000000')}
                       onChange={handleVariantChange}
                     />
                   </div>
-                  <div className="col-md-1">
+                  <div className="col-md-2">
+                    <label className="form-label">Số Lượng *</label>
                     <input
-                      className="form-control h-100"
+                      className="form-control"
                       name="amount"
                       type="number"
                       min="0"
-                      placeholder="Số lượng"
+                      placeholder="0"
                       value={editingVariant ? (variantForm.amount || editingVariant.amount) : variantForm.amount}
                       onChange={handleVariantChange}
                       required
                     />
                   </div>
                   <div className="col-md-2">
+                    <label className="form-label">Trạng Thái</label>
                     <select
-                      className="form-select h-100"
+                      className="form-select"
                       name="status"
                       value={editingVariant ? (variantForm.status || editingVariant.status) : variantForm.status}
                       onChange={handleVariantChange}
@@ -697,23 +832,139 @@ export default function AdminProductDetails() {
                       <option value="out_of_stock">Hết Hàng</option>
                     </select>
                   </div>
-                  <div className="col-md-1 d-grid">
-                    <button
-                      className={` btn ${editingVariant ? 'btn-warning' : 'btn-success'}`}
-                      type="submit"
-                      disabled={variantImages.length !== 5}
-                      title={variantImages.length !== 5 ? 'Vui lòng tải lên đúng 5 hình ảnh' : ''}
-                    >
-                      {editingVariant ? 'Cập Nhật' : 'Thêm'}
-                    </button>
-                    {variantImages.length !== 5 && (
-                      <small className="text-warning mt-1">
-                        Cần thêm {5 - variantImages.length} hình nữa
-                      </small>
+                </div>
+                <div className="mt-3">
+                  <button
+                    className={`btn ${editingVariant ? 'btn-warning' : 'btn-success'}`}
+                    type="submit"
+                  >
+                    {editingVariant ? 'Cập Nhật Thông Tin' : 'Thêm Phân Loại'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Image Management Section */}
+          {showImageManager && selectedVariantForImages && (
+            <div className="mb-4 p-3" style={{ border: '2px solid #dc3545', borderRadius: '5px' }}>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                  <h4>Quản Lý Hình Ảnh - {selectedVariantForImages.color} (Size: {selectedVariantForImages.size})</h4>
+                  <div className="alert alert-warning py-2 mb-0">
+                    <small>
+                      <strong>⚠️ Quan trọng:</strong> Mỗi phân loại phải có đúng 5 hình ảnh vuông.
+                      Tất cả hình ảnh sẽ được cắt tự động.
+                    </small>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  onClick={closeImageManager}
+                >
+                  Đóng
+                </button>
+              </div>
+
+              {/* Image Upload Section */}
+              <div className="mb-4">
+                <label className="form-label">
+                  <strong>Tải Hình Ảnh Sản Phẩm (Đúng 5 Hình Bắt Buộc)</strong>
+                </label>
+                <div className="mb-3">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="form-control"
+                    accept="image/jpeg,image/jpg,image/png,image/gif"
+                    onChange={handleImageUpload}
+                    disabled={variantImages.length >= 5}
+                  />
+                  <div className="mb-3">
+                    <small className={`${variantImages.length >= 5 ? 'text-warning' : 'text-info'}`}>
+                      <strong>{variantImages.length} hình ảnh hiện tại.</strong>
+                      {variantImages.length >= 5 ? ' Đã đạt giới hạn tối đa 5 hình!' : ` Có thể chọn thêm ${5 - variantImages.length} hình nữa.`}
+                    </small>
+                    <br />
+                    <small className="text-muted">
+                      Chỉ cho phép tải lên các định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB.
+                    </small>
+                    {variantImages.some(img => img.isExisting) && (
+                      <>
+                        <br />
+                        <small className="text-success">
+                          <strong>Hình ảnh hiện có:</strong> {variantImages.filter(img => img.isExisting).length} |
+                          <strong> Hình ảnh mới:</strong> {variantImages.filter(img => !img.isExisting).length}
+                        </small>
+                      </>
                     )}
                   </div>
                 </div>
-              </form>
+
+                {/* Image Preview */}
+                {variantImages.length > 0 && (
+                  <div className="row g-2 mb-3">
+                    {variantImages.map((imageData, index) => (
+                      <div key={index} className="col-md-2">
+                        <div className="position-relative">
+                          <img
+                            src={imageData.preview || imageData} // Handle both file objects and direct URLs
+                            alt={`Image ${index + 1}`}
+                            className="img-fluid rounded"
+                            style={{
+                              width: '100%',
+                              height: '120px',
+                              objectFit: 'cover',
+                              border: imageData.isExisting ? '2px solid #28a745' : '2px solid #dc3545'
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                            style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0' }}
+                            onClick={() => removeImage(index)}
+                          >
+                            ×
+                          </button>
+                          {imageData.isExisting && (
+                            <small className="badge bg-success position-absolute bottom-0 start-0 m-1">
+                              Đã có
+                            </small>
+                          )}
+                          {!imageData.isExisting && imageData.name && (
+                            <small className="text-muted d-block text-center mt-1">
+                              {imageData.name.length > 15 ? imageData.name.substring(0, 15) + '...' : imageData.name}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-success"
+                    onClick={updateVariantImages}
+                    disabled={variantImages.length !== 5 || !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file))}
+                    title={variantImages.length !== 5 ? 'Cần đúng 5 hình ảnh' : !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file)) ? 'Tất cả 5 vị trí phải có hình ảnh' : ''}
+                  >
+                    Lưu Hình Ảnh ({variantImages.filter(img => !img.isExisting && img.file).length} mới, {variantImages.filter(img => img.isExisting && img.url).length} hiện có)
+                  </button>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={closeImageManager}
+                  >
+                    Đóng
+                  </button>
+                  {(variantImages.length !== 5 || !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file))) && (
+                    <small className="text-warning align-self-center ms-2">
+                      Cần đủ 5 hình ảnh để lưu ({variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length}/5)
+                    </small>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
@@ -848,9 +1099,19 @@ export default function AdminProductDetails() {
                     onClick={() => startEditVariant(d)}
                     disabled={editingVariant && editingVariant.pd_id === d.pd_id}
                   >
-                    Sửa Phân Loại
+                    Sửa Thông Tin
                   </button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => removeDetail(d.pd_id)}>
+                  <button
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => openImageManager(d)}
+                    disabled={showImageManager && selectedVariantForImages?.pd_id === d.pd_id}
+                  >
+                    Quản Lý Hình Ảnh ({Array.isArray(d.img_list) ? d.img_list.length : 0}/5)
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => removeDetail(d.pd_id)}
+                  >
                     Xóa Phân Loại
                   </button>
                 </div>
