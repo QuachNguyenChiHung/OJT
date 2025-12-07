@@ -22,7 +22,7 @@ public class OrderDTO {
     public static class OrderRequest {
         @NotEmpty(message = "Order items cannot be empty")
         private List<OrderItemRequest> items;
-
+        private Integer additionalFee;
         private String shippingAddress;
         private String phone;
         private String paymentMethod;
@@ -48,6 +48,7 @@ public class OrderDTO {
         private UUID id;
         private String orderStatus;
         private BigDecimal totalAmount;
+        private BigDecimal additionalFee;
         private String shippingAddress;
         private String note;
         private LocalDateTime createdAt;
@@ -77,6 +78,7 @@ public class OrderDTO {
         private String status;
         private Instant dateCreated;
         private BigDecimal total;
+        private BigDecimal additionalFee;
         private int itemCount;
     }
 

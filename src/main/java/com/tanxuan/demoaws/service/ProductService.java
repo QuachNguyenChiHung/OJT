@@ -241,9 +241,27 @@ public class ProductService {
     }
 
     public List<Product> findBestSellingProducts(boolean isAdmin) {
+        List<UUID> productIds;
         if (isAdmin) {
-            return productRepository.findBestSellingProducts();
+            productIds = productRepository.findBestSellingProductIds();
+        } else {
+            productIds = productRepository.findBestSellingProductIdsByActiveStatus(true);
         }
-        return productRepository.findBestSellingProductsByActiveStatus(true);
+
+        return productIds.stream()
+                .limit(12)
+                .map(this::findById)
+                .toList();
+    }
+
+    public List<Product> findNewestProducts(boolean isAdmin) {
+        if (isAdmin) {
+            return productRepository.findNewestProducts().stream()
+                    .limit(12)
+                    .toList();
+        }
+        return productRepository.findNewestProductsByActiveStatus(true).stream()
+                .limit(12)
+                .toList();
     }
 }

@@ -77,6 +77,7 @@ public class ProductDTO {
         private UUID id;
         private String name;
         private BigDecimal price;
+        private String description;
         private List<ProductDetailVariant> productDetails;
     }
 

@@ -223,7 +223,12 @@ public class DataInitializer {
             p.setPDesc("Sample product " + (i + 1));
             // Prices are in VND and must be greater than 100,000
             // Use (i+1)*100000 + 1 to ensure strictly greater than 100,000
-            p.setPrice(BigDecimal.valueOf((i + 1) * 100000L + 1L));
+            // generate price and adjust rightmost digit: if it ends with '1', change to '0'
+            BigDecimal generatedPrice = BigDecimal.valueOf((i + 1) * 100000L + 1L);
+            if (generatedPrice.remainder(BigDecimal.TEN).intValue() == 1) {
+                generatedPrice = generatedPrice.subtract(BigDecimal.ONE);
+            }
+            p.setPrice(generatedPrice);
             // link category and brand (use persisted lists)
             p.setCategory(categories.get(i));
             p.setBrand(brands.get(i));
@@ -378,6 +383,29 @@ public class DataInitializer {
             }
         }
         cartRepository.saveAll(carts);
+
+        // --- Add additional fee to orders based on user's carts ---
+        // Calculate subtotal per user from carts we just created
+        java.util.Map<java.util.UUID, BigDecimal> userCartSubtotals = new java.util.HashMap<>();
+        for (Cart c : carts) {
+            java.util.UUID uid = c.getUser().getUserId();
+            BigDecimal itemTotal = c.getItemTotal();
+            userCartSubtotals.merge(uid, itemTotal, BigDecimal::add);
+        }
+
+        // Define additional fee as 5% of cart subtotal (rounded to 2 decimals)
+        for (CustomerOrder o : orders) {
+            BigDecimal subtotal = userCartSubtotals.getOrDefault(o.getUser().getUserId(), BigDecimal.ZERO);
+            BigDecimal fee = subtotal.multiply(new BigDecimal("0.05"));
+            fee = fee.setScale(2, java.math.RoundingMode.HALF_UP);
+            // ensure order's totalPrice already calculated (order.calculateTotalPrice called earlier)
+            if (o.getTotalPrice() == null) {
+                o.calculateTotalPrice();
+            }
+            o.setTotalPrice(o.getTotalPrice().add(fee));
+        }
+        // Persist updated orders with additional fees
+        orderRepository.saveAll(orders);
 
     }
 }

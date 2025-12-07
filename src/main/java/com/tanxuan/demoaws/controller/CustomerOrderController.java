@@ -5,8 +5,10 @@ import com.tanxuan.demoaws.exception.OrderException;
 import com.tanxuan.demoaws.model.AppUser;
 import com.tanxuan.demoaws.model.CustomerOrder;
 import com.tanxuan.demoaws.model.OrderDetails;
+import com.tanxuan.demoaws.model.Cart;
 import com.tanxuan.demoaws.repository.AppUserRepository;
 import com.tanxuan.demoaws.repository.OrderDetailsRepository;
+import com.tanxuan.demoaws.repository.CartRepository;
 import com.tanxuan.demoaws.service.CustomerOrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +19,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -32,6 +34,7 @@ public class CustomerOrderController {
     private final CustomerOrderService orderService;
     private final OrderDetailsRepository orderDetailsRepository;
     private final AppUserRepository appUserRepository;
+    private final CartRepository cartRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -59,9 +62,9 @@ public class CustomerOrderController {
         // Get current user from SecurityContext
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String userEmail = auth.getName();
-
         // Create CreateOrderRequest from OrderDTO.OrderRequest
         CustomerOrderService.CreateOrderRequest serviceRequest = new CustomerOrderService.CreateOrderRequest();
+        serviceRequest.setAdditionalFee(request.getAdditionalFee());
         AppUser user = appUserRepository.findByEmail(userEmail)
             .orElseThrow(() -> new OrderException("User not found with email: " + userEmail));
         serviceRequest.setUserId(user.getUserId());
@@ -75,9 +78,11 @@ public class CustomerOrderController {
             .collect(Collectors.toList()));
 
         CustomerOrder created = orderService.create(serviceRequest);
+        // Re-fetch persisted order to ensure date/time and any DB-side conversions are present
+        CustomerOrder persisted = orderService.findById(created.getOId());
         return ResponseEntity
-            .created(URI.create("/api/orders/" + created.getOId()))
-            .body(toOrderResponse(created));
+            .created(URI.create("/api/orders/" + persisted.getOId()))
+            .body(toOrderResponse(persisted));
     }
 
     /**
@@ -112,7 +117,7 @@ public class CustomerOrderController {
             .collect(Collectors.toList()));
     }
 
-    @GetMapping("/user/{userId}/status/{status}")
+    @GetMapping("/user/{userId:[0-9a-fA-F\\-]{36}}/status/{status}")
     public ResponseEntity<List<OrderDTO.OrderSummary>> getOrdersByUserAndStatus(
             @PathVariable UUID userId,
             @PathVariable String status) {
@@ -142,29 +147,34 @@ public class CustomerOrderController {
             .map(this::toOrderDetailResponse)
             .collect(Collectors.toList());
 
-        return new OrderDTO.OrderResponse(
-            order.getOId(),
-            order.getStatus(),
-            order.getTotalPrice(),
-            "",  // CustomerOrder doesn't have shippingAddress
-            "",  // CustomerOrder doesn't have note
-            LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()),
-            LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()),
-            items,
-            order.getUser().getUName(),
-            order.getUser().getEmail()
-        );
+        BigDecimal additionalFee = calculateAdditionalFee(order.getUser().getUserId());
+
+        OrderDTO.OrderResponse resp = new OrderDTO.OrderResponse();
+        resp.setId(order.getOId());
+        resp.setOrderStatus(order.getStatus());
+        resp.setTotalAmount(order.getTotalPrice());
+        resp.setAdditionalFee(additionalFee);
+        resp.setShippingAddress(order.getShippingAddress() == null ? "" : order.getShippingAddress());
+        resp.setNote("");
+        resp.setCreatedAt(LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()));
+        resp.setUpdatedAt(LocalDateTime.ofInstant(order.getDateCreated(), ZoneId.systemDefault()));
+        resp.setItems(items);
+        resp.setCustomerName(order.getUser().getUName());
+        resp.setCustomerEmail(order.getUser().getEmail());
+        return resp;
     }
 
     private OrderDTO.OrderSummary toOrderSummary(CustomerOrder order) {
-        return new OrderDTO.OrderSummary(
-            order.getOId(),
-            order.getUser().getUserId(),
-            order.getStatus(),
-            order.getDateCreated(),
-            order.getTotalPrice(),
-            order.getOrderDetails().size()
-        );
+        BigDecimal additionalFee = calculateAdditionalFee(order.getUser().getUserId());
+        OrderDTO.OrderSummary s = new OrderDTO.OrderSummary();
+        s.setId(order.getOId());
+        s.setUserId(order.getUser().getUserId());
+        s.setStatus(order.getStatus());
+        s.setDateCreated(order.getDateCreated());
+        s.setTotal(order.getTotalPrice());
+        s.setAdditionalFee(additionalFee);
+        s.setItemCount(order.getOrderDetails().size());
+        return s;
     }
 
     private OrderDTO.OrderItemResponse toOrderDetailResponse(OrderDetails detail) {
@@ -178,5 +188,13 @@ public class CustomerOrderController {
             unitPrice.multiply(quantity)
         );
     }
-}
 
+    private BigDecimal calculateAdditionalFee(UUID userId) {
+        List<Cart> carts = cartRepository.findByUserId(userId);
+        BigDecimal subtotal = carts.stream()
+            .map(Cart::getItemTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal fee = subtotal.multiply(new BigDecimal("0.05"));
+        return fee.setScale(2, RoundingMode.HALF_UP);
+    }
+}
