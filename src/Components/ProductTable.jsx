@@ -4,7 +4,18 @@ import { Button } from 'react-bootstrap';
 const clothesImg = '/img/clothes.png';
 
 const ProductTable = ({ title, data, pagination }) => {
-    // Sample product data - in a real app, this would come from props or state
+    // Format price for display
+    const formatPrice = (price) => {
+        if (typeof price === 'number') {
+            return new Intl.NumberFormat('vi-VN', {
+                style: 'currency',
+                currency: 'VND'
+            }).format(price);
+        }
+        return price; // Return as-is if it's already formatted
+    };
+
+    // Sample product data - used as a fallback when `data` prop is empty
     const products = Array(6).fill({
         id: 1,
         name: 'Áo đen Gucci Deluxe',
@@ -13,17 +24,19 @@ const ProductTable = ({ title, data, pagination }) => {
         onSale: true
     });
 
+    const items = data;
+
     const pageNumbers = [1, 2, 3, 4, 5];
-    
+
     return (
-        <div className="container py-4 py-xl-5" style={{ maxWidth: '1200px' }}>
+        <div className="container py-2" style={{ maxWidth: '1200px' }}>
             <div className="row mb-5">
                 <div className="col-md-8 col-xl-6 text-center mx-auto">
                     <h2>{title}</h2>
                 </div>
             </div>
             <div className="row gy-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
-                {products.map((product, index) => (
+                {items.map((product, index) => (
 
                     <div key={index} className="col">
                         {/** Replace products with data prop when available */}
@@ -40,7 +53,7 @@ const ProductTable = ({ title, data, pagination }) => {
                                 <img
                                     className="card-img-top w-100 d-block fit-cover cloth-img"
                                     style={{ borderRadius: '19px' }}
-                                    src={product.image}
+                                    src={product.imageUrl || product.image}
                                     alt={product.name}
                                 />
                                 {product.onSale && (
@@ -76,7 +89,7 @@ const ProductTable = ({ title, data, pagination }) => {
                                         {product.name}
                                     </h4>
                                     <p className="text-center text-white card-text">
-                                        {product.price}
+                                        {formatPrice(product.price)}
                                     </p>
                                 </div>
                             </div>
@@ -85,33 +98,7 @@ const ProductTable = ({ title, data, pagination }) => {
                 ))}
             </div>
 
-            {
-                pagination ?
-                    <nav className="d-flex justify-content-center align-items-center mt-3">
-                        <ul className="pagination">
-                            <li className="page-item" style={{ color: 'rgb(33, 37, 41)' }}>
-                                <a className="page-link" aria-label="Previous" href="#">
-                                    <span aria-hidden="true">«</span>
-                                </a>
-                            </li>
-                            {pageNumbers.map((pageNum) => (
-                                <li key={pageNum} className="page-item">
-                                    <a className="page-link" href="#">
-                                        {pageNum}
-                                    </a>
-                                </li>
-                            ))}
-                            <li className="page-item">
-                                <a className="page-link" aria-label="Next" href="#">
-                                    <span aria-hidden="true">»</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </nav> :
-                    <div className='d-flex justify-content-center mt-3'>
-                        <button className='btn btn-orange'>Xem Thêm</button>
-                    </div>
-            }
+
 
 
 

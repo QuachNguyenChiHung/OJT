@@ -15,6 +15,7 @@ export default function ChatBot() {
         setMessages([...messages, { text: inputValue, sender: 'user' }]);
 
         try {
+            setInputValue('');
             const res = await axios.get(`${import.meta.env.VITE_API_URL}/bedrock/ask?q=${inputValue}`, {});
             const botMessage = res.data || 'Xin lỗi, tôi không hiểu câu hỏi của bạn.';
             setMessages(prevMessages => [...prevMessages, { text: botMessage, sender: 'bot' }]);

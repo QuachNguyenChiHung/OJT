@@ -21,6 +21,15 @@ const Login = () => {
         try {
             const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
             setCurrentUser(res.data);
+            // If required profile fields are missing, send user to EnterInfo
+            const missingPhone = !res.data.phoneNumber;
+            const missingUname = !res.data.fullName;
+            if (missingPhone || missingUname) {
+                navigate('/enter-info');
+                return;
+            }
+
+            // Otherwise redirect based on role
             if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
                 navigate('/admin/products');
                 return;
@@ -36,6 +45,16 @@ const Login = () => {
         fetchCurrentUser();
     }, []);
     const [alertType, setAlert] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const success_login_alert = () => {
+        return (
+            <Alert variant="success" dismissible>
+                Đăng nhập thành công! Đang chuyển hướng...
+            </Alert>
+        )
+    }
+
     const failed_login_alert = () => {
         return (
             <>
@@ -64,22 +83,35 @@ const Login = () => {
     };
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setIsLoading(true);
+        setAlert(''); // Clear any previous alerts
+
         try {
             const response = await axios.post(import.meta.env.VITE_API_URL + '/auth/login', formData, {
                 withCredentials: true
             });
-        } catch (error) {
-            console.log(error.response.status);
-            if (error.response.status === 401) {
-                setAlert({ type: 'failed_login' });
-            } else {
-                setAlert({ type: 'failed_server' });
+
+            // If login successful, show success message
+            if (response.status === 200) {
+                setAlert('success_login');
+                // Wait a bit to show the success message before redirecting
+                setTimeout(() => {
+                    fetchCurrentUser();
+                }, 1000);
             }
+        } catch (error) {
+            console.log(error.response?.status);
+            if (error.response?.status === 401) {
+                setAlert('failed_login');
+            } else {
+                setAlert('failed_server');
+            }
+            setIsLoading(false);
         }
-        fetchCurrentUser();
     };
     return (
         <>
+            {alertType === 'success_login' && success_login_alert()}
             {alertType === 'failed_login' && failed_login_alert()}
             {alertType === 'failed_server' && failed_server_alert()}
             <section
@@ -138,12 +170,13 @@ const Login = () => {
                                             <button
                                                 className="btn d-block w-100 btn-warning text-white"
                                                 type="submit"
+                                                disabled={isLoading}
                                             >
-                                                Đăng Nhập
+                                                {isLoading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
                                             </button>
                                             <div className="d-flex">
                                                 <p className="text-muted">Chưa có tài khoản?&nbsp;</p>
-                                                <a href="#">Đăng kí</a>
+                                                <a href="/register">Đăng kí</a>
                                             </div>
                                         </div>
                                     </form>

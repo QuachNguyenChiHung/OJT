@@ -101,21 +101,6 @@ export default function AdminProducts() {
         setProducts(normalizedProducts);
       } catch (err) {
         console.error('Failed to fetch product/category/brand lists', err);
-        // If any fetch fails, try to fall back to localStorage values (keeps previous behavior)
-        try {
-          const br = localStorage.getItem('admin_brands_v1');
-          if (br) {
-            const parsed = JSON.parse(br);
-            setBrands(parsed.map(item => ({ id: item.brand_id ?? item.b_id ?? item.id, name: item.brand_name ?? item.b_name ?? item.name })));
-          }
-          const cat = localStorage.getItem('admin_categories_v1');
-          if (cat) {
-            const parsed = JSON.parse(cat);
-            setCategories(parsed.map(item => ({ id: item.c_id ?? item.id, name: item.c_name ?? item.name })));
-          }
-        } catch (e) {
-          console.error('Failed to parse localStorage fallback', e);
-        }
       } finally {
         if (mounted) setLoading(false);
       }
@@ -145,7 +130,7 @@ export default function AdminProducts() {
   const addProduct = async (e) => {
     e.preventDefault();
     if (!productForm.name.trim()) {
-      alert('Product name is required');
+      alert('Tên sản phẩm là bắt buộc');
       return;
     }
     const payload = {
@@ -167,9 +152,7 @@ export default function AdminProducts() {
       setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
     } catch (err) {
       console.error('Add product failed', err);
-      setProducts(p => [payload, ...p]);
-      setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
-      alert('Failed to add product on server; added locally');
+      alert('Không thể thêm sản phẩm');
     }
   };
 
@@ -182,7 +165,7 @@ export default function AdminProducts() {
   const updateProduct = async (e) => {
     e.preventDefault();
     if (!editingProduct.name.trim()) {
-      alert('Product name is required');
+      alert('Tên sản phẩm là bắt buộc');
       return;
     }
     const payload = {
@@ -221,7 +204,7 @@ export default function AdminProducts() {
       // revert optimistic change if present
       setProducts(products => products.map(p => p.id === editingProduct.id ? ({ ...p, isActive: editingProduct._originalIsActive ?? p.isActive }) : p));
       setEditingProduct(null);
-      alert('Failed to update product on server; updated locally');
+      alert('Không thể cập nhật sản phẩm');
     }
   };
 
@@ -261,12 +244,13 @@ export default function AdminProducts() {
   return (
     <div className="container py-4" style={{ maxWidth: 1200 }}>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Admin - Products</h2>
+        <h2>Quản Trị - Quản Lý Sản Phẩm</h2>
         <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Users</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Categories</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Brands</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Refresh</button>
+          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
+          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
+          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
+          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
+          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm Mới</button>
         </div>
       </div>
 
@@ -281,7 +265,7 @@ export default function AdminProducts() {
               <input
                 type="text"
                 className="form-control"
-                placeholder="Search products by name, description, category, or brand..."
+                placeholder="Tìm kiếm sản phẩm theo tên, mô tả, giá, danh mục hoặc thương hiệu..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -291,14 +275,14 @@ export default function AdminProducts() {
                   type="button"
                   onClick={() => setSearchTerm('')}
                 >
-                  Clear
+                  Xóa
                 </button>
               )}
             </div>
           </div>
           <div className="col-md-6 text-end">
             <small className="text-muted">
-              Showing {filteredProducts.length} of {products.length} products
+              Hiển thị {filteredProducts.length} trong tổng số {products.length} sản phẩm
             </small>
           </div>
         </div>
@@ -306,14 +290,14 @@ export default function AdminProducts() {
 
       {/* Product Creation/Edit Form */}
       <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
-        <h4>{editingProduct ? 'Edit Product' : 'Create New Product'}</h4>
+        <h4>{editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Tạo Sản Phẩm Mới'}</h4>
         <form onSubmit={editingProduct ? updateProduct : addProduct}>
           <div className="row g-2">
             <div className="col-md-3">
               <input
                 className="form-control"
                 name="name"
-                placeholder="Product name"
+                placeholder="Tên sản phẩm"
                 value={editingProduct ? editingProduct.name : productForm.name}
                 onChange={editingProduct ?
                   (e) => setEditingProduct({ ...editingProduct, name: e.target.value, PName: e.target.value, pName: e.target.value }) :
@@ -385,14 +369,14 @@ export default function AdminProducts() {
                 <label className="form-check-label ms-2" htmlFor="isActive">Active</label>
               </div>
             </div>
-            <div className="col-md-2 d-grid">
+            <div className="col-md-12">
               {editingProduct ? (
-                <div className="d-flex gap-1">
-                  <button className="btn btn-success btn-sm" type="submit">Update</button>
-                  <button className="btn btn-secondary btn-sm" type="button" onClick={cancelEdit}>Cancel</button>
+                <div className="d-flex gap-2">
+                  <button className="btn btn-success" type="submit">Cập Nhật Sản Phẩm</button>
+                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Create Product</button>
+                <button className="btn btn-orange" type="submit">Tạo Sản Phẩm</button>
               )}
             </div>
             <div className="col-md-12">
@@ -416,14 +400,14 @@ export default function AdminProducts() {
         {filteredProducts.length === 0 ? (
           <div className="text-center py-4">
             <div className="text-muted">
-              {searchTerm ? `No products found matching "${searchTerm}"` : 'No products available'}
+              {searchTerm ? `Không tìm thấy sản phẩm nào với từ khóa "${searchTerm}"` : 'Không có sản phẩm nào'}
             </div>
             {searchTerm && (
               <button
                 className="btn btn-link btn-sm"
                 onClick={() => setSearchTerm('')}
               >
-                Clear search to show all products
+                Xóa tìm kiếm để hiển thị tất cả sản phẩm
               </button>
             )}
           </div>
