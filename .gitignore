@@ -1,0 +1,156 @@
+# Root .gitignore for OJT Monorepo
+
+# ===========================
+# CRITICAL - SECURITY FILES
+# ===========================
+# Environment files - NEVER commit secrets!
+.env
+.env.*
+!.env.example
+.env.local
+.env.production
+.env.development
+
+# AWS Credentials
+.aws/
+credentials
+config
+
+# SSH Keys
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+
+# ===========================
+# SOURCE CODE PROTECTION
+# ===========================
+# Backend source code (Spring Boot)
+OJT_backenddev/src/main/java/com/tanxuan/**/*.java
+!OJT_backenddev/src/main/java/com/tanxuan/**/Application.java
+
+# Frontend source code (React)
+OJT_frontendDev/src/**/*.jsx
+OJT_frontendDev/src/**/*.js
+!OJT_frontendDev/src/App.jsx
+!OJT_frontendDev/src/main.jsx
+
+# Lambda source code
+OJT_lambda/auth/**/*.js
+OJT_lambda/cart/**/*.js
+OJT_lambda/orders/**/*.js
+OJT_lambda/products/**/*.js
+OJT_lambda/shared/**/*.js
+!OJT_lambda/**/package.json
+
+# Infrastructure code (CDK)
+OJT_infrastructure/lib/**/*.ts
+!OJT_infrastructure/lib/stacks/index.ts
+OJT_infrastructure/bin/**/*.ts
+
+# ===========================
+# DOCUMENTATION PROTECTION
+# ===========================
+# Critical documentation - Do NOT push proprietary info
+ARCHITECTURE_REPORT.md
+DEPLOYMENT_CONFIG_SUMMARY.md
+COST_OPTIMIZATION_SUMMARY.md
+STACK_*.md
+!README.md
+!STACKS_INDEX.md
+
+# SQL files with production data
+*.sql
+!OJT_backenddev/schema.sql
+
+# ===========================
+# DEPENDENCIES & BUILD
+# ===========================
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules/
+jspm_packages/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+*.zip
+*.tar.gz
+target/
+out/
+
+# ===========================
+# CDK & AWS
+# ===========================
+# CDK
+.cdk.staging/
+cdk.out/
+cdk.context.json
+
+# AWS SAM
+.aws-sam/
+
+# CloudFormation
+*.template.json
+*.template.yaml
+
+# ===========================
+# IDE & EDITORS
+# ===========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+.DS_Store
+Thumbs.db
+*.sublime-workspace
+*.sublime-project
+
+# ===========================
+# TESTING & COVERAGE
+# ===========================
+coverage/
+.nyc_output/
+*.lcov
+.jest/
+
+# ===========================
+# TEMPORARY FILES
+# ===========================
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+.cache/
+
+# ===========================
+# PACKAGE MANAGERS
+# ===========================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+.yarn/
+.npm/
+
+# ===========================
+# OS FILES
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+*.lnk
