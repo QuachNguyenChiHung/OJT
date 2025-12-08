@@ -5,65 +5,7 @@
 # ===========================
 # Environment files - NEVER commit secrets!
 .env
-.env.*
 !.env.example
-.env.local
-.env.production
-.env.development
-
-# AWS Credentials
-.aws/
-credentials
-config
-
-# SSH Keys
-*.pem
-*.key
-*.p12
-*.pfx
-id_rsa*
-id_ed25519*
-
-# ===========================
-# SOURCE CODE PROTECTION
-# ===========================
-# Backend source code (Spring Boot)
-OJT_backenddev/src/main/java/com/tanxuan/**/*.java
-!OJT_backenddev/src/main/java/com/tanxuan/**/Application.java
-
-# Frontend source code (React)
-OJT_frontendDev/src/**/*.jsx
-OJT_frontendDev/src/**/*.js
-!OJT_frontendDev/src/App.jsx
-!OJT_frontendDev/src/main.jsx
-
-# Lambda source code
-OJT_lambda/auth/**/*.js
-OJT_lambda/cart/**/*.js
-OJT_lambda/orders/**/*.js
-OJT_lambda/products/**/*.js
-OJT_lambda/shared/**/*.js
-!OJT_lambda/**/package.json
-
-# Infrastructure code (CDK)
-OJT_infrastructure/lib/**/*.ts
-!OJT_infrastructure/lib/stacks/index.ts
-OJT_infrastructure/bin/**/*.ts
-
-# ===========================
-# DOCUMENTATION PROTECTION
-# ===========================
-# Critical documentation - Do NOT push proprietary info
-ARCHITECTURE_REPORT.md
-DEPLOYMENT_CONFIG_SUMMARY.md
-COST_OPTIMIZATION_SUMMARY.md
-STACK_*.md
-!README.md
-!STACKS_INDEX.md
-
-# SQL files with production data
-*.sql
-!OJT_backenddev/schema.sql
 
 # ===========================
 # DEPENDENCIES & BUILD
