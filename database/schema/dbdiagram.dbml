@@ -1,0 +1,178 @@
+// OJT E-commerce Database Schema
+// Use this file at https://dbdiagram.io/
+
+Project OJT_Ecommerce {
+  database_type: 'MySQL'
+  Note: 'E-commerce database schema for OJT project'
+}
+
+// =====================================================
+// Users Table
+// =====================================================
+Table Users {
+  user_id char(36) [pk, default: `UUID()`]
+  email varchar(255) [unique, not null]
+  password varchar(512) [not null]
+  u_name varchar(255)
+  phone_number varchar(13)
+  address varchar(255)
+  role enum('USER', 'EMPLOYEE', 'ADMIN') [default: 'USER']
+  isActive boolean [default: true]
+  date_of_birth date
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    email
+    role
+  }
+}
+
+// =====================================================
+// Category Table
+// =====================================================
+Table Category {
+  c_id char(36) [pk, default: `UUID()`]
+  c_name varchar(255) [unique, not null]
+
+  indexes {
+    c_name
+  }
+}
+
+// =====================================================
+// Brand Table
+// =====================================================
+Table Brand {
+  brand_id char(36) [pk, default: `UUID()`]
+  brand_name varchar(255) [unique, not null]
+
+  indexes {
+    brand_name
+  }
+}
+
+// =====================================================
+// Banner Table
+// =====================================================
+Table Banner {
+  banner_id char(36) [pk, default: `UUID()`]
+  image_url varchar(255)
+  is_active boolean [default: true]
+  title varchar(128)
+  u_id char(36) [ref: > Users.user_id]
+  createdAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updatedAt timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    is_active
+  }
+}
+
+// =====================================================
+// Product Table
+// =====================================================
+Table Product {
+  p_id char(36) [pk, default: `UUID()`]
+  p_name varchar(255) [not null]
+  p_desc text
+  price decimal(10,2) [not null, note: 'Must be > 0']
+  c_id char(36) [not null, ref: > Category.c_id]
+  brand_id char(36) [not null, ref: > Brand.brand_id]
+  is_active boolean [default: true]
+
+  indexes {
+    p_name
+    c_id
+    brand_id
+    is_active
+  }
+}
+
+// =====================================================
+// ProductDetails Table (Variants)
+// =====================================================
+Table ProductDetails {
+  pd_id char(36) [pk, default: `UUID()`]
+  p_id char(36) [not null, ref: > Product.p_id]
+  color_name varchar(64)
+  color_code varchar(64)
+  img_list json
+  size varchar(10)
+  amount int [default: 0]
+  in_stock boolean [default: true]
+
+  indexes {
+    p_id
+    in_stock
+  }
+}
+
+// =====================================================
+// Orders Table
+// =====================================================
+Table Orders {
+  o_id char(36) [pk, default: `UUID()`]
+  order_number bigint [unique]
+  u_id char(36) [not null, ref: > Users.user_id]
+  status enum('PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED') [default: 'PENDING']
+  date_created timestamp [default: `CURRENT_TIMESTAMP`]
+  total_price decimal(10,2) [not null]
+  payment_method varchar(50)
+  shipping_address varchar(500)
+  phone varchar(20)
+
+  indexes {
+    u_id
+    status
+    date_created
+  }
+}
+
+// =====================================================
+// OrderDetails Table
+// =====================================================
+Table OrderDetails {
+  od_id char(36) [pk, default: `UUID()`]
+  o_id char(36) [not null, ref: > Orders.o_id]
+  pd_id char(36) [not null, ref: > ProductDetails.pd_id]
+  quantity int [default: 1, note: 'Must be > 0']
+  price decimal(10,2) [not null, note: 'Must be > 0']
+
+  indexes {
+    o_id
+  }
+}
+
+// =====================================================
+// Rating Table
+// =====================================================
+Table Rating {
+  r_id char(36) [pk, default: `UUID()`]
+  u_id char(36) [ref: > Users.user_id]
+  p_id char(36) [ref: > Product.p_id]
+  rating_value int [not null, note: 'Between 1 and 5']
+
+  indexes {
+    p_id
+    rating_value
+    (u_id, p_id) [unique]
+  }
+}
+
+// =====================================================
+// Cart Table (Shopping Cart)
+// =====================================================
+Table Cart {
+  cart_id char(36) [pk, default: `UUID()`]
+  user_id char(36) [not null, ref: > Users.user_id]
+  pd_id char(36) [not null, ref: > ProductDetails.pd_id]
+  quantity int [not null, default: 1, note: 'Must be > 0']
+  created_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at timestamp [not null, default: `CURRENT_TIMESTAMP`]
+
+  indexes {
+    user_id
+    (user_id, pd_id) [unique]
+  }
+}

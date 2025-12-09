@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+shared/node_modules/
+auth/node_modules/
+products/node_modules/
+
+# Build artifacts
+dist/
+build/
+*.zip
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

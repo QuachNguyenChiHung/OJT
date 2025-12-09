@@ -1,0 +1,10 @@
+{
+  "name": "orders-functions",
+  "version": "1.0.0",
+  "description": "Orders Lambda functions",
+  "dependencies": {
+    "@aws-sdk/client-rds-data": "^3.400.0",
+    "uuid": "^9.0.0",
+    "jsonwebtoken": "^9.0.0"
+  }
+}

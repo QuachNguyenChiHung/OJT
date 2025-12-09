@@ -1,0 +1,44 @@
+{
+  "name": "ojt-lambda-functions",
+  "version": "1.0.0",
+  "description": "AWS Lambda functions for OJT E-commerce API",
+  "scripts": {
+    "install:all": "npm install && npm run install:shared && npm run install:auth && npm run install:products && npm run install:cart && npm run install:orders && npm run install:users && npm run install:ratings && npm run install:categories && npm run install:brands && npm run install:images",
+    "install:shared": "cd shared && npm install",
+    "install:auth": "cd auth && npm install",
+    "install:products": "cd products && npm install",
+    "install:cart": "cd cart && npm install",
+    "install:orders": "cd orders && npm install",
+    "install:users": "cd users && npm install",
+    "install:ratings": "cd ratings && npm install",
+    "install:categories": "cd categories && npm install",
+    "install:brands": "cd brands && npm install",
+    "install:images": "cd images && npm install",
+    "build": "node scripts/build-lambda.js",
+    "build:auth": "node scripts/build-lambda.js auth",
+    "build:products": "node scripts/build-lambda.js products",
+    "build:cart": "node scripts/build-lambda.js cart",
+    "build:orders": "node scripts/build-lambda.js orders",
+    "build:users": "node scripts/build-lambda.js users",
+    "build:ratings": "node scripts/build-lambda.js ratings",
+    "build:categories": "node scripts/build-lambda.js categories",
+    "build:brands": "node scripts/build-lambda.js brands",
+    "build:images": "node scripts/build-lambda.js images",
+    "deploy": "node ../deploy/deploy-all.js",
+    "deploy:layer": "node ../deploy/deploy-layer.js",
+    "deploy:modules": "node ../deploy/deploy-modules.js",
+    "clean": "node scripts/clean.js"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "serverless",
+    "ecommerce"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "archiver": "^6.0.1",
+    "dotenv": "^16.3.1"
+  }
+}

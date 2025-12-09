@@ -1,0 +1,12 @@
+{
+  "name": "lambda-auth",
+  "version": "1.0.0",
+  "description": "Authentication Lambda functions",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-rds-data": "^3.478.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "uuid": "^9.0.1"
+  }
+}
