@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function OrderList() {
     const [userOrders, setUserOrders] = useState([]);
     const [orderDetails, setOrderDetails] = useState({});
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState({
+    const [, setCurrentUser] = useState({
         email: '',
         fullName: '',
         role: '',
@@ -24,15 +24,16 @@ export default function OrderList() {
         setLoading(true);
         try {
             // Get current user first
-            const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/auth/me`, { withCredentials: true });
+            const userRes = await api.get('/auth/me');
             if (!userRes.data) {
                 navigate('/login');
                 return;
             }
             setCurrentUser(userRes.data);
 
-            // Then get their orders
-            const ordersRes = await axios.get(`${import.meta.env.VITE_API_URL}/orders/user/${userRes.data.u_id}`, { withCredentials: true });
+            // Then get their orders - use userId from response
+            const userId = userRes.data.userId || userRes.data.u_id || userRes.data.id;
+            const ordersRes = await api.get(`/orders/user/${userId}`);
             const orders = ordersRes.data || [];
             setUserOrders(orders);
         } catch (error) {
@@ -58,7 +59,7 @@ export default function OrderList() {
         // Fetch order details if not already loaded
         if (!orderDetails[orderId]) {
             try {
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/orders/${orderId}/details`, { withCredentials: true });
+                const res = await api.get(`/orders/${orderId}/details`);
                 setOrderDetails(prev => ({
                     ...prev,
                     [orderId]: res.data || []

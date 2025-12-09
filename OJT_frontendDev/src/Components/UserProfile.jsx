@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function UserProfile() {
   const [user, setUser] = useState(null);
@@ -8,27 +8,26 @@ export default function UserProfile() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     setLoading(true);
     try {
       // First get current user to get the ID
-      const authRes = await axios.get(`${import.meta.env.VITE_API_URL}/auth/me`, { withCredentials: true });
+      const authRes = await api.get('/auth/me');
       if (!authRes.data) {
         navigate('/login');
         return;
       }
 
+      // /auth/me returns userId (not u_id)
+      const userId = authRes.data.userId || authRes.data.u_id;
+      
       // Then get user details
-      const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/users/${authRes.data.u_id}`, { withCredentials: true });
+      const userRes = await api.get(`/users/${userId}`);
       setUser(userRes.data);
       setError(null);
-    } catch (error) {
-      console.error('Không thể tải thông tin người dùng:', error);
-      if (error.response?.status === 401) {
+    } catch (err) {
+      console.error('Không thể tải thông tin người dùng:', err);
+      if (err.response?.status === 401) {
         navigate('/login');
       } else {
         setError('Không thể tải thông tin người dùng');
@@ -36,7 +35,11 @@ export default function UserProfile() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Chưa có thông tin';

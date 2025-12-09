@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 
 const UpdateProfile = () => {
     const [formData, setFormData] = useState({
@@ -18,9 +18,7 @@ const UpdateProfile = () => {
     useEffect(() => {
         const loadUserData = async () => {
             try {
-                const response = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', {
-                    withCredentials: true
-                });
+                const response = await api.get('/auth/me');
                 const user = response.data;
                 // Format date for input field (YYYY-MM-DD for HTML input, but we'll convert to dd/MM/yyyy for backend)
                 let formattedDate = '';
@@ -39,7 +37,7 @@ const UpdateProfile = () => {
                     }
                 }
                 setFormData({
-                    u_id: user.u_id || user.id || '',
+                    u_id: user.userId || user.u_id || user.id || '',
                     fullName: user.fullName || user.u_name || '',
                     phoneNumber: user.phoneNumber || user.phone_number || '',
                     address: user.address || '',
@@ -48,8 +46,13 @@ const UpdateProfile = () => {
                 });
             } catch (error) {
                 console.error('Error loading user data:', error);
-                setAlert({ type: 'danger', message: 'Không thể tải thông tin người dùng. Vui lòng đăng nhập lại.' });
-                navigate('/login');
+                // Only redirect to login if 401 (unauthorized)
+                if (error.response?.status === 401) {
+                    setAlert({ type: 'danger', message: 'Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.' });
+                    setTimeout(() => navigate('/login'), 1500);
+                } else {
+                    setAlert({ type: 'danger', message: 'Không thể tải thông tin người dùng. Vui lòng thử lại.' });
+                }
             }
         };
 
@@ -84,11 +87,17 @@ const UpdateProfile = () => {
         }
 
         try {
+            // Check if u_id is available
+            if (!formData.u_id) {
+                setAlert({ type: 'danger', message: 'Không tìm thấy ID người dùng. Vui lòng đăng nhập lại.' });
+                setLoading(false);
+                return;
+            }
+
             const updateData = {
                 fullName: formData.fullName.trim(),
                 phoneNumber: formData.phoneNumber.trim(),
                 address: formData.address.trim(),
-                dateOfBirth: formData.dateOfBirth.trim(),
             };
 
             // Only include dateOfBirth if it has a valid value, convert yyyy-MM-dd to dd/MM/yyyy
@@ -98,19 +107,19 @@ const UpdateProfile = () => {
                 updateData.dateOfBirth = `${day}/${month}/${year}`;
             }
 
-            await axios.put(import.meta.env.VITE_API_URL + '/users/profile/' + formData.u_id, updateData, {
-                withCredentials: true
-            });
+            console.log('[UpdateProfile] Updating user:', formData.u_id, updateData);
+            await api.put('/users/profile/' + formData.u_id, updateData);
 
             setAlert({ type: 'success', message: 'Cập nhật thông tin thành công!' });
 
             // Redirect after a short delay
             setTimeout(() => {
-                navigate('/');
-            }, 2000);
+                navigate('/profile');
+            }, 1500);
         } catch (error) {
             console.error('Error updating profile:', error);
-            setAlert({ type: 'danger', message: 'Cập nhật thông tin thất bại. Vui lòng thử lại.' });
+            const errorMsg = error.response?.data?.error || error.message || 'Cập nhật thông tin thất bại';
+            setAlert({ type: 'danger', message: errorMsg + '. Vui lòng thử lại.' });
         } finally {
             setLoading(false);
         }

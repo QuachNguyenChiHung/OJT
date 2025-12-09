@@ -1,44 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
 
 export default function CartPage() {
     const [cartData, setCartData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState({});
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const navigate = useNavigate();
 
-    const fetchCart = async () => {
+    const fetchCart = useCallback(async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            // Not logged in - show empty cart
+            setIsLoggedIn(false);
+            setCartData({ items: [], totalItems: 0, totalPrice: 0 });
+            setLoading(false);
+            return;
+        }
+        
+        setIsLoggedIn(true);
         try {
             setLoading(true);
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/cart/me`, { withCredentials: true });
+            const response = await api.get('/cart/me');
             setCartData(response.data.data);
         } catch (error) {
             console.error('Error fetching cart:', error);
             if (error.response?.status === 401) {
-                navigate('/login');
+                // Token expired or invalid
+                setIsLoggedIn(false);
+                setCartData({ items: [], totalItems: 0, totalPrice: 0 });
             } else {
                 alert('Không thể tải giỏ hàng');
             }
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchCart();
-    }, []);
+    }, [fetchCart]);
 
     const updateQuantity = async (cartId, newQuantity) => {
         if (newQuantity < 1) return;
 
         try {
             setUpdating(prev => ({ ...prev, [cartId]: true }));
-            await axios.put(`${import.meta.env.VITE_API_URL}/cart/${cartId}`,
-                { quantity: newQuantity },
-                { withCredentials: true }
-            );
-            await fetchCart(); // Refresh cart data
+            await api.put(`/cart/${cartId}`, { quantity: newQuantity });
+            await fetchCart();
         } catch (error) {
             console.error('Error updating quantity:', error);
             alert('Không thể cập nhật số lượng');
@@ -52,8 +62,8 @@ export default function CartPage() {
 
         try {
             setUpdating(prev => ({ ...prev, [cartId]: true }));
-            await axios.delete(`${import.meta.env.VITE_API_URL}/cart/${cartId}`, { withCredentials: true });
-            await fetchCart(); // Refresh cart data
+            await api.delete(`/cart/${cartId}`);
+            await fetchCart();
         } catch (error) {
             console.error('Error removing item:', error);
             alert('Không thể xóa sản phẩm');
@@ -63,11 +73,17 @@ export default function CartPage() {
     };
 
     const proceedToCheckout = () => {
+        // Check if user is logged in
+        if (!isLoggedIn) {
+            alert('Vui lòng đăng nhập để thanh toán');
+            navigate('/login', { state: { from: '/cart' } });
+            return;
+        }
+        
         if (!cartData?.items || cartData.items.length === 0) {
             alert('Giỏ hàng trống');
             return;
         }
-        // Navigate to checkout page (you can implement this later)
         navigate('/checkout');
     };
 
@@ -99,7 +115,19 @@ export default function CartPage() {
                         <i className="fas fa-shopping-cart fa-5x text-muted"></i>
                     </div>
                     <h3 className="mb-3">Giỏ hàng trống</h3>
-                    <p className="text-muted mb-4">Bạn chưa có sản phẩm nào trong giỏ hàng</p>
+                    <p className="text-muted mb-4">
+                        {isLoggedIn 
+                            ? 'Bạn chưa có sản phẩm nào trong giỏ hàng'
+                            : 'Đăng nhập để xem giỏ hàng của bạn'}
+                    </p>
+                    {!isLoggedIn && (
+                        <button
+                            className="btn btn-primary btn-lg me-2"
+                            onClick={() => navigate('/login', { state: { from: '/cart' } })}
+                        >
+                            Đăng nhập
+                        </button>
+                    )}
                     <button
                         className="btn btn-orange btn-lg"
                         onClick={() => navigate('/')}

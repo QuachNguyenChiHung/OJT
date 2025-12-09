@@ -1,13 +1,12 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
+import AdminLayout from './AdminLayout';
 
-const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+const MAX_IMAGES = 5;
 
 export default function AdminProducts() {
-  //fix name and desc always being empty or null on edit
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [productForm, setProductForm] = useState({
     name: '',
@@ -22,39 +21,35 @@ export default function AdminProducts() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [selectedImages, setSelectedImages] = useState([]);
+  const [imagePreview, setImagePreview] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState({
-    email: '',
-    fullName: '',
-    role: '',
-    phoneNumber: '',
-    address: ''
-  });
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
-        navigate('/login');
-        return;
-      }
-      setCurrentUser(res.data);
-    } catch (error) {
-      navigate('/login');
-    }
-  }
+  
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+          navigate('/login');
+          return;
+        }
+      } catch {
+        navigate('/login');
+      }
+    };
     fetchCurrentUser();
-  }, []);
+  }, [navigate]);
   // fetch products, categories and brands in parallel and normalize
   useEffect(() => {
     let mounted = true;
     const fetchAll = async () => {
-      setLoading(true);
       try {
         const [pRes, cRes, bRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/products`),
-          axios.get(`${import.meta.env.VITE_API_URL}/categories`),
-          axios.get(`${import.meta.env.VITE_API_URL}/brands`)
+          api.get('/products'),
+          api.get('/categories'),
+          api.get('/brands')
         ]);
 
         // normalize categories
@@ -101,8 +96,6 @@ export default function AdminProducts() {
         setProducts(normalizedProducts);
       } catch (err) {
         console.error('Failed to fetch product/category/brand lists', err);
-      } finally {
-        if (mounted) setLoading(false);
       }
     };
     fetchAll();
@@ -127,6 +120,34 @@ export default function AdminProducts() {
     setProductForm((f) => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  // Handle image selection
+  const handleImageSelect = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length + selectedImages.length > MAX_IMAGES) {
+      alert(`Tối đa ${MAX_IMAGES} ảnh`);
+      return;
+    }
+    
+    const newImages = [...selectedImages, ...files].slice(0, MAX_IMAGES);
+    setSelectedImages(newImages);
+    
+    // Create previews
+    const previews = newImages.map(file => URL.createObjectURL(file));
+    setImagePreview(previews);
+  };
+
+  const removeImage = (index) => {
+    const newImages = selectedImages.filter((_, i) => i !== index);
+    setSelectedImages(newImages);
+    setImagePreview(newImages.map(file => URL.createObjectURL(file)));
+  };
+
+  const clearImages = () => {
+    setSelectedImages([]);
+    setImagePreview([]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const addProduct = async (e) => {
     e.preventDefault();
     if (!productForm.name.trim()) {
@@ -134,26 +155,97 @@ export default function AdminProducts() {
       return;
     }
     const payload = {
-      // provide multiple name/description keys to match various backend DTOs
       name: productForm.name.trim(),
       description: productForm.description.trim(),
       price: parseFloat(productForm.price) || 0,
       categoryId: productForm.categoryId || '',
       brandId: productForm.brandId || '',
-      isActive: Boolean(!!productForm.isActive)
-      // include alternate naming for some backends
+      isActive: Boolean(productForm.isActive)
     };
     try {
-      console.log(payload)
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/products`, payload, { withCredentials: true });
+      console.log(payload);
+      const res = await api.post('/products', payload);
+      const data = res?.data || {};
+      const productId = data.id || data.productId || data.p_id || data.pId;
 
-      const created = res && res.data ? res.data : payload;
-      setProducts(p => [created, ...p]);
+      // Upload images if selected and product has details
+      if (selectedImages.length > 0 && productId) {
+        await uploadImagesToProduct(productId);
+      }
+
+      // Normalize created product for display
+      const categoryName = categories.find(c => String(c.id) === String(payload.categoryId))?.name || '';
+      const brandName = brands.find(b => String(b.id) === String(payload.brandId))?.name || '';
+      const normalizedProduct = {
+        id: productId,
+        name: data.name || payload.name,
+        description: data.description || payload.description,
+        price: data.price ?? payload.price,
+        categoryName,
+        brandName,
+        isActive: data.isActive ?? payload.isActive,
+        averageRating: null
+      };
+
+      setProducts(p => [normalizedProduct, ...p]);
       setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '', isActive: true });
+      clearImages();
+      alert('Tạo sản phẩm thành công!');
     } catch (err) {
       console.error('Add product failed', err);
-      alert('Không thể thêm sản phẩm');
+      alert('Không thể thêm sản phẩm: ' + (err?.response?.data?.message || err.message));
     }
+  };
+
+  // Upload images to product details
+  const uploadImagesToProduct = async (productId) => {
+    if (selectedImages.length === 0) return;
+    
+    setUploading(true);
+    try {
+      // First get product details for this product
+      const detailsRes = await api.get(`/product-details/product/${productId}`);
+      const details = Array.isArray(detailsRes.data) ? detailsRes.data : [detailsRes.data];
+      
+      if (details.length === 0 || !details[0]) {
+        console.log('No product details found, creating default one...');
+        // Create a default product detail
+        const createRes = await api.post('/product-details', {
+          productId: productId,
+          size: 'Default',
+          colorName: 'Default',
+          amount: 0,
+          inStock: true
+        });
+        const newDetail = createRes.data;
+        const pdId = newDetail.pdId || newDetail.pd_id || newDetail.id;
+        if (pdId) {
+          await uploadToProductDetail(pdId);
+        }
+      } else {
+        // Upload to first product detail
+        const pdId = details[0].pdId || details[0].pd_id || details[0].id;
+        if (pdId) {
+          await uploadToProductDetail(pdId);
+        }
+      }
+    } catch (err) {
+      console.error('Upload images failed:', err);
+      alert('Sản phẩm đã tạo nhưng upload ảnh thất bại');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadToProductDetail = async (pdId) => {
+    const formData = new FormData();
+    selectedImages.forEach((file, idx) => {
+      formData.append(`image${idx}`, file);
+    });
+    
+    await api.post(`/product-details/${pdId}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
   };
 
   const startEditProduct = (product) => {
@@ -174,14 +266,14 @@ export default function AdminProducts() {
       PName: editingProduct.name.trim(),
       pDesc: editingProduct.description.trim(),
       price: parseFloat(editingProduct.price) || 0,
-      isActive: Boolean(!!editingProduct.isActive),
+      isActive: Boolean(editingProduct.isActive),
     };
     try {
       // backend expects categoryId and brandId as request params
       const categoryParam = editingProduct.categoryId ? `?categoryId=${editingProduct.categoryId}` : '';
       const brandParam = editingProduct.brandId ? `${categoryParam ? '&' : '?'}brandId=${editingProduct.brandId}` : '';
       const query = `${categoryParam}${brandParam}`;
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/products/${editingProduct.id}${query}`, payload, { withCredentials: true });
+      const res = await api.put(`/products/${editingProduct.id}${query}`, payload);
       console.log(payload)
       const responseObj = res && res.data ? res.data : payload;
       // determine id from multiple possible keys
@@ -219,7 +311,7 @@ export default function AdminProducts() {
   const remove = async (id) => {
     if (!confirm('Xóa sản phẩm này?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/products/${id}`, { withCredentials: true });
+      await api.delete(`/products/${id}`);
       setProducts((p) => p.filter(x => x.id !== id));
     } catch (err) {
       console.error('Delete product failed', err);
@@ -242,17 +334,14 @@ export default function AdminProducts() {
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1200 }}>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản Trị - Quản Lý Sản Phẩm</h2>
-        <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
-          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm Mới</button>
+    <AdminLayout title="Quản Lý Sản Phẩm">
+      <div style={{ maxWidth: 1200 }}>
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div></div>
+          <button className="btn" style={{ background: '#008B8B', color: '#fff' }} onClick={() => navigate('/admin/products')}>
+            🔄 Làm Mới
+          </button>
         </div>
-      </div>
 
       {/* Search Bar */}
       <div className="mb-3">
@@ -289,7 +378,7 @@ export default function AdminProducts() {
       </div>
 
       {/* Product Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+      <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
         <h4>{editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Tạo Sản Phẩm Mới'}</h4>
         <form onSubmit={editingProduct ? updateProduct : addProduct}>
           <div className="row g-2">
@@ -376,7 +465,7 @@ export default function AdminProducts() {
                   <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo Sản Phẩm</button>
+                <button className="btn" style={{ background: '#008B8B', color: '#fff' }} type="submit">Tạo Sản Phẩm</button>
               )}
             </div>
             <div className="col-md-12">
@@ -392,6 +481,56 @@ export default function AdminProducts() {
                 rows="2"
               />
             </div>
+            
+            {/* Image Upload Section */}
+            {!editingProduct && (
+              <div className="col-md-12 mt-3">
+                <label className="form-label fw-bold">Ảnh sản phẩm (tối đa {MAX_IMAGES} ảnh)</label>
+                <div className="d-flex align-items-center gap-2 mb-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    className="form-control"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageSelect}
+                    disabled={selectedImages.length >= MAX_IMAGES}
+                  />
+                  {selectedImages.length > 0 && (
+                    <button type="button" className="btn btn-outline-danger btn-sm" onClick={clearImages}>
+                      Xóa tất cả
+                    </button>
+                  )}
+                </div>
+                <small className="text-muted">Đã chọn: {selectedImages.length}/{MAX_IMAGES} ảnh</small>
+                
+                {/* Image Previews */}
+                {imagePreview.length > 0 && (
+                  <div className="d-flex flex-wrap gap-2 mt-2">
+                    {imagePreview.map((src, idx) => (
+                      <div key={idx} style={{ position: 'relative' }}>
+                        <img
+                          src={src}
+                          alt={`Preview ${idx + 1}`}
+                          style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(idx)}
+                          style={{
+                            position: 'absolute', top: -8, right: -8,
+                            background: '#dc3545', color: '#fff', border: 'none',
+                            borderRadius: '50%', width: 20, height: 20, fontSize: 12,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                          }}
+                        >×</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {uploading && <div className="text-info mt-2">⏳ Đang upload ảnh...</div>}
+              </div>
+            )}
           </div>
         </form>
       </div>
@@ -457,6 +596,7 @@ export default function AdminProducts() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

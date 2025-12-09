@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function CheckoutPage() {
     const [cartData, setCartData] = useState(null);
@@ -29,8 +29,8 @@ export default function CheckoutPage() {
         try {
             setLoading(true);
             const [cartResponse, userResponse] = await Promise.all([
-                axios.get(`${import.meta.env.VITE_API_URL}/cart/me`, { withCredentials: true }),
-                axios.get(`${import.meta.env.VITE_API_URL}/auth/me`, { withCredentials: true })
+                api.get('/cart/me'),
+                api.get('/auth/me')
             ]);
 
             setCartData(cartResponse.data.data);
@@ -91,14 +91,10 @@ export default function CheckoutPage() {
 
             // Use /api/orders endpoint as defined in CustomerOrderController
             console.log('Order Data:', orderData); // For debugging
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/orders`,
-                orderData,
-                { withCredentials: true }
-            );
+            const response = await api.post('/orders', orderData);
 
             // Clear cart after successful order
-            await axios.delete(`${import.meta.env.VITE_API_URL}/cart`, { withCredentials: true });
+            await api.delete('/cart');
 
             alert('Đặt hàng thành công!');
             navigate('/orders', {

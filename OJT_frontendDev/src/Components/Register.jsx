@@ -1,42 +1,110 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import '../styles/theme.css';
 
 const logoImg = '/img/logo.png';
 
 const Register = () => {
     const [formData, setFormData] = useState({
+        fullName: '',
+        username: '',
         email: '',
+        phone: '',
         password: '',
         confirmPassword: ''
     });
+    const [showVerify, setShowVerify] = useState(false);
+    const [verifyCode, setVerifyCode] = useState('');
     const navigate = useNavigate();
-    const handleChange = (e) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
-    };
-    const fetchCurrentUser = async () => {
-        try {
-            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-            console.log(res.data);
-            if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
-                navigate('/admin/products');
-                return;
-            } else {
-                navigate('/');
+
+    // Field validation states (only username and phone)
+    const [fieldErrors, setFieldErrors] = useState({
+        username: '',
+        phone: ''
+    });
+    const [fieldChecking, setFieldChecking] = useState({
+        username: false,
+        phone: false
+    });
+
+    // Check duplicate field (only username and phone)
+    const checkDuplicate = useCallback(async (field, value) => {
+        if (!value || value.length < 3) {
+            setFieldErrors(prev => ({ ...prev, [field]: '' }));
+            return;
+        }
+
+        // Validate format first
+        if (field === 'username') {
+            const usernameRegex = /^[a-zA-Z0-9_]{3,30}$/;
+            if (!usernameRegex.test(value)) {
+                setFieldErrors(prev => ({ ...prev, username: 'Username chỉ chứa chữ, số và dấu gạch dưới (3-30 ký tự)' }));
                 return;
             }
-
-        } catch (error) {
         }
-    }
-    useEffect(() => {
-        fetchCurrentUser();
+
+        if (field === 'phone') {
+            const phoneRegex = /^[0-9]{9,11}$/;
+            if (!phoneRegex.test(value.replace(/\D/g, ''))) {
+                setFieldErrors(prev => ({ ...prev, phone: 'Số điện thoại không hợp lệ' }));
+                return;
+            }
+        }
+
+        setFieldChecking(prev => ({ ...prev, [field]: true }));
+        
+        try {
+            const res = await api.post('/auth/check-duplicate', { field, value });
+            if (res.data.exists) {
+                setFieldErrors(prev => ({ ...prev, [field]: res.data.message }));
+            } else {
+                setFieldErrors(prev => ({ ...prev, [field]: '' }));
+            }
+        } catch {
+            // Silent fail for duplicate check
+        } finally {
+            setFieldChecking(prev => ({ ...prev, [field]: false }));
+        }
     }, []);
+
+    // Debounce timer refs
+    const usernameTimerRef = useRef(null);
+    const phoneTimerRef = useRef(null);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+
+        // Trigger duplicate check for username and phone only (debounced)
+        if (name === 'username') {
+            if (usernameTimerRef.current) clearTimeout(usernameTimerRef.current);
+            usernameTimerRef.current = setTimeout(() => checkDuplicate('username', value), 500);
+        } else if (name === 'phone') {
+            if (phoneTimerRef.current) clearTimeout(phoneTimerRef.current);
+            phoneTimerRef.current = setTimeout(() => checkDuplicate('phone', value), 500);
+        }
+    };
+
+    useEffect(() => {
+        const fetchCurrentUser = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            
+            try {
+                const res = await api.get('/auth/me');
+                if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+                    navigate('/admin/products');
+                } else {
+                    navigate('/home');
+                }
+            } catch { /* empty */ }
+        };
+        fetchCurrentUser();
+    }, [navigate]);
+
     const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState(null); // 'error' | 'success'
+    const [messageType, setMessageType] = useState(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -44,142 +112,197 @@ const Register = () => {
         setMessage('');
         setMessageType(null);
 
-        // Client-side validation
+        // Check for field errors
+        if (fieldErrors.username || fieldErrors.phone) {
+            setMessage('Vui lòng sửa các lỗi trước khi đăng ký');
+            setMessageType('error');
+            return;
+        }
+
         if (formData.password !== formData.confirmPassword) {
             setMessage('Mật khẩu không khớp!');
+            setMessageType('error');
+            return;
+        }
+        if (formData.password.length < 8) {
+            setMessage('Mật khẩu phải có ít nhất 8 ký tự!');
+            setMessageType('error');
+            return;
+        }
+        if (!formData.username || formData.username.length < 3) {
+            setMessage('Username phải có ít nhất 3 ký tự!');
             setMessageType('error');
             return;
         }
 
         setIsSubmitting(true);
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/signup`, {
+            const res = await api.post('/auth/signup', {
+                fullName: formData.fullName,
+                username: formData.username,
                 email: formData.email,
-                password: formData.password
-            }, { withCredentials: true });
+                phone: formData.phone,
+                password: formData.password,
+                confirmPassword: formData.confirmPassword
+            });
 
-            // Assuming success status codes 2xx
-            setMessage('Đăng ký thành công!, vui lòng đăng nhập.');
-            setMessageType('success');
-            setFormData({ email: '', password: '', confirmPassword: '' });
-            navigate('/login');
-            return;
-        } catch (error) {
-            // Show specific message for HTTP 409 (conflict / already exists)
-            if (error?.response?.status === 409) {
-                setMessage('Email đã được đăng ký');
+            if (res.data.authType === 'cognito') {
+                setMessage('Đăng ký thành công! Vui lòng kiểm tra email để lấy mã xác nhận.');
+                setMessageType('success');
+                setShowVerify(true);
             } else {
-                // Show server error message if available
-                const serverMsg = error?.response?.data?.message || error?.message || 'Lỗi máy chủ. Vui lòng thử lại sau.';
-                setMessage(serverMsg);
+                setMessage('Đăng ký thành công! Đang chuyển đến trang đăng nhập...');
+                setMessageType('success');
+                setTimeout(() => navigate('/login'), 2000);
             }
+        } catch (error) {
+            const serverMsg = error?.response?.data?.error || error?.message || 'Lỗi máy chủ';
+            setMessage(serverMsg);
             setMessageType('error');
         } finally {
             setIsSubmitting(false);
         }
+    };
 
-        console.log('Register attempt:', formData);
+    const handleVerifyCode = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        try {
+            await api.post('/auth/verify', {
+                username: formData.username,
+                code: verifyCode
+            });
+            setMessage('Xác nhận thành công! Đang chuyển đến trang đăng nhập...');
+            setMessageType('success');
+            setTimeout(() => navigate('/login'), 2000);
+        } catch (error) {
+            setMessage(error?.response?.data?.error || 'Mã xác nhận không đúng');
+            setMessageType('error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Input field with validation indicator (only for username and phone)
+    const renderValidatedInput = (name, label, type, options = {}) => {
+        const hasError = fieldErrors[name];
+        const isChecking = fieldChecking[name];
+        const isValid = formData[name] && formData[name].length >= 3 && !hasError && !isChecking;
+        
+        return (
+            <div className="mb-3">
+                <label className="form-label" style={{ fontWeight: '500', color: '#555' }}>{label}</label>
+                <div style={{ position: 'relative' }}>
+                    <input 
+                        className={`form-control ${hasError ? 'is-invalid' : (isValid ? 'is-valid' : '')}`}
+                        type={type} 
+                        name={name} 
+                        placeholder=""
+                        value={formData[name]} 
+                        onChange={handleChange} 
+                        required 
+                        {...options}
+                    />
+                    {isChecking && (
+                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <span className="spinner-border spinner-border-sm text-secondary" />
+                        </div>
+                    )}
+                </div>
+                {hasError && (
+                    <small className="text-danger">{hasError}</small>
+                )}
+            </div>
+        );
     };
 
     return (
-        <section
-            className="d-flex align-items-center py-4 py-xl-5"
-            style={{ height: '100vh ', width: '100vw ' }}
-        >
-            <div className="container">
-                <div className="row d-flex justify-content-center">
-                    <div className="col-md-6 col-xl-4">
-                        <div
-                            className="card mb-5"
-                            style={{
-                                padding: '1rem',
-                                borderWidth: '3px',
-                                borderColor: 'rgb(228, 148, 0)',
-                                paddingBottom: 0
-                            }}
-                        >
-                            <div className="d-flex align-items-center">
-                                <img className="logo" src={logoImg} alt="Logo" />
-                            </div>
-                            <div
-                                className="card-body d-flex flex-column align-items-center"
-                                style={{ paddingLeft: 0, paddingBottom: 0 }}
-                            >
-                                <form
-                                    className="text-center"
-                                    method="post"
-                                    style={{ width: '100%' }}
-                                    onSubmit={handleSubmit}
-                                >
-                                    <div className="mb-3">
-                                        <input
-                                            className="form-control"
-                                            type="email"
-                                            name="email"
-                                            placeholder="Email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <input
-                                            className="form-control"
-                                            type="password"
-                                            name="password"
-                                            placeholder="Mật khẩu"
-                                            value={formData.password}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <input
-                                            className="form-control"
-                                            type="password"
-                                            name="confirmPassword"
-                                            placeholder="Nhập lại mật khẩu"
-                                            value={formData.confirmPassword}
-                                            onChange={handleChange}
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        {message && (
-                                            <div
-                                                role="alert"
-                                                style={{
-                                                    color: messageType === 'error' ? '#a94442' : '#155724',
-                                                    backgroundColor: messageType === 'error' ? '#f8d7da' : '#d4edda',
-                                                    border: `1px solid ${messageType === 'error' ? '#f5c6cb' : '#c3e6cb'}`,
-                                                    padding: '0.5rem 0.75rem',
-                                                    borderRadius: '4px',
-                                                    marginBottom: '0.75rem'
-                                                }}
-                                            >
-                                                {message}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="mb-3">
-                                        <button
-                                            className="btn d-block w-100 btn-warning text-white"
-                                            type="submit"
-                                            disabled={isSubmitting}
-                                        >
-                                            {isSubmitting ? 'Đang gửi...' : 'Đăng Ký'}
-                                        </button>
-
-                                        <div className="d-flex">
-                                            <p className="text-muted">Đã có tài khoản?&nbsp;</p>
-                                            <a href="/login">Đăng nhập</a>
-                                        </div>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+        <section className="auth-page">
+            <div className="auth-card">
+                <div className="text-center">
+                    <img className="logo" src={logoImg} alt="Furious Five Fashion" />
+                    <h4>{showVerify ? 'Xác Nhận Email' : 'Đăng Ký Tài Khoản'}</h4>
                 </div>
+                
+                {message && (
+                    <div className={messageType === 'error' ? 'alert-error-themed' : 'alert-success-themed'} 
+                         style={{ marginBottom: '20px' }}>
+                        {message}
+                    </div>
+                )}
+
+                {!showVerify ? (
+                    <form onSubmit={handleSubmit}>
+                        <div className="mb-3">
+                            <label className="form-label" style={{ fontWeight: '500', color: '#555' }}>Họ và tên</label>
+                            <input className="form-control" type="text" name="fullName" placeholder=""
+                                value={formData.fullName} onChange={handleChange} required />
+                        </div>
+                        
+                        {renderValidatedInput('username', 'Username', 'text', { minLength: 3 })}
+                        
+                        <div className="mb-3">
+                            <label className="form-label" style={{ fontWeight: '500', color: '#555' }}>Email</label>
+                            <input className="form-control" type="email" name="email" placeholder=""
+                                value={formData.email} onChange={handleChange} required />
+                        </div>
+                        
+                        {renderValidatedInput('phone', 'Số điện thoại', 'tel')}
+                        
+                        <div className="mb-3">
+                            <label className="form-label" style={{ fontWeight: '500', color: '#555' }}>Mật khẩu</label>
+                            <input className="form-control" type="password" name="password" placeholder=""
+                                value={formData.password} onChange={handleChange} required minLength={8} />
+                            <small className="text-muted">Ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường và số</small>
+                        </div>
+                        <div className="mb-4">
+                            <label className="form-label" style={{ fontWeight: '500', color: '#555' }}>Nhập lại mật khẩu</label>
+                            <input className="form-control" type="password" name="confirmPassword" placeholder=""
+                                value={formData.confirmPassword} onChange={handleChange} required />
+                        </div>
+                        <button 
+                            className="btn btn-submit w-100" 
+                            type="submit" 
+                            disabled={isSubmitting || fieldErrors.username || fieldErrors.phone}
+                        >
+                            {isSubmitting ? 'Đang xử lý...' : 'Đăng Ký'}
+                        </button>
+                        <div className="text-center mt-4">
+                            <span style={{ color: '#666' }}>Đã có tài khoản? </span>
+                            <a href="/login">Đăng nhập</a>
+                        </div>
+                    </form>
+                ) : (
+                    <form onSubmit={handleVerifyCode}>
+                        <div className="text-center mb-4">
+                            <div style={{ fontSize: '48px', marginBottom: '15px' }}>📧</div>
+                            <p style={{ color: '#666' }}>
+                                Chúng tôi đã gửi mã xác nhận đến<br/>
+                                <strong style={{ color: '#00B4DB' }}>{formData.email}</strong>
+                            </p>
+                        </div>
+                        <div className="mb-4">
+                            <input 
+                                className="form-control verify-code-input" 
+                                type="text" 
+                                placeholder="000000"
+                                value={verifyCode} 
+                                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))} 
+                                required 
+                                maxLength={6} 
+                            />
+                        </div>
+                        <button className="btn btn-submit w-100" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Đang xác nhận...' : 'Xác Nhận'}
+                        </button>
+                        <div className="text-center mt-3">
+                            <button type="button" className="btn btn-link" style={{ color: '#00B4DB' }}
+                                onClick={() => setShowVerify(false)}>
+                                ← Quay lại
+                            </button>
+                        </div>
+                    </form>
+                )}
             </div>
         </section>
     );

@@ -1,62 +1,64 @@
-// Lambda function: Search products
-const { executeStatement } = require('../shared/database');
-const { successResponse, errorResponse, getQueryParams } = require('../shared/response');
+// Lambda: Search Products - MySQL
+const { getMany } = require('./shared/database');
+const { successResponse, errorResponse, getQueryParams } = require('./shared/response');
 
 exports.handler = async (event) => {
   try {
     const { q, categoryId, brandId, minPrice, maxPrice } = getQueryParams(event);
     
-    let sql = `SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
-                      c.c_id, c.c_name, b.b_id, b.b_name
+    let sql = `SELECT p.p_id, p.p_name, p.description, p.image_url, p.is_active,
+                      c.c_id, c.c_name, b.b_id, b.b_name,
+                      (SELECT MIN(pd.price) FROM product_details pd WHERE pd.p_id = p.p_id) as min_price
                FROM products p
-               LEFT JOIN categories c ON p.category_id = c.c_id
-               LEFT JOIN brands b ON p.brand_id = b.b_id
+               LEFT JOIN categories c ON p.c_id = c.c_id
+               LEFT JOIN brands b ON p.b_id = b.b_id
                WHERE p.is_active = 1`;
     
-    const parameters = [];
+    const params = [];
     
     if (q) {
-      sql += ' AND (p.p_name LIKE @search OR p.p_desc LIKE @search)';
-      parameters.push({ name: 'search', value: { stringValue: `%${q}%` } });
+      sql += ' AND (p.p_name LIKE ? OR p.description LIKE ?)';
+      params.push(`%${q}%`, `%${q}%`);
     }
     
     if (categoryId) {
-      sql += ' AND p.category_id = @categoryId';
-      parameters.push({ name: 'categoryId', value: { stringValue: categoryId } });
+      sql += ' AND p.c_id = ?';
+      params.push(categoryId);
     }
     
     if (brandId) {
-      sql += ' AND p.brand_id = @brandId';
-      parameters.push({ name: 'brandId', value: { stringValue: brandId } });
+      sql += ' AND p.b_id = ?';
+      params.push(brandId);
     }
     
     if (minPrice) {
-      sql += ' AND p.price >= @minPrice';
-      parameters.push({ name: 'minPrice', value: { doubleValue: parseFloat(minPrice) } });
+      sql += ' AND EXISTS (SELECT 1 FROM product_details pd WHERE pd.p_id = p.p_id AND pd.price >= ?)';
+      params.push(parseFloat(minPrice));
     }
     
     if (maxPrice) {
-      sql += ' AND p.price <= @maxPrice';
-      parameters.push({ name: 'maxPrice', value: { doubleValue: parseFloat(maxPrice) } });
+      sql += ' AND EXISTS (SELECT 1 FROM product_details pd WHERE pd.p_id = p.p_id AND pd.price <= ?)';
+      params.push(parseFloat(maxPrice));
     }
     
     sql += ' ORDER BY p.p_name';
 
-    const result = await executeStatement(sql, parameters);
+    const rows = await getMany(sql, params);
 
-    const products = (result.records || []).map(record => ({
-      pId: record[0].stringValue,
-      pName: record[1].stringValue,
-      pDesc: record[2].stringValue || null,
-      price: parseFloat(record[3].stringValue),
-      isActive: record[4].booleanValue,
-      category: record[5].stringValue ? {
-        cId: record[5].stringValue,
-        cName: record[6].stringValue
+    const products = rows.map(row => ({
+      pId: row.p_id,
+      pName: row.p_name,
+      description: row.description || null,
+      imageUrl: row.image_url || null,
+      price: parseFloat(row.min_price || 0),
+      isActive: !!row.is_active,
+      category: row.c_id ? {
+        cId: row.c_id,
+        cName: row.c_name
       } : null,
-      brand: record[7].stringValue ? {
-        bId: record[7].stringValue,
-        bName: record[8].stringValue
+      brand: row.b_id ? {
+        bId: row.b_id,
+        bName: row.b_name
       } : null,
     }));
 
@@ -64,6 +66,6 @@ exports.handler = async (event) => {
 
   } catch (error) {
     console.error('Search products error:', error);
-    return errorResponse('Failed to search products', 500, error);
+    return errorResponse('Failed to search products', 500);
   }
 };

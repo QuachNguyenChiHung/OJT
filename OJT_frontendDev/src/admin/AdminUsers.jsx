@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import AdminLayout from './AdminLayout';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -19,44 +20,46 @@ export default function AdminUsers() {
 
   const [editingUser, setEditingUser] = useState(null);
   const navigate = useNavigate();
-  const [currentUser, setCurrentUser] = useState({
-    email: '',
-    fullName: '',
-    role: '',
-    phoneNumber: '',
-    address: ''
-  });
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
-        navigate('/login');
-        return;
-      }
-      setCurrentUser(res.data);
-    } catch (error) {
-      navigate('/login');
-    }
-  }
+  
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+          navigate('/login');
+          return;
+        }
+      } catch {
+        navigate('/login');
+      }
+    };
     fetchCurrentUser();
-  }, []);
+  }, [navigate]);
   useEffect(() => {
     const load = async () => {
       try {
-        const base = import.meta.env.VITE_API_URL || '';
-        const res = await axios.get(`${base}/users`, { withCredentials: true });
-        const data = res?.data;
+        const res = await api.get('/users');
+        // Backend returns { users: [...] } or array directly
+        const data = res?.data?.users || res?.data;
         if (Array.isArray(data) && data.length > 0) {
-          setUsers(data);
+          // Map backend field names to frontend expected names
+          const mappedUsers = data.map(u => ({
+            id: u.userId || u.u_id || u.id,
+            email: u.email,
+            fullName: u.name || u.fullName || u.full_name || '',
+            phoneNumber: u.phoneNumber || u.phone_number || '',
+            address: u.address || '',
+            dateOfBirth: u.dateOfBirth || u.date_of_birth || null,
+            role: u.role,
+            active: u.isActive !== undefined ? u.isActive : (u.is_active !== undefined ? u.is_active : true)
+          }));
+          setUsers(mappedUsers);
           return;
         }
       } catch (err) {
+        console.error('Load users failed:', err);
         // ignore network/backend errors and fallback to local sample data
       }
-
-      // Seed sample data as last resort (use fixed ids so generateId is not required here)
-
     };
     load();
   }, []);
@@ -129,7 +132,7 @@ export default function AdminUsers() {
     };
 
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/users`, payload, { withCredentials: true });
+      const res = await api.post('/users', payload);
       // ensure created user has `active: true` by default when server doesn't return it
       const created = res?.data ? ({ ...res.data, active: typeof res.data.active !== 'undefined' ? res.data.active : true }) : ({ ...payload, active: true });
       setUsers(u => [created, ...u]);
@@ -214,7 +217,7 @@ export default function AdminUsers() {
     };
 
     try {
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/users/${editingUser.id}`, payload, { withCredentials: true });
+      const res = await api.put(`/users/${editingUser.id}`, payload);
       const updated = res?.data;
       // Update local list from server response if available
       if (updated) {
@@ -272,17 +275,11 @@ export default function AdminUsers() {
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1200 }}>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản Trị - Quản Lý Người Dùng</h2>
-        <div>
-          <Link to="/admin/products" className="btn btn-outline-secondary me-2">Sản Phẩm</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
-          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Làm Mới</button>
+    <AdminLayout title="Quản Lý Người Dùng">
+      <div style={{ maxWidth: 1200 }}>
+        <div className="d-flex justify-content-end mb-3">
+          <button className="btn" style={{ background: '#008B8B', color: '#fff' }} onClick={() => navigate('/admin/users')}>🔄 Làm Mới</button>
         </div>
-      </div>
 
       {/* Search Bar */}
       <div className="mb-3">
@@ -319,7 +316,7 @@ export default function AdminUsers() {
       </div>
 
       {/* User Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+      <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
         <h4>{editingUser ? 'Chỉnh Sửa Người Dùng' : 'Tạo Người Dùng Mới'}</h4>
         <form onSubmit={editingUser ? updateUser : addUser}>
           <div className="row g-3">
@@ -449,7 +446,7 @@ export default function AdminUsers() {
                   <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo Người Dùng</button>
+                <button className="btn" style={{ background: '#008B8B', color: '#fff' }} type="submit">Tạo Người Dùng</button>
               )}
             </div>
           </div>
@@ -531,6 +528,7 @@ export default function AdminUsers() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

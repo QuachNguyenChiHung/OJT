@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function UserDetails() {
   const { id } = useParams();
@@ -12,7 +12,7 @@ export default function UserDetails() {
   const navigate = useNavigate();
   const fetchCurrentUser = async () => {
     try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      const res = await api.get('/auth/me');
       console.debug('UserDetails auth check:', {
         role: res?.data?.role,
         isAdmin: res?.data?.role === 'ADMIN',
@@ -23,7 +23,6 @@ export default function UserDetails() {
         navigate('/login');
         return;
       }
-      // Remove setCurrentUser since we're not using currentUser state anymore
     } catch (error) {
       console.debug('UserDetails: Error fetching user, redirecting to /login:', error.message);
       navigate('/login');
@@ -31,12 +30,12 @@ export default function UserDetails() {
   }
   useEffect(() => {
     fetchCurrentUser();
-  }, []);
+  }, [fetchCurrentUser]);
   useEffect(() => {
     // Load user data from API
     const fetchUser = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/users/${id}`, { withCredentials: true });
+        const res = await api.get(`/users/${id}`);
         setUser(res.data);
       } catch (error) {
         console.error('Failed to fetch user:', error);
@@ -48,7 +47,7 @@ export default function UserDetails() {
     // Load orders data from API
     const fetchOrders = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/orders/user/${id}`, { withCredentials: true });
+        const res = await api.get(`/orders/user/${id}`);
         const orders = res.data || [];
         setUserOrders(orders);
       } catch (error) {
@@ -98,7 +97,7 @@ export default function UserDetails() {
         address: editingUser.address?.trim() || null
       };
 
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/users/${editingUser.id}`, payload, { withCredentials: true });
+      const res = await api.put(`/users/${editingUser.id}`, payload);
       setUser(res.data);
       setEditingUser(null);
     } catch (error) {
@@ -161,7 +160,7 @@ export default function UserDetails() {
     // Fetch order details if not already loaded
     if (!orderDetails[orderId]) {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/orders/${orderId}/details`, { withCredentials: true });
+        const res = await api.get(`/orders/${orderId}/details`);
         setOrderDetails(prev => ({
           ...prev,
           [orderId]: res.data || []

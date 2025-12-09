@@ -1,10 +1,10 @@
-import { useState } from 'react'
+
 import '../node_modules/bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import './styles.min.css'
 import Filter from './Components/Filter'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
-import axios from 'axios'
+import api from './api/axios'
 import { useEffect } from 'react'
 import ProductTable from './Components/ProductTable'
 import Navbar from './Components/Navbar'
@@ -25,52 +25,63 @@ import AdminBrands from './admin/AdminBrands'
 import AdminUsers from './admin/AdminUsers'
 import UserDetails from './admin/UserDetails'
 import AdminOrders from './admin/AdminOrders'
-import ChatBot from './Components/ChatBot';
+// import ChatBot from './Components/ChatBot'; // Disabled for now
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
 import UpdateProfile from './Components/UpdateProfile';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
+import ForgotPassword from './Components/ForgotPassword';
+import HomePage from './pages/HomePage';
 
 function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
+  
+  // Pages that require complete profile (phone + name)
+  const profileRequiredPages = ['/checkout', '/orders', '/profile', '/update-profile'];
+  
   useEffect(() => {
     const checkProfile = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return; // Not logged in, skip check
+      
+      // Only check profile for pages that require it
+      const needsProfileCheck = profileRequiredPages.some(p => location.pathname.startsWith(p));
+      if (!needsProfileCheck) return;
+      
       try {
-        const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true })
-        console.debug('Global profile check:', {
-          route: location.pathname,
-          response: res.data,
-          hasPhone: !!res.data?.phoneNumber,
-          hasFullName: !!res.data?.fullName
-        });
-        const u = res.data || {}
-        const missingPhone = !res.data.phoneNumber;
-        const missingUname = !res.data.fullName;
+        const res = await api.get('/auth/me')
+        const missingPhone = !res.data?.phoneNumber;
+        const missingUname = !res.data?.fullName;
         if (missingPhone || missingUname) {
-          console.debug('Redirecting to /enter-info due to missing fields');
           navigate('/enter-info');
           return;
         }
       } catch (err) {
-        console.debug('Profile check error (probably not logged in):', err.message);
+        console.debug('Profile check error:', err.message);
       }
     }
-    if (location.pathname !== '/login' && location.pathname !== '/register' && location.pathname !== '/enter-info') {
-      checkProfile();
-    }
-  }, [location.pathname, navigate])
-  const showNavAndFooter = ['/login', '/register'].includes(location.pathname)
+    checkProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, navigate]);
+
+  // Pages that should NOT show footer
+  const hideFooterPages = ['/login', '/register', '/forgot-password', '/home', '/search', '/product', '/cart', '/checkout', '/orders', '/profile', '/update-profile', '/brands', '/admin', '/enter-info'];
+  const shouldHideFooter = hideFooterPages.some(p => location.pathname.startsWith(p)) || location.pathname !== '/';
+  
+  // Only show footer on MainPage (/)
+  const showFooter = location.pathname === '/';
 
   return (
     <>
-      {!showNavAndFooter && <Navbar />}
-      {!showNavAndFooter && <ChatBot />}
+      {/* ChatBot disabled */}
       <Routes>
         <Route path="/" element={<MainPage />} />
+        <Route path="/home" element={<HomePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/product/:id" element={<ProductDetailsPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/cart" element={<CartPage />} />
@@ -79,6 +90,7 @@ function Layout() {
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/brands" element={<BrandPage />} />
+        <Route path="/admin" element={<AdminProducts />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/products/:id" element={<AdminProductDetails />} />
         <Route path="/admin/categories" element={<AdminCategories />} />
@@ -89,14 +101,14 @@ function Layout() {
         <Route path="*" element={<h2 className="text-center my-5">404 - Page Not Found</h2>} />
         <Route path='/enter-info' element={<EnterInfo />} />
       </Routes>
-      {!showNavAndFooter && <Footer />}
+      {showFooter && <Footer />}
     </>
   )
 }
 
 
 function App() {
-  const [count, setCount] = useState(0)
+  
 
   return (
     <BrowserRouter>

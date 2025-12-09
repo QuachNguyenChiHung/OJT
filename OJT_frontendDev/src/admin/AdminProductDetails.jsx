@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import api from '../api/axios';
 
 const STORAGE_KEY = 'admin_products_v1';
 
@@ -47,7 +48,7 @@ export default function AdminProductDetails() {
   const imgRef = useRef(null);
   const navigate = useNavigate();
 
-  const [currentUser, setCurrentUser] = useState({
+  const [, setCurrentUser] = useState({
     email: '',
     fullName: '',
     role: '',
@@ -56,13 +57,13 @@ export default function AdminProductDetails() {
   });
   const fetchCurrentUser = async () => {
     try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+      const res = await api.get('/auth/me');
       if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
         navigate('/login');
         return;
       }
       setCurrentUser(res.data);
-    } catch (error) {
+    } catch {
       navigate('/login');
     }
   }
@@ -89,16 +90,15 @@ export default function AdminProductDetails() {
     };
 
     const tryFetchFromApi = async () => {
-      if (!import.meta.env.VITE_API_URL) return;
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/product-details/product/${id}`);
+        const res = await api.get(`/product-details/product/${id}`);
         const data = res && res.data ? res.data : null;
         // backend may return an array of detail objects for the product
         // Always try to fetch the product info so we can display product details
         // even when `data` is an empty array (no variants yet).
         let p = null;
         try {
-          p = await axios.get(`${import.meta.env.VITE_API_URL}/products/${id}`);
+          p = await api.get(`/products/${id}`);
         } catch (error) {
           // ignore product fetch errors for now; we'll decide fallback below
         }
@@ -114,7 +114,7 @@ export default function AdminProductDetails() {
             categoryName: p?.data?.categoryName ?? first?.categoryName ?? '',
             brandName: p?.data?.brandName ?? first?.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
-            price: (p?.data?.price) + " VND" ?? null,
+            price: p?.data?.price ? `${p.data.price} VND` : null,
             details: (data || []).map(d => {
               // imgList may be JSON string or already array
               let imgs = [];
@@ -161,7 +161,7 @@ export default function AdminProductDetails() {
             categoryName: p?.data?.categoryName ?? data.categoryName ?? '',
             brandName: p?.data?.brandName ?? data.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
-            price: (p?.data?.price) + " VND" ?? null,
+            price: p?.data?.price ? `${p.data.price} VND` : null,
             details: [{
               pd_id: data.pdId ?? data.pd_id ?? null,
               img_list: imgs,
@@ -187,7 +187,7 @@ export default function AdminProductDetails() {
               categoryName: p.data.categoryName ?? '',
               brandName: p.data.brandName ?? '',
               desc: p.data.desc ?? p.data.description ?? '',
-              price: (p?.data?.price) + " VND" ?? null,
+              price: p?.data?.price ? `${p.data.price} VND` : null,
               details: []
             };
             if (mounted) setProduct(normalized);
@@ -393,7 +393,7 @@ export default function AdminProductDetails() {
       };
 
       if (!import.meta.env.VITE_API_URL) throw new Error('API URL not configured');
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/product-details`, payload, { withCredentials: true });
+      const res = await api.post('/product-details', payload);
       const created = res?.data;
       const createdVariant = {
         pd_id: created?.pdId ?? created?.pd_id ?? newVariantLocal.pd_id,
@@ -558,11 +558,10 @@ export default function AdminProductDetails() {
       console.log('Image slots:', variantImages);
 
       // Upload images using backend API
-      const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/product-details/${selectedVariantForImages.pd_id}/images`,
+      const res = await api.post(
+        `/product-details/${selectedVariantForImages.pd_id}/images`,
         formData,
         {
-          withCredentials: true,
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -644,7 +643,7 @@ export default function AdminProductDetails() {
 
       if (!import.meta.env.VITE_API_URL || !editingVariant.pd_id) throw new Error('API URL or pdId missing');
       console.log(payload);
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/product-details/${editingVariant.pd_id}`, payload, { withCredentials: true });
+      const res = await api.put(`/product-details/${editingVariant.pd_id}`, payload);
       const updated = res?.data;
       const normalized = {
         pd_id: updated?.pdId ?? updated?.pd_id ?? editingVariant.pd_id,

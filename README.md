@@ -2,15 +2,22 @@
 
 ## 📂 Project Structure
 
-Dự án được tách thành **2 repositories riêng biệt**:
-
 ```
 OJT/
 ├── OJT_infrastructure/      # CDK Infrastructure (TypeScript)
 │   └── Deploy AWS resources: VPC, RDS, S3, API Gateway, etc.
 │
-└── OJT_lambda/             # Lambda Functions (JavaScript)
-    └── Application code cho API endpoints
+├── OJT_lambda/             # Lambda Functions (JavaScript) - 63 APIs
+│   └── Application code cho API endpoints
+│
+├── OJT_frontendDev/        # Frontend (React + Vite)
+│   └── Web application
+│
+└── database/               # Database Scripts (MySQL)
+    ├── schema/             # Main schema
+    ├── migrations/         # Migration scripts
+    ├── seeds/              # Sample data
+    └── helpers/            # Testing queries
 ```
 
 ## 🎭 Why 2 Separate Projects?
@@ -156,7 +163,12 @@ npm run deploy
 
 ### OJT_lambda (Functions)
 - [README.md](OJT_lambda/README.md) - **⭐ START HERE for Lambda deployment**
+- [API_ENDPOINTS.md](OJT_lambda/API_ENDPOINTS.md) - Full API documentation (63 endpoints)
 - Includes: build scripts, deploy scripts, testing guide
+
+### Database
+- [README.md](database/README.md) - Database setup guide
+- [mysql_schema.sql](database/schema/mysql_schema.sql) - Main schema for RDS Aurora MySQL
 
 ---
 

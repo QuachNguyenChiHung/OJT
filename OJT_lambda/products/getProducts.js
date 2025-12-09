@@ -1,50 +1,55 @@
-// Lambda function: Get all products
-const { executeStatement } = require('../shared/database');
-const { successResponse, errorResponse, getQueryParams } = require('../shared/response');
+// Lambda: Get All Products - MySQL (Schema v2)
+const { getMany } = require('./shared/database');
+const { successResponse, errorResponse, getQueryParams } = require('./shared/response');
 
 exports.handler = async (event) => {
   try {
+    console.log('[getProducts] Starting...');
     const { isActive } = getQueryParams(event);
     
+    // Schema v2: Product table with c_id, brand_id
     let sql = `SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
-                      c.c_id, c.c_name, b.b_id, b.b_name,
-                      p.created_at, p.updated_at
-               FROM products p
-               LEFT JOIN categories c ON p.category_id = c.c_id
-               LEFT JOIN brands b ON p.brand_id = b.b_id`;
-    
-    const parameters = [];
+                      c.c_id, c.c_name, b.brand_id, b.brand_name
+               FROM Product p
+               LEFT JOIN Category c ON p.c_id = c.c_id
+               LEFT JOIN Brand b ON p.brand_id = b.brand_id`;
     
     if (isActive === 'true') {
       sql += ' WHERE p.is_active = 1';
     }
     
-    sql += ' ORDER BY p.created_at DESC';
+    sql += ' ORDER BY p.p_id DESC';
 
-    const result = await executeStatement(sql, parameters);
+    console.log('[getProducts] Executing SQL...');
+    const rows = await getMany(sql);
+    console.log('[getProducts] Got', rows?.length || 0, 'products');
 
-    const products = (result.records || []).map(record => ({
-      pId: record[0].stringValue,
-      pName: record[1].stringValue,
-      pDesc: record[2].stringValue || null,
-      price: parseFloat(record[3].stringValue),
-      isActive: record[4].booleanValue,
-      category: record[5].stringValue ? {
-        cId: record[5].stringValue,
-        cName: record[6].stringValue
+    const products = (rows || []).map(row => ({
+      id: row.p_id,
+      pId: row.p_id,
+      name: row.p_name,
+      pName: row.p_name,
+      description: row.p_desc || null,
+      price: parseFloat(row.price || 0),
+      isActive: !!row.is_active,
+      categoryId: row.c_id,
+      categoryName: row.c_name || null,
+      category: row.c_id ? {
+        cId: row.c_id,
+        cName: row.c_name
       } : null,
-      brand: record[7].stringValue ? {
-        bId: record[7].stringValue,
-        bName: record[8].stringValue
+      brandId: row.brand_id,
+      brandName: row.brand_name || null,
+      brand: row.brand_id ? {
+        brandId: row.brand_id,
+        brandName: row.brand_name
       } : null,
-      createdAt: record[9].stringValue,
-      updatedAt: record[10].stringValue,
     }));
 
     return successResponse(products);
 
   } catch (error) {
-    console.error('Get products error:', error);
-    return errorResponse('Failed to fetch products', 500, error);
+    console.error('[getProducts] Error:', error.message, error.stack);
+    return errorResponse('Failed to fetch products: ' + error.message, 500);
   }
 };

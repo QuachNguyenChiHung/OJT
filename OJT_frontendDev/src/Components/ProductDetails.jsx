@@ -1,6 +1,6 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import api from '../api/axios';
 
 const clothesImg = '/img/clothes.png';
 const pinkImg = '/img/pink.jpg';
@@ -136,7 +136,7 @@ const ProductDetails = () => {
     useEffect(() => {
         const fetchCurrentUser = async () => {
             try {
-                const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+                const res = await api.get('/auth/me');
                 if (res?.data) {
                     setCurrentUser(res.data);
                     setIsLoggedIn(true);
@@ -162,18 +162,12 @@ const ProductDetails = () => {
                 if (userId) {
                     try {
                         // Check if user has rated this product
-                        const checkRes = await axios.get(
-                            `${import.meta.env.VITE_API_URL}/ratings/check?userId=${userId}&productId=${id}`,
-                            { withCredentials: true }
-                        );
+                        const checkRes = await api.get(`/ratings/check?userId=${userId}&productId=${id}`);
                         setHasUserRated(checkRes.data.hasRated);
 
                         // If user has rated, get their rating
                         if (checkRes.data.hasRated) {
-                            const userRatingsRes = await axios.get(
-                                `${import.meta.env.VITE_API_URL}/ratings/user/${userId}`,
-                                { withCredentials: true }
-                            );
+                            const userRatingsRes = await api.get(`/ratings/user/${userId}`);
                             console.log('User ratings response:', userRatingsRes.data);
                             const userProductRating = userRatingsRes.data.find(r => r.productId === id);
                             console.log('Found user product rating:', userProductRating);
@@ -340,11 +334,7 @@ const ProductDetails = () => {
                 comment: '' // You can add comment functionality later
             };
 
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/ratings`,
-                ratingData,
-                { withCredentials: true }
-            );
+            const response = await api.post('/ratings', ratingData);
 
             if (response.data) {
                 setRating(starValue);
@@ -391,11 +381,7 @@ const ProductDetails = () => {
                 quantity: quantity
             };
 
-            const response = await axios.post(
-                `${import.meta.env.VITE_API_URL}/cart`,
-                cartData,
-                { withCredentials: true }
-            );
+            const response = await api.post('/cart', cartData);
 
             if (response.data.success) {
                 alert('Đã thêm sản phẩm vào giỏ hàng!');

@@ -1,57 +1,90 @@
 import * as cdk from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
-import * as sns from 'aws-cdk-lib/aws-sns';
-import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
-import * as cloudwatch_actions from 'aws-cdk-lib/aws-cloudwatch-actions';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import { Construct } from 'constructs';
 
 export interface MonitoringStackProps extends cdk.StackProps {
   appName: string;
   apiId: string;
-  alarmEmail?: string;
+  alarmEmail?: string; // Not used anymore, kept for compatibility
 }
 
+/**
+ * Monitoring Stack - CloudWatch Logs & Dashboard (No SNS)
+ * 
+ * Log Groups for all services:
+ * - API Gateway
+ * - Lambda
+ * - RDS
+ * - VPC Flow
+ * - CloudFront
+ */
 export class MonitoringStack extends cdk.Stack {
   public readonly dashboard: cloudwatch.Dashboard;
 
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id, props);
 
-    // SNS Topic for alarms
-    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
-      displayName: `${props.appName} Alarms`,
-      topicName: `${props.appName}-alarms`,
+    // ========================================
+    // CloudWatch Log Groups
+    // ========================================
+
+    // API Gateway Logs
+    new logs.LogGroup(this, 'ApiGatewayLogs', {
+      logGroupName: `/aws/apigateway/${props.appName}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    if (props.alarmEmail) {
-      alarmTopic.addSubscription(
-        new subscriptions.EmailSubscription(props.alarmEmail)
-      );
-    }
+    // RDS Logs
+    new logs.LogGroup(this, 'RDSLogs', {
+      logGroupName: `/aws/rds/${props.appName}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
 
+    // VPC Flow Logs
+    new logs.LogGroup(this, 'VPCFlowLogs', {
+      logGroupName: `/aws/vpc/${props.appName}-flow`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // CloudFront Logs
+    new logs.LogGroup(this, 'CloudFrontLogs', {
+      logGroupName: `/aws/cloudfront/${props.appName}`,
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // ========================================
     // CloudWatch Dashboard
+    // ========================================
     this.dashboard = new cloudwatch.Dashboard(this, 'Dashboard', {
       dashboardName: `${props.appName}-Dashboard`,
     });
 
     // API Gateway Metrics
-    const apiMetric4xx = new cloudwatch.Metric({
+    const apiRequests = new cloudwatch.Metric({
       namespace: 'AWS/ApiGateway',
-      metricName: '4XXError',
-      dimensionsMap: {
-        ApiId: props.apiId,
-      },
+      metricName: 'Count',
+      dimensionsMap: { ApiId: props.apiId },
       statistic: 'Sum',
       period: cdk.Duration.minutes(5),
     });
 
-    const apiMetric5xx = new cloudwatch.Metric({
+    const api4xx = new cloudwatch.Metric({
+      namespace: 'AWS/ApiGateway',
+      metricName: '4XXError',
+      dimensionsMap: { ApiId: props.apiId },
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(5),
+    });
+
+    const api5xx = new cloudwatch.Metric({
       namespace: 'AWS/ApiGateway',
       metricName: '5XXError',
-      dimensionsMap: {
-        ApiId: props.apiId,
-      },
+      dimensionsMap: { ApiId: props.apiId },
       statistic: 'Sum',
       period: cdk.Duration.minutes(5),
     });
@@ -59,83 +92,165 @@ export class MonitoringStack extends cdk.Stack {
     const apiLatency = new cloudwatch.Metric({
       namespace: 'AWS/ApiGateway',
       metricName: 'Latency',
-      dimensionsMap: {
-        ApiId: props.apiId,
-      },
+      dimensionsMap: { ApiId: props.apiId },
       statistic: 'Average',
       period: cdk.Duration.minutes(5),
     });
 
-    const apiCount = new cloudwatch.Metric({
-      namespace: 'AWS/ApiGateway',
-      metricName: 'Count',
-      dimensionsMap: {
-        ApiId: props.apiId,
-      },
+    // Lambda Metrics
+    const lambdaInvocations = new cloudwatch.Metric({
+      namespace: 'AWS/Lambda',
+      metricName: 'Invocations',
       statistic: 'Sum',
       period: cdk.Duration.minutes(5),
     });
 
-    // Alarms
-    const highErrorRateAlarm = new cloudwatch.Alarm(this, 'HighErrorRate', {
-      metric: apiMetric5xx,
-      threshold: 10,
-      evaluationPeriods: 2,
-      alarmDescription: 'Alert when 5XX errors exceed threshold',
-      alarmName: `${props.appName}-High5XXErrors`,
+    const lambdaErrors = new cloudwatch.Metric({
+      namespace: 'AWS/Lambda',
+      metricName: 'Errors',
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(5),
     });
-    highErrorRateAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
 
-    const highLatencyAlarm = new cloudwatch.Alarm(this, 'HighLatency', {
-      metric: apiLatency,
-      threshold: 2000, // 2 seconds
-      evaluationPeriods: 2,
-      alarmDescription: 'Alert when API latency is high',
-      alarmName: `${props.appName}-HighLatency`,
+    const lambdaDuration = new cloudwatch.Metric({
+      namespace: 'AWS/Lambda',
+      metricName: 'Duration',
+      statistic: 'Average',
+      period: cdk.Duration.minutes(5),
     });
-    highLatencyAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alarmTopic));
+
+    // NAT Gateway Metrics
+    const natBytes = new cloudwatch.Metric({
+      namespace: 'AWS/NATGateway',
+      metricName: 'BytesOutToDestination',
+      statistic: 'Sum',
+      period: cdk.Duration.minutes(5),
+    });
 
     // Dashboard Widgets
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
-        title: 'API Requests',
-        left: [apiCount],
-        width: 12,
+        title: 'API Gateway - Requests',
+        left: [apiRequests],
+        width: 8,
       }),
       new cloudwatch.GraphWidget({
-        title: 'API Errors',
-        left: [apiMetric4xx, apiMetric5xx],
-        width: 12,
+        title: 'API Gateway - Errors',
+        left: [api4xx, api5xx],
+        width: 8,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'API Gateway - Latency (ms)',
+        left: [apiLatency],
+        width: 8,
       })
     );
 
     this.dashboard.addWidgets(
       new cloudwatch.GraphWidget({
-        title: 'API Latency',
-        left: [apiLatency],
+        title: 'Lambda - Invocations',
+        left: [lambdaInvocations],
+        width: 8,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Lambda - Errors',
+        left: [lambdaErrors],
+        width: 8,
+      }),
+      new cloudwatch.GraphWidget({
+        title: 'Lambda - Duration (ms)',
+        left: [lambdaDuration],
+        width: 8,
+      })
+    );
+
+    this.dashboard.addWidgets(
+      new cloudwatch.GraphWidget({
+        title: 'NAT Gateway - Bytes Out',
+        left: [natBytes],
         width: 12,
       }),
       new cloudwatch.SingleValueWidget({
-        title: 'Total Requests (5min)',
-        metrics: [apiCount],
+        title: 'Total API Requests (5min)',
+        metrics: [apiRequests],
         width: 6,
       }),
       new cloudwatch.SingleValueWidget({
-        title: 'Avg Latency (5min)',
-        metrics: [apiLatency],
+        title: 'Lambda Errors (5min)',
+        metrics: [lambdaErrors],
         width: 6,
       })
     );
 
+    // Lambda Log Groups (11 modules created in ApiStack)
+    const lambdaLogGroups = [
+      `/aws/lambda/${props.appName}-AuthModule`,
+      `/aws/lambda/${props.appName}-ProductsModule`,
+      `/aws/lambda/${props.appName}-ProductDetailsModule`,
+      `/aws/lambda/${props.appName}-CartModule`,
+      `/aws/lambda/${props.appName}-OrdersModule`,
+      `/aws/lambda/${props.appName}-CategoriesModule`,
+      `/aws/lambda/${props.appName}-BrandsModule`,
+      `/aws/lambda/${props.appName}-BannersModule`,
+      `/aws/lambda/${props.appName}-RatingsModule`,
+      `/aws/lambda/${props.appName}-UsersModule`,
+      `/aws/lambda/${props.appName}-ImagesModule`,
+    ];
+
+    // Log Insights Widget - All Lambda Errors
+    this.dashboard.addWidgets(
+      new cloudwatch.LogQueryWidget({
+        title: 'Lambda Errors (All Functions)',
+        logGroupNames: lambdaLogGroups,
+        queryLines: [
+          'fields @timestamp, @logStream, @message',
+          'filter @message like /ERROR|error|Error|Exception/',
+          'sort @timestamp desc',
+          'limit 50',
+        ],
+        width: 24,
+        height: 6,
+      })
+    );
+
+    // Log Insights Widget - Lambda Debug Logs
+    this.dashboard.addWidgets(
+      new cloudwatch.LogQueryWidget({
+        title: 'Lambda Debug Logs (Recent)',
+        logGroupNames: lambdaLogGroups,
+        queryLines: [
+          'fields @timestamp, @logStream, @message',
+          'filter @message not like /START|END|REPORT/',
+          'sort @timestamp desc',
+          'limit 100',
+        ],
+        width: 24,
+        height: 8,
+      })
+    );
+
+    // ========================================
     // Outputs
+    // ========================================
     new cdk.CfnOutput(this, 'DashboardUrl', {
-      value: `https://console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.dashboard.dashboardName}`,
+      value: `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards:name=${this.dashboard.dashboardName}`,
       description: 'CloudWatch Dashboard URL',
     });
 
-    new cdk.CfnOutput(this, 'AlarmTopicArn', {
-      value: alarmTopic.topicArn,
-      description: 'SNS Topic ARN for alarms',
+    new cdk.CfnOutput(this, 'LogGroups', {
+      value: JSON.stringify({
+        apiGateway: `/aws/apigateway/${props.appName}`,
+        lambda: `/aws/lambda/${props.appName}-*`,
+        rds: `/aws/rds/${props.appName}`,
+        vpcFlow: `/aws/vpc/${props.appName}-flow`,
+        cloudfront: `/aws/cloudfront/${props.appName}`,
+      }),
+      description: 'CloudWatch Log Groups',
+    });
+
+    new cdk.CfnOutput(this, 'ViewLogsCommand', {
+      value: `aws logs tail /aws/lambda/${props.appName}-AuthModule --follow --region ${this.region}`,
+      description: 'Command to tail Lambda logs',
     });
   }
 }

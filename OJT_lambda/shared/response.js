@@ -44,10 +44,16 @@ const getPathParams = (event) => {
   return event.pathParameters || {};
 };
 
+const getPathParam = (event, paramName) => {
+  const params = event.pathParameters || {};
+  return params[paramName] || null;
+};
+
 module.exports = {
   successResponse,
   errorResponse,
   parseBody,
   getQueryParams,
   getPathParams,
+  getPathParam,
 };

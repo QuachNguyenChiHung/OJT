@@ -1,48 +1,58 @@
-// Lambda function: Get current user (me)
-const { executeStatement } = require('../shared/database');
-const { verifyToken, extractTokenFromHeader } = require('../shared/auth');
-const { successResponse, errorResponse } = require('../shared/response');
+// Lambda function: Get current user (me) - Schema v2
+const { getOne } = require('./shared/database');
+const { verifyToken, extractTokenFromHeader } = require('./shared/auth');
+const { successResponse, errorResponse } = require('./shared/response');
 
 exports.handler = async (event) => {
   try {
     const token = extractTokenFromHeader(event.headers);
     
     if (!token) {
-      return errorResponse('No token provided', 401);
+      return errorResponse('Token không được cung cấp', 401);
     }
 
-    const decoded = verifyToken(token);
+    const decoded = await verifyToken({ headers: event.headers });
+    console.log('[me] Decoded token:', JSON.stringify(decoded));
     
     if (!decoded) {
-      return errorResponse('Invalid or expired token', 401);
+      return errorResponse('Token không hợp lệ hoặc đã hết hạn', 401);
     }
 
-    // Get user details from database
-    const sql = `SELECT u_id, email, full_name, role, phone_number, address, is_active 
-                 FROM app_users 
-                 WHERE u_id = @u_id`;
+    // Schema v2: Users table with user_id, u_name, isActive
+    const sql = `SELECT user_id, email, u_name, role, phone_number, address, isActive, date_of_birth
+                 FROM Users WHERE user_id = ?`;
     
-    const result = await executeStatement(sql, [
-      { name: 'u_id', value: { stringValue: decoded.u_id } }
-    ]);
+    console.log('[me] Looking for user with user_id:', decoded.u_id);
+    const user = await getOne(sql, [decoded.u_id]);
+    console.log('[me] Found user:', JSON.stringify(user));
 
-    if (!result.records || result.records.length === 0) {
-      return errorResponse('User not found', 404);
+    if (!user) {
+      console.log('[me] User not found in database, returning Cognito data');
+      // Return data from Cognito token if user not in DB
+      return successResponse({
+        userId: decoded.u_id,
+        email: decoded.email,
+        fullName: null,
+        role: decoded.role || 'USER',
+        phoneNumber: null,
+        address: null,
+        isActive: true,
+      });
     }
-
-    const user = result.records[0];
 
     return successResponse({
-      u_id: user[0].stringValue,
-      email: user[1].stringValue,
-      fullName: user[2].stringValue || null,
-      role: user[3].stringValue,
-      phoneNumber: user[4].stringValue || null,
-      address: user[5].stringValue || null,
+      userId: user.user_id,
+      email: user.email,
+      fullName: user.u_name || null,
+      role: user.role,
+      phoneNumber: user.phone_number || null,
+      address: user.address || null,
+      isActive: user.isActive !== undefined ? !!user.isActive : true,
+      dateOfBirth: user.date_of_birth || null,
     });
 
   } catch (error) {
     console.error('Get user error:', error);
-    return errorResponse('Internal server error', 500, error);
+    return errorResponse('Lỗi server: ' + error.message, 500);
   }
 };

@@ -41,7 +41,7 @@
 
 #### Email Configuration
 - **Verification:** Email verification required
-- **Email Provider:** Amazon SES (hoặc Cognito default)
+- **Email Provider:** Cognito default
 - **From Email:** noreply@yourdomain.com
 - **Verification Message:** 
   ```

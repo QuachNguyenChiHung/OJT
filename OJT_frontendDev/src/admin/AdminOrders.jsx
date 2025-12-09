@@ -1,6 +1,7 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import AdminLayout from './AdminLayout';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
@@ -15,10 +16,30 @@ export default function AdminOrders() {
 
     const fetchOrders = async () => {
         try {
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/orders`, { withCredentials: true });
-            setOrders(response.data);
-        } catch (error) {
-            alert('Không thể tải đơn hàng');
+            const response = await api.get('/orders');
+            // Backend returns array directly or { orders: [...] }
+            const data = response?.data?.orders || response?.data;
+            if (Array.isArray(data)) {
+                // Map backend field names to frontend expected names
+                const mappedOrders = data.map(o => ({
+                    id: o.id || o.o_id,
+                    userId: o.userId || o.u_id,
+                    status: o.status || o.order_status,
+                    total: o.totalPrice || o.total_price || o.total || 0,
+                    dateCreated: o.dateCreated || o.created_at,
+                    itemCount: o.itemCount || o.item_count || 0,
+                    customerName: o.customerName || o.u_name || '',
+                    customerEmail: o.customerEmail || o.email || '',
+                    shippingAddress: o.shippingAddress || o.shipping_address || '',
+                    paymentMethod: o.paymentMethod || o.payment_method || ''
+                }));
+                setOrders(mappedOrders);
+            } else {
+                setOrders([]);
+            }
+        } catch (err) {
+            console.error('Fetch orders failed:', err);
+            setOrders([]); // Set empty array on error to prevent crash
         }
     };
 
@@ -26,30 +47,20 @@ export default function AdminOrders() {
         fetchOrders();
     }, []);
 
-    const [currentUser, setCurrentUser] = useState({
-        email: '',
-        fullName: '',
-        role: '',
-        phoneNumber: '',
-        address: ''
-    });
-
-    const fetchCurrentUser = async () => {
-        try {
-            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-            if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
-                navigate('/login');
-                return;
-            }
-            setCurrentUser(res.data);
-        } catch (error) {
-            navigate('/login');
-        }
-    };
-
     useEffect(() => {
+        const fetchCurrentUser = async () => {
+            try {
+                const res = await api.get('/auth/me');
+                if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+                    navigate('/login');
+                    return;
+                }
+            } catch {
+                navigate('/login');
+            }
+        };
         fetchCurrentUser();
-    }, []);
+    }, [navigate]);
 
     // Filter orders based on search term and status
     useEffect(() => {
@@ -116,10 +127,7 @@ export default function AdminOrders() {
     const saveEdit = async (orderId) => {
         if (!editingStatus) return alert('Trạng thái không được để trống');
         try {
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/orders/${orderId}`,
-                { status: editingStatus },
-                { withCredentials: true }
-            );
+            await api.put(`/orders/${orderId}`, { status: editingStatus });
             setOrders(o => o.map(item => item.id === orderId ? { ...item, status: editingStatus } : item));
             cancelEdit();
             alert('Cập nhật trạng thái đơn hàng thành công');
@@ -130,16 +138,8 @@ export default function AdminOrders() {
     };
 
     return (
-        <div className="container py-4" style={{ maxWidth: 1400 }}>
-            <div className="d-flex justify-content-between align-items-center mb-3">
-                <h2>Quản Trị - Đơn Hàng</h2>
-                <div>
-                    <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
-                    <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
-                    <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
-                    <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
-                </div>
-            </div>
+        <AdminLayout title="Quản Lý Đơn Hàng">
+            <div style={{ maxWidth: 1400 }}>
 
             {/* Search and Filter Bar */}
             <div className="mb-3">
@@ -192,15 +192,15 @@ export default function AdminOrders() {
             {/* Orders Table */}
             <div className="table-responsive">
                 <table className="table table-striped table-hover">
-                    <thead className="">
+                    <thead>
                         <tr>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Order ID</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>User ID</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Trạng Thái</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Ngày Tạo</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Tổng Tiền</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Số Lượng Item</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Thao Tác</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Order ID</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>User ID</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Trạng Thái</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Ngày Tạo</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Tổng Tiền</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Số Lượng Item</th>
+                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -305,6 +305,7 @@ export default function AdminOrders() {
                     </tbody>
                 </table>
             </div>
-        </div>
+            </div>
+        </AdminLayout>
     );
 }

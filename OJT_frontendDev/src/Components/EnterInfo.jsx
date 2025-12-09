@@ -1,7 +1,7 @@
-import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { Alert } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
 
 const EnterInfo = () => {
     const [formData, setFormData] = useState({
@@ -19,14 +19,14 @@ const EnterInfo = () => {
     useEffect(() => {
         const load = async () => {
             try {
-                const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+                const res = await api.get('/auth/me');
                 const u = res.data || {};
                 setFormData({
-                    u_id: u.u_id || u.id || '',
-                    date_of_birth: u.date_of_birth || u.dateOfBirth || '',
+                    u_id: u.userId || u.u_id || u.id || '',
+                    date_of_birth: u.dateOfBirth || u.date_of_birth || '',
                     phone_number: u.phoneNumber || u.phone_number || u.phone || '',
                     address: u.address || '',
-                    u_name: u.u_name || u.username || u.fullName || '',
+                    u_name: u.fullName || u.u_name || u.username || '',
                     age: u.age || ''
                 });
             } catch (err) {
@@ -34,7 +34,7 @@ const EnterInfo = () => {
             }
         };
         load();
-    }, []);
+    }, [navigate]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -62,16 +62,16 @@ const EnterInfo = () => {
         }
 
         try {
-            // Update profile - using PATCH on /auth/me (adjust if your API differs)
-            await axios.put(import.meta.env.VITE_API_URL + '/users/profile/' + formData.u_id, {
+            // Update profile
+            await api.put('/users/profile/' + formData.u_id, {
                 phoneNumber: formData.phone_number,
                 address: formData.address,
                 fullName: formData.u_name,
-                dateOfBirth: formData.dateOfBirth
-            }, { withCredentials: true });
+                dateOfBirth: formData.date_of_birth
+            });
 
             // Re-fetch user to determine role and redirect
-            const me = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            const me = await api.get('/auth/me');
             const role = me?.data?.role;
             if (role === 'ADMIN' || role === 'EMPLOYEE') {
                 navigate('/admin/products');

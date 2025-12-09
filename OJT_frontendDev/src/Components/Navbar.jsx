@@ -1,17 +1,14 @@
 import { Button } from 'react-bootstrap';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
+import '../styles/theme.css';
 
 const logoImg = '/img/logo.png';
-const magnifierImg = '/img/magnifier.png';
-const searchImg = '/img/search.png';
 const userImg = '/img/user.png';
-const shoppingCartImg = '/img/shopping-cart.png';
 
 const Navbar = () => {
     const navigate = useNavigate();
-    const menuItems = Array(7).fill('QUẦN ÁO');
     const [loggedIn, setLoggedIn] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [currentUser, setCurrentUser] = useState({
@@ -21,9 +18,15 @@ const Navbar = () => {
         phoneNumber: '',
         address: ''
     });
+
     const fetchCurrentUser = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setLoggedIn(false);
+            return;
+        }
         try {
-            const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
+            const res = await api.get('/auth/me');
             if (res?.data) {
                 setCurrentUser(res.data);
                 setLoggedIn(true);
@@ -31,221 +34,201 @@ const Navbar = () => {
                 setLoggedIn(false);
             }
         } catch (error) {
-            // not logged in or network error — keep user as not logged in
             setLoggedIn(false);
         }
-    }
+    };
 
     const logout = async () => {
         try {
-            await axios.post(import.meta.env.VITE_API_URL + '/auth/logout', {}, { withCredentials: true });
-        } catch (e) {
-            // ignore errors — still clear client state
-        }
+            await api.post('/auth/logout', {});
+        } catch (e) {}
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
         setLoggedIn(false);
         setCurrentUser({ email: '', fullName: '', role: '', phoneNumber: '', address: '' });
         navigate('/login');
-    }
+    };
+
     useEffect(() => {
         fetchCurrentUser();
     }, []);
+
     return (
-        <>
-            <header className="d-flex justify-content-center align-items-center container-fluid">
-                <div
-                    className="d-flex justify-content-between align-items-center"
-                    style={{
-                        margin: 0,
-                        marginTop: '8px',
-                        maxWidth: '1200px',
-                        width: '100%'
-                    }}
-                >
-                    <div className="d-flex align-items-center">
-                        <img className="logo" src={logoImg} alt="Logo" />
+        <header style={{ 
+            background: '#fff', 
+            boxShadow: '0 2px 20px rgba(0,0,0,0.08)',
+            position: 'sticky',
+            top: 0,
+            zIndex: 1000
+        }}>
+            <div className="container" style={{ maxWidth: '1200px' }}>
+                <div className="d-flex justify-content-between align-items-center py-3">
+                    {/* Logo */}
+                    <div className="d-flex align-items-center" style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+                        <img src={logoImg} alt="FFF" style={{ height: '45px' }} />
                     </div>
-                    <div className="d-md-flex align-items-center">
-                        <div className="d-none d-md-block">
-                            <div className="input-group">
-                                <input
-                                    className="form-control search-control"
-                                    type="text"
-                                    placeholder="Tìm kiếm từ khóa"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') { navigate('/search?q=' + encodeURIComponent(searchQuery)); return; } }}
-                                    style={{
-                                        borderWidth: '2px',
-                                        borderColor: 'rgb(228, 148, 0)',
-                                        borderRightWidth: '0px'
-                                    }}
-                                />
-                                <button
-                                    onClick={() => { navigate("/search?q=" + encodeURIComponent(searchQuery)); return; }}
-                                    className="btn"
-                                    type="button"
-                                    style={{
-                                        background: 'rgb(228, 148, 0)',
-                                        padding: '0px 14px',
-                                        borderWidth: '2px',
-                                        borderColor: 'rgb(228, 148, 0)'
-                                    }}
-                                >
-                                    <img className="magifier" src={magnifierImg} alt="Search" />
-                                </button>
-                            </div>
+
+                    {/* Search Bar - Desktop */}
+                    <div className="d-none d-md-block flex-grow-1 mx-4" style={{ maxWidth: '500px' }}>
+                        <div className="input-group">
+                            <input
+                                className="form-control"
+                                type="text"
+                                placeholder="Tìm kiếm sản phẩm..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyDown={(e) => { 
+                                    if (e.key === 'Enter') {
+                                        const token = localStorage.getItem('token');
+                                        if (!token) {
+                                            navigate('/register');
+                                        } else {
+                                            navigate('/search?q=' + encodeURIComponent(searchQuery));
+                                        }
+                                    }
+                                }}
+                                style={{
+                                    border: '2px solid #e0e0e0',
+                                    borderRight: 'none',
+                                    borderRadius: '50px 0 0 50px',
+                                    padding: '10px 20px'
+                                }}
+                            />
+                            <button
+                                onClick={() => {
+                                    const token = localStorage.getItem('token');
+                                    if (!token) {
+                                        navigate('/register');
+                                    } else {
+                                        navigate('/search?q=' + encodeURIComponent(searchQuery));
+                                    }
+                                }}
+                                className="btn"
+                                type="button"
+                                style={{
+                                    background: 'linear-gradient(135deg, #00B4DB 0%, #00D4AA 100%)',
+                                    border: 'none',
+                                    borderRadius: '0 50px 50px 0',
+                                    padding: '10px 25px',
+                                    color: '#fff'
+                                }}
+                            >
+                                🔍
+                            </button>
                         </div>
                     </div>
-                    <div className="d-flex align-items-center">
-                        <div className="d-block d-md-none mx-1">
-                            <div className="dropdown">
-                                <button
-                                    className="btn dropdown-toggle cancel-bg-change"
-                                    aria-expanded="false"
-                                    data-bs-toggle="dropdown"
-                                    type="button"
-                                    style={{ paddingRight: '6px', paddingLeft: '6px' }}
-                                >
-                                    <span>
-                                        <img className="icon" src={searchImg} alt="Search" />
-                                    </span>
-                                </button>
-                                <div
-                                    className="dropdown-menu"
-                                    style={{
-                                        width: '90vw',
-                                        paddingRight: '8px',
-                                        paddingLeft: '8px'
-                                    }}
-                                >
-                                    <div className="input-group" style={{ marginLeft: 'initial' }}>
-                                        <input
-                                            className="form-control search-control"
-                                            type="text"
-                                            placeholder="Tìm kiếm từ khóa"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.currentTarget.value)}
-                                            onKeyDown={(e) => { if (e.key === 'Enter') navigate('/search?q=' + encodeURIComponent(searchQuery)); }}
-                                            style={{
-                                                borderWidth: '2px',
-                                                borderColor: 'rgb(228, 148, 0)',
-                                                borderRightWidth: '0px'
+
+                    {/* Right Actions */}
+                    <div className="d-flex align-items-center gap-2">
+                        {/* Mobile Search */}
+                        <button 
+                            className="btn d-md-none"
+                            onClick={() => navigate('/search')}
+                            style={{ background: 'transparent', border: 'none', fontSize: '1.3rem' }}
+                        >
+                            🔍
+                        </button>
+
+                        {loggedIn ? (
+                            <>
+                                {/* User Dropdown */}
+                                <div className="dropdown">
+                                    <button
+                                        className="btn dropdown-toggle d-flex align-items-center gap-2"
+                                        data-bs-toggle="dropdown"
+                                        style={{ 
+                                            background: 'transparent', 
+                                            border: 'none',
+                                            padding: '5px 10px'
+                                        }}
+                                    >
+                                        <img
+                                            src={currentUser.avatarUrl || userImg}
+                                            alt="User"
+                                            style={{ 
+                                                width: '36px', 
+                                                height: '36px', 
+                                                borderRadius: '50%',
+                                                objectFit: 'cover',
+                                                border: '2px solid #00D4AA'
                                             }}
                                         />
-                                        <button
-                                            className="btn"
-                                            type="button"
-                                            onClick={() => navigate("/search?q=" + encodeURIComponent(searchQuery))}
-                                            style={{
-                                                background: 'rgb(228, 148, 0)',
-                                                padding: '0px 14px',
-                                                borderWidth: '2px',
-                                                borderColor: 'rgb(228, 148, 0)'
-                                            }}
-                                        >
-                                            <img className="magifier" src={magnifierImg} alt="Search" />
+                                        <span className="d-none d-lg-inline" style={{ color: '#333', fontWeight: '500' }}>
+                                            {currentUser.fullName || 'User'}
+                                        </span>
+                                    </button>
+                                    <div className="dropdown-menu dropdown-menu-end" style={{ borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
+                                        <button className="dropdown-item py-2" onClick={() => navigate('/profile')}>
+                                            👤 Thông Tin Cá Nhân
+                                        </button>
+                                        <button className="dropdown-item py-2" onClick={() => navigate('/orders')}>
+                                            📦 Đơn Hàng Của Tôi
+                                        </button>
+                                        {(currentUser.role === 'ADMIN' || currentUser.role === 'EMPLOYEE') && (
+                                            <button className="dropdown-item py-2" onClick={() => navigate('/admin/products')}>
+                                                ⚙️ Quản Trị
+                                            </button>
+                                        )}
+                                        <hr className="dropdown-divider" />
+                                        <button className="dropdown-item py-2" onClick={logout} style={{ color: '#e74c3c' }}>
+                                            🚪 Đăng Xuất
                                         </button>
                                     </div>
                                 </div>
+
+                                {/* Cart */}
+                                <button
+                                    className="btn position-relative"
+                                    onClick={() => navigate('/cart')}
+                                    style={{ 
+                                        background: 'linear-gradient(135deg, #00B4DB 0%, #00D4AA 100%)',
+                                        border: 'none',
+                                        borderRadius: '50%',
+                                        width: '42px',
+                                        height: '42px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    <span style={{ fontSize: '1.2rem' }}>🛒</span>
+                                </button>
+                            </>
+                        ) : (
+                            <div className="d-flex gap-2">
+                                <Button 
+                                    onClick={() => navigate('/login')}
+                                    style={{
+                                        background: 'transparent',
+                                        border: '2px solid #00D4AA',
+                                        color: '#00B4DB',
+                                        fontWeight: '600',
+                                        borderRadius: '50px',
+                                        padding: '8px 20px'
+                                    }}
+                                >
+                                    Đăng Nhập
+                                </Button>
+                                <Button 
+                                    onClick={() => navigate('/register')}
+                                    style={{
+                                        background: 'linear-gradient(135deg, #00B4DB 0%, #00D4AA 100%)',
+                                        border: 'none',
+                                        color: '#fff',
+                                        fontWeight: '600',
+                                        borderRadius: '50px',
+                                        padding: '8px 20px'
+                                    }}
+                                >
+                                    Đăng Ký
+                                </Button>
                             </div>
-                        </div>
-                        {
-                            loggedIn ? (
-                                <>
-                                    <div className="mx-1">
-                                        <div className="dropdown">
-                                            <button
-                                                className="btn dropdown-toggle cancel-bg-change d-flex align-items-center"
-                                                aria-expanded="false"
-                                                data-bs-toggle="dropdown"
-                                                type="button"
-                                                style={{ paddingRight: '6px', paddingLeft: '6px' }}
-                                            >
-                                                <img
-                                                    className="icon rounded-circle"
-                                                    src={currentUser.avatarUrl || userImg}
-                                                    alt="User"
-                                                    style={{ width: '34px', height: '34px', objectFit: 'cover' }}
-                                                />
-
-                                            </button>
-                                            <div className="dropdown-menu">
-                                                <button
-                                                    className="dropdown-item"
-                                                    type="button"
-                                                    onClick={() => navigate('/profile')}
-                                                >
-                                                    Thông Tin Cá Nhân
-                                                </button>
-                                                <button
-                                                    className="dropdown-item"
-                                                    type="button"
-                                                    onClick={() => navigate('/orders')}
-                                                >
-                                                    Đơn Hàng Của Tôi
-                                                </button>
-                                                <button className="dropdown-item" type="button" onClick={logout}>
-                                                    Đăng Xuất
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mx-1">
-                                        <button
-                                            className="btn p-0 border-0 bg-transparent"
-                                            onClick={() => navigate('/cart')}
-                                            style={{ cursor: 'pointer' }}
-                                        >
-                                            <img
-                                                className="icon shopping"
-                                                src={shoppingCartImg}
-                                                alt="Shopping Cart"
-                                            />
-                                        </button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="mx-1">
-                                        <Button variant="orange" className='btn-orange' style={{
-                                            borderColor: 'rgb(228, 148, 0)'
-                                        }} onClick={() => { navigate('/login'); }}>
-                                            Đăng Nhập
-                                        </Button>
-                                        <Button variant="orange" className='btn-orange mx-3' style={{
-                                            borderColor: 'rgb(228, 148, 0)'
-                                        }} onClick={() => navigate('/register')}>
-                                            Đăng Kí
-                                        </Button>
-                                    </div>
-                                </>
-                            )
-                        }
-
+                        )}
                     </div>
                 </div>
-            </header>
-            <nav>
-                <div className="container-fluid" style={{ background: 'rgb(228, 148, 0)' }}>
-                    <div>
-                        <div
-                            className="container"
-                            style={{
-                                maxWidth: '1200px',
-                                width: '100%',
-                                paddingRight: '0px',
-                                paddingLeft: '0px'
-                            }}
-                        >
-                            {/*  */}
-                            <div style={{ backgroundColor: 'rgb(228, 148, 0)', height: '3rem', padding: 0 }}>
-
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-        </>
+            </div>
+        </header>
     );
 };
 

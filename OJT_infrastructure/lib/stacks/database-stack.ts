@@ -10,11 +10,14 @@ export interface DatabaseStackProps extends cdk.StackProps {
 }
 
 export class DatabaseStack extends cdk.Stack {
-  public readonly dbCluster: rds.DatabaseCluster;
+  public readonly dbInstance: rds.DatabaseInstance;
   public readonly dbSecret: secretsmanager.ISecret;
+  public readonly dbSecurityGroup: ec2.SecurityGroup;
 
   constructor(scope: Construct, id: string, props: DatabaseStackProps) {
     super(scope, id, props);
+
+    const dbName = process.env.DB_NAME || 'ojtdb';
 
     // Database credentials secret
     this.dbSecret = new secretsmanager.Secret(this, 'DBSecret', {
@@ -31,57 +34,72 @@ export class DatabaseStack extends cdk.Stack {
     });
 
     // Security Group for RDS
-    const dbSecurityGroup = new ec2.SecurityGroup(this, 'DBSecurityGroup', {
+    this.dbSecurityGroup = new ec2.SecurityGroup(this, 'DBSecurityGroup', {
       vpc: props.vpc,
-      description: 'Security group for RDS SQL Server',
+      securityGroupName: `${props.appName}-rds-sg`,
+      description: 'Security group for RDS MySQL - allows Lambda access',
       allowAllOutbound: true,
     });
 
-    dbSecurityGroup.addIngressRule(
+    // Allow from VPC (Lambda in private subnet)
+    this.dbSecurityGroup.addIngressRule(
       ec2.Peer.ipv4(props.vpc.vpcCidrBlock),
-      ec2.Port.tcp(1433),
-      'Allow SQL Server access from VPC'
+      ec2.Port.tcp(3306),
+      'Allow MySQL access from VPC'
     );
 
-    // RDS SQL Server Cluster (Aurora doesn't support SQL Server, using RDS instance)
-    const dbInstance = new rds.DatabaseInstance(this, 'SQLServerInstance', {
-      engine: rds.DatabaseInstanceEngine.sqlServerEx({
-        version: rds.SqlServerEngineVersion.VER_15_00_4236_7_V1, // SQL Server 2019
+    // Allow from anywhere (for development - Query Editor, local tools)
+    this.dbSecurityGroup.addIngressRule(
+      ec2.Peer.anyIpv4(),
+      ec2.Port.tcp(3306),
+      'Allow MySQL access from anywhere (dev only)'
+    );
+
+    // RDS MySQL Instance - FREE TIER ELIGIBLE
+    this.dbInstance = new rds.DatabaseInstance(this, 'MySQLInstance', {
+      engine: rds.DatabaseInstanceEngine.mysql({
+        version: rds.MysqlEngineVersion.VER_8_0,
       }),
       instanceType: ec2.InstanceType.of(
         ec2.InstanceClass.T3,
-        ec2.InstanceSize.MICRO  // Cost optimization: ~$15/month vs $54/month for t3.small
+        ec2.InstanceSize.MICRO // Free Tier: 750 hours/month
       ),
       vpc: props.vpc,
       vpcSubnets: {
-        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
+        subnetType: ec2.SubnetType.PUBLIC, // Public for Query Editor access
       },
-      securityGroups: [dbSecurityGroup],
+      securityGroups: [this.dbSecurityGroup],
       credentials: rds.Credentials.fromSecret(this.dbSecret),
-      databaseName: process.env.DB_NAME || 'demoaws',
-      allocatedStorage: 20,
-      maxAllocatedStorage: 100,
-      multiAz: false, // Set to true for production
-      publiclyAccessible: false,
-      deletionProtection: false, // Set to true for production
-      backupRetention: cdk.Duration.days(1), // Cost optimization: 1 day vs 7 days
+      databaseName: dbName,
+      allocatedStorage: 20, // Free Tier: 20GB
+      maxAllocatedStorage: 20, // Keep at 20GB for Free Tier
+      multiAz: false,
+      publiclyAccessible: true, // For Query Editor and local tools
+      deletionProtection: false,
+      backupRetention: cdk.Duration.days(1),
       preferredBackupWindow: '03:00-04:00',
       preferredMaintenanceWindow: 'sun:04:00-sun:05:00',
-      removalPolicy: cdk.RemovalPolicy.SNAPSHOT,
+      removalPolicy: cdk.RemovalPolicy.DESTROY, // Easy cleanup for dev
+      storageType: rds.StorageType.GP2,
     });
 
     // Parameter Store for database endpoint
     new cdk.aws_ssm.StringParameter(this, 'DBEndpointParameter', {
       parameterName: `/${props.appName}/db/endpoint`,
-      stringValue: dbInstance.dbInstanceEndpointAddress,
-      description: 'RDS SQL Server endpoint',
+      stringValue: this.dbInstance.dbInstanceEndpointAddress,
+      description: 'RDS MySQL endpoint',
     });
 
     // Outputs
     new cdk.CfnOutput(this, 'DBEndpoint', {
-      value: dbInstance.dbInstanceEndpointAddress,
+      value: this.dbInstance.dbInstanceEndpointAddress,
       description: 'Database endpoint',
       exportName: `${props.appName}-DBEndpoint`,
+    });
+
+    new cdk.CfnOutput(this, 'DBPort', {
+      value: '3306',
+      description: 'Database port',
     });
 
     new cdk.CfnOutput(this, 'DBSecretArn', {
@@ -91,9 +109,15 @@ export class DatabaseStack extends cdk.Stack {
     });
 
     new cdk.CfnOutput(this, 'DBName', {
-      value: process.env.DB_NAME || 'demoaws',
+      value: dbName,
       description: 'Database name',
       exportName: `${props.appName}-DBName`,
+    });
+
+    new cdk.CfnOutput(this, 'DBSecurityGroupId', {
+      value: this.dbSecurityGroup.securityGroupId,
+      description: 'RDS Security Group ID',
+      exportName: `${props.appName}-DBSecurityGroupId`,
     });
   }
 }

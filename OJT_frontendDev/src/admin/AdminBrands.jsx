@@ -1,6 +1,7 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import AdminLayout from './AdminLayout';
 
 
 
@@ -11,13 +12,18 @@ export default function AdminBrands() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const navigate = useNavigate();
+  
   const fetchBrands = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/brands`);
-      setBrands(response.data);
+      const response = await api.get('/brands');
+      // Handle both array and object response
+      const data = Array.isArray(response.data) ? response.data : (response.data?.brands || []);
+      setBrands(data);
     }
     catch (error) {
-      alert('Không thể tải thương hiệu');
+      console.error('Fetch brands error:', error);
+      setBrands([]);
     }
   }
   useEffect(() => {
@@ -25,37 +31,30 @@ export default function AdminBrands() {
   }, []);
 
 
-  const [currentUser, setCurrentUser] = useState({
-    email: '',
-    fullName: '',
-    role: '',
-    phoneNumber: '',
-    address: ''
-  });
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
-        navigate('/login');
-        return;
-      }
-      setCurrentUser(res.data);
-    } catch (error) {
-      navigate('/login');
-    }
-  }
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+          navigate('/login');
+          return;
+        }
+      } catch {
+        navigate('/login');
+      }
+    };
     fetchCurrentUser();
-  }, []);
+  }, [navigate]);
 
   // Filter brands based on search term
   useEffect(() => {
+    const brandList = Array.isArray(brands) ? brands : [];
     if (!searchTerm.trim()) {
-      setFilteredBrands(brands);
+      setFilteredBrands(brandList);
     } else {
-      const filtered = brands.filter(brand =>
-        brand.brandName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        brand.brandId.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = brandList.filter(brand =>
+        (brand.brandName || brand.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (brand.brandId || brand.id || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredBrands(filtered);
     }
@@ -65,8 +64,7 @@ export default function AdminBrands() {
     e.preventDefault();
     if (!name.trim()) return;
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/brands`, { brandName: name.trim() }, { withCredentials: true });
-      // assume API returns created brand
+      const res = await api.post('/brands', { brandName: name.trim() });
       setBrands(b => [res.data, ...b]);
       setName('');
       alert('Thêm thương hiệu thành công');
@@ -79,8 +77,8 @@ export default function AdminBrands() {
   const remove = async (brandId) => {
     if (!confirm('Xóa brand?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { withCredentials: true });
-      setBrands((b) => b.filter(x => x.brandId !== brandId));
+      await api.delete(`/brands/${brandId}`);
+      setBrands((b) => b.filter(x => (x.brandId || x.id) !== brandId));
       alert('Xóa thương hiệu thành công');
     } catch (err) {
       alert(err?.response?.data?.message || 'Không thể xóa thương hiệu');
@@ -89,8 +87,8 @@ export default function AdminBrands() {
   };
 
   const startEdit = (brand) => {
-    setEditingId(brand.brandId);
-    setEditingName(brand.brandName);
+    setEditingId(brand.brandId || brand.id);
+    setEditingName(brand.brandName || brand.name);
   };
 
   const cancelEdit = () => {
@@ -101,8 +99,8 @@ export default function AdminBrands() {
   const saveEdit = async (brandId) => {
     if (!editingName.trim()) return alert('Tên thương hiệu không được để trống');
     try {
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/brands/${brandId}`, { brandName: editingName.trim() }, { withCredentials: true });
-      setBrands(b => b.map(item => item.brandId === brandId ? res.data : item));
+      const res = await api.put(`/brands/${brandId}`, { brandName: editingName.trim() });
+      setBrands(b => b.map(item => (item.brandId || item.id) === brandId ? res.data : item));
       cancelEdit();
       alert('Cập nhật thương hiệu thành công');
     } catch (err) {
@@ -112,17 +110,8 @@ export default function AdminBrands() {
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1200 }}>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản Trị - Thương Hiệu</h2>
-        <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
-          <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
-          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
-        </div>
-      </div>
-      {/* inline editing (Edit toggles row into input) */}
+    <AdminLayout title="Quản Lý Thương Hiệu">
+      <div style={{ maxWidth: 1200 }}>
 
       {/* Search Bar */}
       <div className="mb-3">
@@ -166,7 +155,7 @@ export default function AdminBrands() {
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Thêm Thương Hiệu</button>
+        <button className="btn" style={{ background: '#008B8B', color: '#fff' }} type="submit">Thêm Thương Hiệu</button>
       </form>
 
       <div className="list-group">
@@ -185,47 +174,52 @@ export default function AdminBrands() {
             )}
           </div>
         ) : (
-          filteredBrands.map(b => (
-            <div key={b.brandId} className="list-group-item d-flex justify-content-between align-items-center">
-              <div style={{ flex: 1 }}>
-                {editingId === b.brandId ? (
-                  <input
-                    className="form-control"
-                    value={editingName}
-                    onChange={e => setEditingName(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && saveEdit(b.brandId)}
-                    autoFocus
-                  />
-                ) : (
-                  <div>
-                    <strong>{b.brandName}</strong>
-                    <div className="text-muted small">ID: {b.brandId}</div>
-                  </div>
-                )}
+          filteredBrands.map(b => {
+            const bId = b.brandId || b.id;
+            const bName = b.brandName || b.name;
+            return (
+              <div key={bId} className="list-group-item d-flex justify-content-between align-items-center">
+                <div style={{ flex: 1 }}>
+                  {editingId === bId ? (
+                    <input
+                      className="form-control"
+                      value={editingName}
+                      onChange={e => setEditingName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && saveEdit(bId)}
+                      autoFocus
+                    />
+                  ) : (
+                    <div>
+                      <strong>{bName}</strong>
+                      <div className="text-muted small">ID: {bId}</div>
+                    </div>
+                  )}
+                </div>
+                <div className="d-flex gap-2">
+                  {editingId === bId ? (
+                    <>
+                      <button className="btn btn-sm btn-success" onClick={() => saveEdit(bId)}>Lưu</button>
+                      <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Hủy</button>
+                    </>
+                  ) : (
+                    <>
+                      <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(b)}>Sửa</button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => remove(bId)}
+                        title="Xóa thương hiệu"
+                      >
+                        Xóa
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="d-flex gap-2">
-                {editingId === b.brandId ? (
-                  <>
-                    <button className="btn btn-sm btn-success" onClick={() => saveEdit(b.brandId)}>Lưu</button>
-                    <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>Hủy</button>
-                  </>
-                ) : (
-                  <>
-                    <button className="btn btn-sm btn-outline-secondary" onClick={() => startEdit(b)}>Sửa</button>
-                    <button
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={() => remove(b.brandId)}
-                      title="Xóa thương hiệu"
-                    >
-                      Xóa
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }

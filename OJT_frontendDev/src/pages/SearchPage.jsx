@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/axios';
 import ProductTable from "../Components/ProductTable";
 
 const SearchPage = () => {
@@ -188,7 +188,7 @@ const SearchPage = () => {
             try {
                 const searchParam = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
                 const url = `/products/list${searchParam}`;
-                const resp = await axios.get(import.meta.env.VITE_API_URL + url, { withCredentials: true });
+                const resp = await api.get(url);
                 const data = resp?.data || [];
 
                 if (isMounted) {

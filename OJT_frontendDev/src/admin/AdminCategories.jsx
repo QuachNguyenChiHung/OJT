@@ -1,6 +1,7 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../api/axios';
+import AdminLayout from './AdminLayout';
 
 
 export default function AdminCategories() {
@@ -11,51 +12,48 @@ export default function AdminCategories() {
   const [name, setName] = useState('');
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
+  const navigate = useNavigate();
+  
   const fetchCategories = async () => {
     try {
-      const response = await axios.get(`${import.meta.env.VITE_API_URL}/categories`);
-      setCats(response.data);
+      const response = await api.get('/categories');
+      // Handle both array and object response
+      const data = Array.isArray(response.data) ? response.data : (response.data?.categories || []);
+      setCats(data);
     }
     catch (error) {
       console.error('Failed to fetch categories', error);
-      alert('Không thể tải danh mục');
+      setCats([]);
     }
   }
   useEffect(() => {
     fetchCategories();
   }, []);
 
-  const [currentUser, setCurrentUser] = useState({
-    email: '',
-    fullName: '',
-    role: '',
-    phoneNumber: '',
-    address: ''
-  });
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
-      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
-        navigate('/login');
-        return;
-      }
-      setCurrentUser(res.data);
-    } catch (error) {
-      navigate('/login');
-    }
-  }
   useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+          navigate('/login');
+          return;
+        }
+      } catch {
+        navigate('/login');
+      }
+    };
     fetchCurrentUser();
-  }, []);
+  }, [navigate]);
 
   // Filter categories based on search term
   useEffect(() => {
+    const catList = Array.isArray(cats) ? cats : [];
     if (!searchTerm.trim()) {
-      setFilteredCats(cats);
+      setFilteredCats(catList);
     } else {
-      const filtered = cats.filter(cat =>
-        cat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        cat.id.toLowerCase().includes(searchTerm.toLowerCase())
+      const filtered = catList.filter(cat =>
+        (cat.name || cat.c_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (cat.id || cat.c_id || '').toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredCats(filtered);
     }
@@ -65,26 +63,24 @@ export default function AdminCategories() {
     e.preventDefault();
     if (!name.trim()) return;
     try {
-      const res = await axios.post(`${import.meta.env.VITE_API_URL}/categories`, { name: name.trim() }, { withCredentials: true });
+      const res = await api.post('/categories', { name: name.trim() });
       setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
+      setName('');
     } catch (error) {
       console.error('Add category failed', error);
       alert('Không thể thêm danh mục');
     }
-    setCats((c) => [{ id: res.data.id, name: res.data.name }, ...c]);
-    setName('');
   };
 
   const remove = async (id) => {
     if (!confirm('Xóa category?')) return;
     try {
-      await axios.delete(`${import.meta.env.VITE_API_URL}/categories/${id}`, { withCredentials: true });
+      await api.delete(`/categories/${id}`);
       setCats((c) => c.filter(x => x.id !== id));
     } catch (error) {
       console.error('Delete category failed', error);
       alert(error?.response?.data?.message || 'Không thể xóa danh mục');
     }
-
   };
 
   const startEdit = (cat) => {
@@ -100,7 +96,7 @@ export default function AdminCategories() {
   const saveEdit = async (id) => {
     if (!editingName.trim()) return alert('Tên danh mục không được để trống');
     try {
-      const res = await axios.put(`${import.meta.env.VITE_API_URL}/categories/${id}`, { name: editingName.trim() }, { withCredentials: true });
+      await api.put(`/categories/${id}`, { name: editingName.trim() });
       setCats(c => c.map(item => item.id === id ? { ...item, name: editingName.trim() } : item));
     } catch (error) {
       console.error('Update category failed', error);
@@ -114,16 +110,8 @@ export default function AdminCategories() {
   };
 
   return (
-    <div className="container py-4" style={{ maxWidth: 1200 }}>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2>Quản Trị - Danh Mục</h2>
-        <div>
-          <Link to="/admin/users" className="btn btn-outline-secondary me-2">Người Dùng</Link>
-          <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
-          <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <Link to="/admin/products" className="btn btn-outline-secondary">Sản Phẩm</Link>
-        </div>
-      </div>
+    <AdminLayout title="Quản Lý Danh Mục">
+      <div style={{ maxWidth: 1200 }}>
 
       {/* Search Bar */}
       <div className="mb-3">
@@ -167,7 +155,7 @@ export default function AdminCategories() {
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Thêm Danh Mục</button>
+        <button className="btn" style={{ background: '#008B8B', color: '#fff' }} type="submit">Thêm Danh Mục</button>
       </form>
 
       <div className="list-group">
@@ -227,6 +215,7 @@ export default function AdminCategories() {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </AdminLayout>
   );
 }
