@@ -30,7 +30,7 @@ export const MainPage = () => {
     }, []);
     return (
         <>
-            <ProductTable title="Các Sản Phẩm Bán Chạy" data={bestSellers} pagination={false} />
+            {/* <ProductTable title="Các Sản Phẩm Bán Chạy" data={bestSellers} pagination={false} /> */}
             <ProductTable title="Các Sản Phẩm Mới Nhất" data={newestItems} pagination={false} />
         </>
     )

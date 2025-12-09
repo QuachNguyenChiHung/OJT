@@ -117,7 +117,7 @@ const ProductDetails = () => {
     const [selectedColor, setSelectedColor] = useState('');
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [mainImage, setMainImage] = useState(clothesImg);
-    const [thumbnails, setThumbnails] = useState([clothesImg, clothesImg, clothesImg, clothesImg]);
+    const [thumbnails, setThumbnails] = useState([clothesImg, clothesImg, clothesImg, clothesImg, clothesImg]);
     const [quantity, setQuantity] = useState(1);
     const [rating, setRating] = useState(0);
     const [userRating, setUserRating] = useState(0); // User's actual submitted rating
@@ -225,13 +225,14 @@ const ProductDetails = () => {
             // Parse images if they're JSON strings
             const parsedImages = images.map(img => {
                 try {
-                    return img.replace(/^"|"$/g, ''); // Remove extra quotes
+                    return img.replace(/^"|"/g, ''); // Remove extra quotes
                 } catch (e) {
                     return img;
                 }
             });
             setMainImage(parsedImages[0] || clothesImg);
-            setThumbnails(parsedImages.slice(0, 4).concat(Array(4).fill(clothesImg)).slice(0, 4));
+            // Handle up to 5 images and fill remaining slots with default
+            setThumbnails(parsedImages.slice(0, 5).concat(Array(5).fill(clothesImg)).slice(0, 5));
         }
     };
 
@@ -462,11 +463,13 @@ const ProductDetails = () => {
                                 {thumbnails.map((img, index) => (
                                     <div
                                         key={index}
-                                        className={`w-25 ${mainImage === img ? 'border-primary' : 'border-orange'}`}
+                                        className={`${mainImage === img ? 'border-primary' : 'border-orange'}`}
                                         style={{
                                             cursor: 'pointer',
                                             borderWidth: mainImage === img ? '3px' : '1px',
-                                            transition: 'border 0.3s'
+                                            transition: 'border 0.3s',
+                                            width: '18%', // Changed from w-25 to accommodate 5 images
+                                            marginRight: index < thumbnails.length - 1 ? '2.5%' : '0'
                                         }}
                                         onClick={() => handleThumbnailClick(index)}
                                     >

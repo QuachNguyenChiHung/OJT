@@ -8,28 +8,32 @@
 }
 
 .form-control {
-    border: #E49400 1px solid;
+    border: #06BAE9 1px solid;
+}
+
+.meme {
+    background-color: #06BAE9;
 }
 
 .list-group-item {
-    border: #E49400 1px solid !important;
+    border: #06BAE9 1px solid !important;
     margin-bottom: 1rem;
 }
 
 .card {
-    border: #E49400 2px solid;
+    border: #06BAE9 2px solid;
 }
 
 .form-select {
-    border: #E49400 1px solid;
+    border: #06BAE9 1px solid;
 }
 
 tr {
-    border: #E49400 1px solid;
+    border: #06BAE9 1px solid;
 }
 
 th {
-    border: #E49400 1px solid;
+    border: #06BAE9 1px solid;
 }
 
 .foot-list {
@@ -38,7 +42,7 @@ th {
 
 select {
     color: #fff;
-    background-color: rgb(228, 148, 0)
+    background-color: #06BAE9
 }
 
 .bs-icon {
@@ -160,8 +164,8 @@ select {
 }
 
 .page-link {
-    color: rgb(228, 148, 0);
-    border: 1px solid rgb(228, 148, 0)
+    color: #06BAE9;
+    border: 1px solid #06BAE9
 }
 
 .page-link:hover {
@@ -170,17 +174,17 @@ select {
 }
 
 footer {
-    background-color: rgb(228, 148, 0)
+    background-color: #06BAE9
 }
 
 .sort {
-    background: rgb(228, 148, 0);
+    background: #06BAE9;
     border: none;
     color: #fff
 }
 
 .form-check-input {
-    color: rgb(228, 148, 0) !important;
+    color: #06BAE9 !important;
     display: none
 }
 
@@ -202,8 +206,8 @@ footer {
 }
 
 .form-check-input:checked+.form-check-label::before {
-    background-color: rgb(228, 148, 0);
-    border-color: rgb(228, 148, 0)
+    background-color: #06BAE9;
+    border-color: #06BAE9
 }
 
 .form-check-input:checked+.form-check-label::after {
@@ -221,7 +225,7 @@ footer {
 
 .btn-orange {
     color: #fff;
-    background: rgb(228, 148, 0)
+    background: #06BAE9
 }
 
 .btn-orange:hover {
@@ -234,7 +238,7 @@ footer {
     font-family: Inter, system-ui, Arial, sans-serif;
     padding: 24px;
     background: #fff;
-    color: rgb(228, 148, 0)
+    color: #06BAE9
 }
 
 .label,
@@ -254,13 +258,13 @@ footer {
     min-width: 44px;
     height: 44px;
     border-radius: 8px;
-    border: 2px solid rgb(228, 148, 0);
+    border: 2px solid #06BAE9;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     background: #fff;
-    color: rgb(228, 148, 0);
+    color: #06BAE9;
     font-weight: 600;
     box-shadow: none;
     font-size: 14px
@@ -284,7 +288,7 @@ footer {
 .qty-box {
     display: flex;
     align-items: center;
-    border: 2px solid rgb(228, 148, 0);
+    border: 2px solid #06BAE9;
     border-radius: 6px;
     width: 160px;
     height: 52px;
@@ -296,7 +300,7 @@ footer {
     height: 48px;
     border: 0;
     background: 0 0;
-    color: rgb(228, 148, 0);
+    color: #06BAE9;
     font-size: 20px;
     cursor: pointer
 }
@@ -331,7 +335,7 @@ footer {
 }
 
 .border-orange {
-    border: 3px solid rgb(228, 148, 0)
+    border: 3px solid #06BAE9
 }
 
 .stars {

@@ -538,24 +538,55 @@ export default function AdminProductDetails() {
     }
 
     try {
-      // Prepare exactly 5 files for backend (null for empty positions)
-      const formData = new FormData();
+      // Separate existing URLs and new files
+      const existingUrls = [];
+      const newFiles = [];
+      const filePositions = []; // Track which positions have new files
 
-      // Backend expects exactly 5 files in the array
       for (let i = 0; i < 5; i++) {
         const imageData = variantImages[i];
+        if (imageData.isExisting && imageData.url) {
+          // Keep existing image URL
+          existingUrls[i] = imageData.url;
+        } else if (!imageData.isExisting && imageData.file) {
+          // New file to upload
+          newFiles.push(imageData.file);
+          filePositions.push(i);
+        }
+      }
 
+      console.log('Existing URLs:', existingUrls);
+      console.log('New files count:', newFiles.length);
+      console.log('File positions:', filePositions);
+
+      // Always send exactly 5 files to backend as required
+      const formData = new FormData();
+      
+      // Create exactly 5 files for the backend
+      for (let i = 0; i < 5; i++) {
+        const imageData = variantImages[i];
+        
         if (imageData && !imageData.isExisting && imageData.file) {
           // New file to upload
           formData.append('files', imageData.file);
         } else {
-          // Existing image or empty position - send empty file
-          formData.append('files', new File([], '', { type: 'application/octet-stream' }));
+          // For existing images or empty slots, send a placeholder empty file
+          // The backend will know to preserve existing images based on position
+          formData.append('files', new File([''], 'placeholder.txt', { type: 'text/plain' }));
         }
       }
 
+      // Send metadata about which positions have existing images
+      const existingImageInfo = variantImages.map((img, index) => ({
+        position: index,
+        isExisting: img.isExisting || false,
+        url: img.isExisting ? img.url : null
+      }));
+
+      formData.append('existingImageInfo', JSON.stringify(existingImageInfo));
+
       console.log('Sending image update for variant:', selectedVariantForImages.pd_id);
-      console.log('Image slots:', variantImages);
+      console.log('Existing image info:', existingImageInfo);
 
       // Upload images using backend API
       const res = await axios.post(
@@ -1051,7 +1082,7 @@ export default function AdminProductDetails() {
           <h4>Chi Tiết Sản Phẩm (Phân Loại)</h4>
           {product.details && product.details.length > 0 ? (
             product.details.map((d) => (
-              <div key={d.pd_id} className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+              <div key={d.pd_id} className="mb-4 p-3" style={{ border: '2px solid #06BAE9', borderRadius: '5px' }}>
                 <div className="row">
                   <div className="col-md-6">
                     <p><strong>Mã Chi Tiết:</strong> {d.pd_id}</p>
@@ -1082,7 +1113,7 @@ export default function AdminProductDetails() {
                               width: 100,
                               height: 120,
                               objectFit: 'cover',
-                              border: '2px solid orange',
+                              border: '2px solid #06BAE9',
                               borderRadius: '5px'
                             }}
                           />

@@ -166,7 +166,7 @@ export default function AdminBrands() {
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Thêm Thương Hiệu</button>
+        <button className="btn btn-#06BAE9" type="submit">Thêm Thương Hiệu</button>
       </form>
 
       <div className="list-group">

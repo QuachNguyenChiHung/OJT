@@ -167,7 +167,7 @@ export default function AdminCategories() {
           onChange={e => setName(e.target.value)}
           required
         />
-        <button className="btn btn-orange" type="submit">Thêm Danh Mục</button>
+        <button className="btn btn-#06BAE9" type="submit">Thêm Danh Mục</button>
       </form>
 
       <div className="list-group">

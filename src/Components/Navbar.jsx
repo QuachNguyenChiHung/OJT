@@ -76,7 +76,7 @@ const Navbar = () => {
                                     onKeyDown={(e) => { if (e.key === 'Enter') { navigate('/search?q=' + encodeURIComponent(searchQuery)); return; } }}
                                     style={{
                                         borderWidth: '2px',
-                                        borderColor: 'rgb(228, 148, 0)',
+                                        borderColor: '#06BAE9',
                                         borderRightWidth: '0px'
                                     }}
                                 />
@@ -85,10 +85,10 @@ const Navbar = () => {
                                     className="btn"
                                     type="button"
                                     style={{
-                                        background: 'rgb(228, 148, 0)',
+                                        background: '#06BAE9',
                                         padding: '0px 14px',
                                         borderWidth: '2px',
-                                        borderColor: 'rgb(228, 148, 0)'
+                                        borderColor: '#06BAE9'
                                     }}
                                 >
                                     <img className="magifier" src={magnifierImg} alt="Search" />
@@ -128,7 +128,7 @@ const Navbar = () => {
                                             onKeyDown={(e) => { if (e.key === 'Enter') navigate('/search?q=' + encodeURIComponent(searchQuery)); }}
                                             style={{
                                                 borderWidth: '2px',
-                                                borderColor: 'rgb(228, 148, 0)',
+                                                borderColor: '#06BAE9',
                                                 borderRightWidth: '0px'
                                             }}
                                         />
@@ -137,10 +137,10 @@ const Navbar = () => {
                                             type="button"
                                             onClick={() => navigate("/search?q=" + encodeURIComponent(searchQuery))}
                                             style={{
-                                                background: 'rgb(228, 148, 0)',
+                                                background: '#06BAE9',
                                                 padding: '0px 14px',
                                                 borderWidth: '2px',
-                                                borderColor: 'rgb(228, 148, 0)'
+                                                borderColor: '#06BAE9'
                                             }}
                                         >
                                             <img className="magifier" src={magnifierImg} alt="Search" />
@@ -208,12 +208,12 @@ const Navbar = () => {
                                 <>
                                     <div className="mx-1">
                                         <Button variant="orange" className='btn-orange' style={{
-                                            borderColor: 'rgb(228, 148, 0)'
+                                            borderColor: '#06BAE9'
                                         }} onClick={() => { navigate('/login'); }}>
                                             Đăng Nhập
                                         </Button>
                                         <Button variant="orange" className='btn-orange mx-3' style={{
-                                            borderColor: 'rgb(228, 148, 0)'
+                                            borderColor: '#06BAE9'
                                         }} onClick={() => navigate('/register')}>
                                             Đăng Kí
                                         </Button>
@@ -226,7 +226,7 @@ const Navbar = () => {
                 </div>
             </header>
             <nav>
-                <div className="container-fluid" style={{ background: 'rgb(228, 148, 0)' }}>
+                <div className="container-fluid" style={{ background: '#06BAE9' }}>
                     <div>
                         <div
                             className="container"
@@ -238,13 +238,17 @@ const Navbar = () => {
                             }}
                         >
                             {/*  */}
-                            <div style={{ backgroundColor: 'rgb(228, 148, 0)', height: '3rem', padding: 0 }}>
-
+                            <div style={{ backgroundColor: '#06BAE9', height: '3rem', padding: 0 }}>
                             </div>
                         </div>
+
                     </div>
                 </div>
+
             </nav>
+            <div>
+                <img className='w-100' src="/img/Banner.png" alt="" />
+            </div>
         </>
     );
 };

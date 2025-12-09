@@ -1,6 +1,7 @@
 import axios from 'axios';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import OrderRow from './components/OrderRow';
 
 export default function AdminOrders() {
     const [orders, setOrders] = useState([]);
@@ -11,30 +12,21 @@ export default function AdminOrders() {
     const [editingStatus, setEditingStatus] = useState('');
     const navigate = useNavigate();
 
-    const statuses = ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
+    // Memoize statuses to prevent recreation
+    const statuses = useMemo(() => ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'], []);
 
-    const fetchOrders = async () => {
+    // Memoize fetch functions to prevent recreation
+    const fetchOrders = useCallback(async () => {
         try {
             const response = await axios.get(`${import.meta.env.VITE_API_URL}/orders`, { withCredentials: true });
             setOrders(response.data);
         } catch (error) {
+            console.error('Error fetching orders:', error);
             alert('Không thể tải đơn hàng');
         }
-    };
-
-    useEffect(() => {
-        fetchOrders();
     }, []);
 
-    const [currentUser, setCurrentUser] = useState({
-        email: '',
-        fullName: '',
-        role: '',
-        phoneNumber: '',
-        address: ''
-    });
-
-    const fetchCurrentUser = async () => {
+    const fetchCurrentUser = useCallback(async () => {
         try {
             const res = await axios.get(import.meta.env.VITE_API_URL + '/auth/me', { withCredentials: true });
             if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
@@ -45,20 +37,34 @@ export default function AdminOrders() {
         } catch (error) {
             navigate('/login');
         }
-    };
+    }, [navigate]);
+
+    const [currentUser, setCurrentUser] = useState({
+        email: '',
+        fullName: '',
+        role: '',
+        phoneNumber: '',
+        address: ''
+    });
+
+    // Optimize useEffects
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
 
     useEffect(() => {
         fetchCurrentUser();
-    }, []);
+    }, [fetchCurrentUser]);
 
-    // Filter orders based on search term and status
-    useEffect(() => {
+    // Memoize filtered orders to prevent expensive operations
+    const memoizedFilteredOrders = useMemo(() => {
         let filtered = orders;
 
         if (searchTerm.trim()) {
+            const lowerSearchTerm = searchTerm.toLowerCase();
             filtered = filtered.filter(order =>
-                order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.userId.toLowerCase().includes(searchTerm.toLowerCase())
+                order.id.toLowerCase().includes(lowerSearchTerm) ||
+                order.userId.toLowerCase().includes(lowerSearchTerm)
             );
         }
 
@@ -66,10 +72,16 @@ export default function AdminOrders() {
             filtered = filtered.filter(order => order.status === statusFilter);
         }
 
-        setFilteredOrders(filtered);
+        return filtered;
     }, [orders, searchTerm, statusFilter]);
 
-    const formatDate = (timestamp) => {
+    // Update filteredOrders when memoized result changes
+    useEffect(() => {
+        setFilteredOrders(memoizedFilteredOrders);
+    }, [memoizedFilteredOrders]);
+
+    // Memoize utility functions
+    const formatDate = useCallback((timestamp) => {
         return new Date(timestamp * 1000).toLocaleDateString('vi-VN', {
             year: 'numeric',
             month: '2-digit',
@@ -77,46 +89,48 @@ export default function AdminOrders() {
             hour: '2-digit',
             minute: '2-digit'
         });
-    };
+    }, []);
 
-    const formatCurrency = (amount) => {
+    const formatCurrency = useCallback((amount) => {
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
             currency: 'VND'
         }).format(amount);
-    };
+    }, []);
 
-    const getStatusBadge = (status) => {
-        const statusConfig = {
-            PENDING: { class: 'bg-warning text-dark', text: 'Chờ Xử Lý' },
-            PROCESSING: { class: 'bg-info text-white', text: 'Đang Xử Lý' },
-            SHIPPING: { class: 'bg-primary text-white', text: 'Đang Giao' },
-            DELIVERED: { class: 'bg-success text-white', text: 'Đã Giao' },
-            CANCELLED: { class: 'bg-danger text-white', text: 'Đã Hủy' }
-        };
+    // Memoize status config to prevent recreation
+    const statusConfig = useMemo(() => ({
+        PENDING: { class: 'bg-warning text-dark', text: 'Chờ Xử Lý' },
+        PROCESSING: { class: 'bg-info text-white', text: 'Đang Xử Lý' },
+        SHIPPING: { class: 'bg-primary text-white', text: 'Đang Giao' },
+        DELIVERED: { class: 'bg-success text-white', text: 'Đã Giao' },
+        CANCELLED: { class: 'bg-danger text-white', text: 'Đã Hủy' }
+    }), []);
 
+    const getStatusBadge = useCallback((status) => {
         const config = statusConfig[status] || { class: 'bg-secondary text-white', text: status };
         return (
             <span className={`badge ${config.class}`}>
                 {config.text}
             </span>
         );
-    };
+    }, [statusConfig]);
 
-    const startEdit = (order) => {
+    // Memoize event handlers
+    const startEdit = useCallback((order) => {
         setEditingId(order.id);
         setEditingStatus(order.status);
-    };
+    }, []);
 
-    const cancelEdit = () => {
+    const cancelEdit = useCallback(() => {
         setEditingId(null);
         setEditingStatus('');
-    };
+    }, []);
 
-    const saveEdit = async (orderId) => {
+    const saveEdit = useCallback(async (orderId) => {
         if (!editingStatus) return alert('Trạng thái không được để trống');
         try {
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/orders/${orderId}`,
+            await axios.put(`${import.meta.env.VITE_API_URL}/orders/${orderId}`,
                 { status: editingStatus },
                 { withCredentials: true }
             );
@@ -127,7 +141,20 @@ export default function AdminOrders() {
             console.error('Update order failed', err);
             alert('Không thể cập nhật trạng thái đơn hàng');
         }
-    };
+    }, [editingStatus, cancelEdit]);
+
+    const clearFilters = useCallback(() => {
+        setSearchTerm('');
+        setStatusFilter('');
+    }, []);
+
+    const handleSearchChange = useCallback((e) => {
+        setSearchTerm(e.target.value);
+    }, []);
+
+    const handleStatusFilterChange = useCallback((e) => {
+        setStatusFilter(e.target.value);
+    }, []);
 
     return (
         <div className="container py-4" style={{ maxWidth: 1400 }}>
@@ -154,7 +181,7 @@ export default function AdminOrders() {
                                 className="form-control"
                                 placeholder="Tìm kiếm theo Order ID hoặc User ID..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={handleSearchChange}
                             />
                             {searchTerm && (
                                 <button
@@ -171,7 +198,7 @@ export default function AdminOrders() {
                         <select
                             className="form-select"
                             value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
+                            onChange={handleStatusFilterChange}
                         >
                             <option value="">Tất cả trạng thái</option>
                             <option value="PENDING">Chờ Xử Lý</option>
@@ -194,13 +221,13 @@ export default function AdminOrders() {
                 <table className="table table-striped table-hover">
                     <thead className="">
                         <tr>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Order ID</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>User ID</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Trạng Thái</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Ngày Tạo</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Tổng Tiền</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Số Lượng Item</th>
-                            <th style={{ backgroundColor: "#E49400", color: "#FFFFFF" }}>Thao Tác</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Order ID</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>User ID</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Trạng Thái</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Ngày Tạo</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Tổng Tiền</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Số Lượng Item</th>
+                            <th style={{ backgroundColor: "#06BAE9", color: "#FFFFFF" }}>Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -216,10 +243,7 @@ export default function AdminOrders() {
                                     {(searchTerm || statusFilter) && (
                                         <button
                                             className="btn btn-link btn-sm"
-                                            onClick={() => {
-                                                setSearchTerm('');
-                                                setStatusFilter('');
-                                            }}
+                                            onClick={clearFilters}
                                         >
                                             Xóa bộ lọc để hiển thị tất cả đơn hàng
                                         </button>
@@ -228,78 +252,20 @@ export default function AdminOrders() {
                             </tr>
                         ) : (
                             filteredOrders.map(order => (
-                                <tr key={order.id}>
-                                    <td>
-                                        <small className="text-monospace">{order.id.substring(0, 8)}...</small>
-                                    </td>
-                                    <td>
-                                        <small className="text-monospace">{order.userId.substring(0, 8)}...</small>
-                                    </td>
-                                    <td>
-                                        {editingId === order.id ? (
-                                            <select
-                                                className="form-select form-select-sm"
-                                                value={editingStatus}
-                                                onChange={(e) => setEditingStatus(e.target.value)}
-                                                autoFocus
-                                            >
-                                                {statuses.map(status => (
-                                                    <option key={status} value={status}>
-                                                        {status === 'PENDING' && 'Chờ Xử Lý'}
-                                                        {status === 'PROCESSING' && 'Đang Xử Lý'}
-                                                        {status === 'SHIPPING' && 'Đang Giao'}
-                                                        {status === 'DELIVERED' && 'Đã Giao'}
-                                                        {status === 'CANCELLED' && 'Đã Hủy'}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            getStatusBadge(order.status)
-                                        )}
-                                    </td>
-                                    <td>{formatDate(order.dateCreated)}</td>
-                                    <td className="fw-bold">{formatCurrency(order.total)}</td>
-                                    <td className="text-center">{order.itemCount}</td>
-                                    <td>
-                                        <div className="d-flex gap-1">
-                                            {editingId === order.id ? (
-                                                <>
-                                                    <button
-                                                        className="btn btn-sm btn-success"
-                                                        onClick={() => saveEdit(order.id)}
-                                                        title="Lưu thay đổi"
-                                                    >
-                                                        Lưu
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        onClick={cancelEdit}
-                                                        title="Hủy thay đổi"
-                                                    >
-                                                        Hủy
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <button
-                                                        className="btn btn-sm btn-outline-info"
-                                                        onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                                        title="Xem chi tiết"
-                                                    >
-                                                        Chi Tiết
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-outline-secondary"
-                                                        onClick={() => startEdit(order)}
-                                                        title="Sửa trạng thái"
-                                                    >
-                                                        Sửa
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
+                                <OrderRow
+                                    key={order.id}
+                                    order={order}
+                                    editingId={editingId}
+                                    editingStatus={editingStatus}
+                                    setEditingStatus={setEditingStatus}
+                                    statuses={statuses}
+                                    getStatusBadge={getStatusBadge}
+                                    formatDate={formatDate}
+                                    formatCurrency={formatCurrency}
+                                    startEdit={startEdit}
+                                    saveEdit={saveEdit}
+                                    cancelEdit={cancelEdit}
+                                />
                             ))
                         )}
                     </tbody>

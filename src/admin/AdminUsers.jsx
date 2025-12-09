@@ -280,7 +280,7 @@ export default function AdminUsers() {
           <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
           <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
           <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/users')}>Làm Mới</button>
+          <button className="btn btn-#06BAE9" onClick={() => navigate('/admin/users')}>Làm Mới</button>
         </div>
       </div>
 
@@ -319,7 +319,7 @@ export default function AdminUsers() {
       </div>
 
       {/* User Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+      <div className="mb-4 p-3" style={{ border: '2px solid #06BAE9', borderRadius: '5px' }}>
         <h4>{editingUser ? 'Chỉnh Sửa Người Dùng' : 'Tạo Người Dùng Mới'}</h4>
         <form onSubmit={editingUser ? updateUser : addUser}>
           <div className="row g-3">
@@ -449,7 +449,7 @@ export default function AdminUsers() {
                   <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo Người Dùng</button>
+                <button className="btn btn-#06BAE9" type="submit">Tạo Người Dùng</button>
               )}
             </div>
           </div>

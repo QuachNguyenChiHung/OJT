@@ -250,7 +250,7 @@ export default function AdminProducts() {
           <Link to="/admin/categories" className="btn btn-outline-secondary me-2">Danh Mục</Link>
           <Link to="/admin/brands" className="btn btn-outline-secondary me-2">Thương Hiệu</Link>
           <Link to="/admin/orders" className="btn btn-outline-secondary me-2">Đơn Hàng</Link>
-          <button className="btn btn-orange" onClick={() => navigate('/admin/products')}>Làm Mới</button>
+          <button className="btn btn-#06BAE9" onClick={() => navigate('/admin/products')}>Làm Mới</button>
         </div>
       </div>
 
@@ -289,7 +289,7 @@ export default function AdminProducts() {
       </div>
 
       {/* Product Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid orange', borderRadius: '5px' }}>
+      <div className="mb-4 p-3" style={{ border: '2px solid #06BAE9', borderRadius: '5px' }}>
         <h4>{editingProduct ? 'Chỉnh Sửa Sản Phẩm' : 'Tạo Sản Phẩm Mới'}</h4>
         <form onSubmit={editingProduct ? updateProduct : addProduct}>
           <div className="row g-2">
@@ -376,7 +376,7 @@ export default function AdminProducts() {
                   <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
                 </div>
               ) : (
-                <button className="btn btn-orange" type="submit">Tạo Sản Phẩm</button>
+                <button className="btn btn-#06BAE9" type="submit">Tạo Sản Phẩm</button>
               )}
             </div>
             <div className="col-md-12">

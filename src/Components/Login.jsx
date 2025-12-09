@@ -127,11 +127,11 @@ const Login = () => {
                                 style={{
                                     padding: '1rem',
                                     borderWidth: '3px',
-                                    borderColor: 'orange',
+                                    borderColor: '#06BAE9',
                                     paddingBottom: 0
                                 }}
                             >
-                                <div className="d-flex align-items-center">
+                                <div className="d-flex align-items-center justify-content-center ">
                                     <img className="logo" src={logoImg} alt="Logo" />
                                 </div>
                                 <div
@@ -168,7 +168,7 @@ const Login = () => {
                                         </div>
                                         <div className="mb-3">
                                             <button
-                                                className="btn d-block w-100 btn-warning text-white"
+                                                className="btn d-block w-100 meme text-white"
                                                 type="submit"
                                                 disabled={isLoading}
                                             >
