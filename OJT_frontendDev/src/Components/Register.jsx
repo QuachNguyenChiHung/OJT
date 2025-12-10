@@ -93,7 +93,7 @@ const Register = () => {
             
             try {
                 const res = await api.get('/auth/me');
-                if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+                if (res?.data.role === 'ADMIN') {
                     navigate('/admin/products');
                 } else {
                     navigate('/home');

@@ -165,7 +165,7 @@ const Navbar = () => {
                                         <button className="dropdown-item py-2" onClick={() => navigate('/orders')}>
                                             📦 Đơn Hàng Của Tôi
                                         </button>
-                                        {(currentUser.role === 'ADMIN' || currentUser.role === 'EMPLOYEE') && (
+                                        {currentUser.role === 'ADMIN' && (
                                             <button className="dropdown-item py-2" onClick={() => navigate('/admin/products')}>
                                                 ⚙️ Quản Trị
                                             </button>

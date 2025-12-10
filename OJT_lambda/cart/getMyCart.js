@@ -12,22 +12,26 @@ exports.handler = async (event) => {
     }
 
     // Get all cart items for user with product details - Schema v2
+    // Include selected_size from Cart, sizes JSON, thumbnail from Product
     const sql = `
       SELECT 
         c.cart_id,
         c.quantity,
+        c.selected_size,
         c.created_at,
         c.updated_at,
         pd.pd_id,
         pd.size,
+        pd.sizes,
         pd.color_name,
         pd.color_code,
         pd.img_list,
-        pd.amount as stock,
+        pd.amount,
         p.p_id,
         p.p_name,
         p.p_desc,
-        p.price
+        p.price,
+        p.thumbnail_1
       FROM Cart c
       INNER JOIN ProductDetails pd ON c.pd_id = pd.pd_id
       INNER JOIN Product p ON pd.p_id = p.p_id
@@ -54,14 +58,63 @@ exports.handler = async (event) => {
       const quantity = parseInt(row.quantity || 0);
       const price = parseFloat(row.price || 0);
       
-      // Parse img_list JSON
+      // Parse img_list JSON - try multiple formats
       let images = [];
-      try {
-        images = row.img_list ? JSON.parse(row.img_list) : [];
-      } catch (e) {
-        images = [];
+      let firstImage = '';
+      
+      if (row.img_list) {
+        try {
+          const parsed = typeof row.img_list === 'string' ? JSON.parse(row.img_list) : row.img_list;
+          if (Array.isArray(parsed)) {
+            images = parsed;
+            firstImage = parsed[0] || '';
+          } else if (typeof parsed === 'string') {
+            firstImage = parsed;
+          }
+        } catch (e) {
+          if (typeof row.img_list === 'string' && row.img_list.trim()) {
+            firstImage = row.img_list.trim();
+          }
+        }
       }
-      const firstImage = images.length > 0 ? images[0] : '';
+      
+      // Fallback to product thumbnail if no variant image
+      if (!firstImage && row.thumbnail_1) {
+        firstImage = row.thumbnail_1;
+      }
+      
+      // Parse sizes JSON array first
+      let sizes = [];
+      if (row.sizes) {
+        try {
+          sizes = typeof row.sizes === 'string' ? JSON.parse(row.sizes) : row.sizes;
+          if (!Array.isArray(sizes)) sizes = [];
+        } catch (e) {
+          sizes = [];
+        }
+      }
+      
+      // Get selected size from cart, or fallback to product size, or first available size
+      let selectedSize = row.selected_size || row.size || '';
+      
+      // If no selected size but has sizes array, use first size with stock > 0
+      if (!selectedSize && sizes.length > 0) {
+        const firstAvailable = sizes.find(s => parseInt(s.amount || 0) > 0);
+        if (firstAvailable) {
+          selectedSize = firstAvailable.size;
+        } else {
+          selectedSize = sizes[0]?.size || '';
+        }
+      }
+      
+      // Calculate stock for the selected size
+      let stockForSize = parseInt(row.amount || 0);
+      if (sizes.length > 0 && selectedSize) {
+        const sizeData = sizes.find(s => s.size === selectedSize);
+        if (sizeData) {
+          stockForSize = parseInt(sizeData.amount || 0);
+        }
+      }
       
       return {
         cartId: row.cart_id,
@@ -69,15 +122,17 @@ exports.handler = async (event) => {
         createdAt: row.created_at,
         updatedAt: row.updated_at,
         pdId: row.pd_id,
-        size: row.size,
+        size: selectedSize,
+        sizes: sizes,
         colorName: row.color_name || '',
         colorCode: row.color_code || '',
         price,
-        stock: parseInt(row.stock || 0),
+        stock: stockForSize,
         productId: row.p_id,
         productName: row.p_name,
         description: row.p_desc || '',
         image: firstImage,
+        images: images,
         itemTotal: price * quantity
       };
     });

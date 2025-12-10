@@ -51,7 +51,7 @@ export default function AdminOrders() {
         const fetchCurrentUser = async () => {
             try {
                 const res = await api.get('/auth/me');
-                if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+                if (res?.data.role !== 'ADMIN') {
                     navigate('/login');
                     return;
                 }
@@ -124,13 +124,25 @@ export default function AdminOrders() {
         setEditingStatus('');
     };
 
+    const getStatusText = (status) => {
+        const statusTexts = {
+            PENDING: 'Chờ Xử Lý',
+            PROCESSING: 'Đang Xử Lý',
+            SHIPPING: 'Đang Giao',
+            DELIVERED: 'Đã Giao',
+            CANCELLED: 'Đã Hủy'
+        };
+        return statusTexts[status] || status;
+    };
+
     const saveEdit = async (orderId) => {
         if (!editingStatus) return alert('Trạng thái không được để trống');
         try {
-            await api.put(`/orders/${orderId}`, { status: editingStatus });
+            // Use PATCH /orders/{id}/status endpoint
+            await api.patch(`/orders/${orderId}/status`, { status: editingStatus });
             setOrders(o => o.map(item => item.id === orderId ? { ...item, status: editingStatus } : item));
             cancelEdit();
-            alert('Cập nhật trạng thái đơn hàng thành công');
+            alert(`✅ Cập nhật trạng thái thành "${getStatusText(editingStatus)}" thành công!\n\n📧 Thông báo đã được gửi đến khách hàng.`);
         } catch (err) {
             console.error('Update order failed', err);
             alert('Không thể cập nhật trạng thái đơn hàng');

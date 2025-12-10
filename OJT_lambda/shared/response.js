@@ -4,7 +4,6 @@ const successResponse = (data, statusCode = 200) => ({
   headers: {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Credentials': true,
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type,Authorization',
   },
@@ -18,7 +17,8 @@ const errorResponse = (message, statusCode = 500, error = null) => {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Credentials': true,
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type,Authorization',
     },
     body: JSON.stringify({
       error: message,
@@ -49,6 +49,11 @@ const getPathParam = (event, paramName) => {
   return params[paramName] || null;
 };
 
+const getQueryParam = (event, paramName) => {
+  const params = event.queryStringParameters || {};
+  return params[paramName] || null;
+};
+
 module.exports = {
   successResponse,
   errorResponse,
@@ -56,4 +61,5 @@ module.exports = {
   getQueryParams,
   getPathParams,
   getPathParam,
+  getQueryParam,
 };

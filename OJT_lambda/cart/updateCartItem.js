@@ -23,8 +23,9 @@ exports.handler = async (event) => {
     }
 
     // Check if cart item exists and belongs to user - Schema v2
+    // Include selected_size and sizes JSON for accurate stock calculation
     const checkSql = `
-      SELECT c.cart_id, c.pd_id, pd.amount, p.price
+      SELECT c.cart_id, c.pd_id, c.selected_size, pd.amount, pd.sizes, pd.size, p.price
       FROM Cart c
       INNER JOIN ProductDetails pd ON c.pd_id = pd.pd_id
       INNER JOIN Product p ON pd.p_id = p.p_id
@@ -37,12 +38,42 @@ exports.handler = async (event) => {
       return errorResponse('Cart item not found', 404);
     }
 
-    const availableAmount = parseInt(cartItem.amount || 0);
+    // Parse sizes JSON array first
+    let sizes = [];
+    if (cartItem.sizes) {
+      try {
+        sizes = typeof cartItem.sizes === 'string' ? JSON.parse(cartItem.sizes) : cartItem.sizes;
+        if (!Array.isArray(sizes)) sizes = [];
+      } catch (e) {
+        sizes = [];
+      }
+    }
+    
+    // Get selected size from cart, or fallback to product size, or first available size
+    let selectedSize = cartItem.selected_size || cartItem.size || '';
+    if (!selectedSize && sizes.length > 0) {
+      const firstAvailable = sizes.find(s => parseInt(s.amount || 0) > 0);
+      if (firstAvailable) {
+        selectedSize = firstAvailable.size;
+      } else {
+        selectedSize = sizes[0]?.size || '';
+      }
+    }
+    
+    // Calculate stock for the selected size
+    let availableAmount = parseInt(cartItem.amount || 0);
+    if (sizes.length > 0 && selectedSize) {
+      const sizeData = sizes.find(s => s.size === selectedSize);
+      if (sizeData) {
+        availableAmount = parseInt(sizeData.amount || 0);
+      }
+    }
+    
     const price = parseFloat(cartItem.price || 0);
 
-    // Check stock
+    // Check stock for selected size
     if (availableAmount < quantity) {
-      return errorResponse('Insufficient stock', 400);
+      return errorResponse(`Chỉ còn ${availableAmount} sản phẩm size ${selectedSize || 'này'} trong kho`, 400);
     }
 
     // Update cart item - Schema v2

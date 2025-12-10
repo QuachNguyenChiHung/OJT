@@ -11,7 +11,7 @@ exports.handler = async (event) => {
       return errorResponse('Unauthorized', 401);
     }
 
-    const { productDetailsId, quantity } = parseBody(event);
+    const { productDetailsId, quantity, selectedSize } = parseBody(event);
 
     if (!productDetailsId || !quantity || quantity <= 0) {
       return errorResponse('Product details ID and valid quantity are required', 400);
@@ -19,7 +19,7 @@ exports.handler = async (event) => {
 
     // Check if product details exists and has stock - Schema v2
     const checkProductSql = `
-      SELECT pd.pd_id, pd.amount, pd.size, pd.p_id, p.price
+      SELECT pd.pd_id, pd.amount, pd.size, pd.sizes, pd.p_id, p.price
       FROM ProductDetails pd
       INNER JOIN Product p ON pd.p_id = p.p_id
       WHERE pd.pd_id = ?
@@ -31,23 +31,38 @@ exports.handler = async (event) => {
       return errorResponse('Product not found', 404);
     }
 
-    const availableAmount = parseInt(product.amount || 0);
     const price = parseFloat(product.price || 0);
-    const size = product.size;
+    const size = selectedSize || product.size || '';
+    
+    // Calculate available stock for the selected size
+    let availableAmount = parseInt(product.amount || 0);
+    if (product.sizes && selectedSize) {
+      try {
+        const sizes = typeof product.sizes === 'string' ? JSON.parse(product.sizes) : product.sizes;
+        if (Array.isArray(sizes)) {
+          const sizeData = sizes.find(s => s.size === selectedSize);
+          if (sizeData) {
+            availableAmount = parseInt(sizeData.amount || 0);
+          }
+        }
+      } catch (e) {
+        // Keep using product.amount
+      }
+    }
 
     // Check stock
     if (availableAmount < quantity) {
-      return errorResponse('Insufficient stock', 400);
+      return errorResponse(`Chỉ còn ${availableAmount} sản phẩm size ${size}`, 400);
     }
 
-    // Check if item already exists in cart - Schema v2
+    // Check if item already exists in cart (same product + same size)
     const checkCartSql = `
       SELECT cart_id, quantity
       FROM Cart
-      WHERE user_id = ? AND pd_id = ?
+      WHERE user_id = ? AND pd_id = ? AND (selected_size = ? OR (selected_size IS NULL AND ? IS NULL) OR (selected_size IS NULL AND ? = ''))
     `;
 
-    const cartItem = await getOne(checkCartSql, [user.u_id, productDetailsId]);
+    const cartItem = await getOne(checkCartSql, [user.u_id, productDetailsId, size, size, size]);
 
     let cartId;
     let newQuantity = quantity;
@@ -71,13 +86,13 @@ exports.handler = async (event) => {
 
       await update(updateSql, [newQuantity, cartId]);
     } else {
-      // Insert new cart item - Schema v2
+      // Insert new cart item with selected_size
       const insertSql = `
-        INSERT INTO Cart (user_id, pd_id, quantity, created_at, updated_at)
-        VALUES (?, ?, ?, NOW(), NOW())
+        INSERT INTO Cart (user_id, pd_id, selected_size, quantity, created_at, updated_at)
+        VALUES (?, ?, ?, ?, NOW(), NOW())
       `;
 
-      cartId = await insert(insertSql, [user.u_id, productDetailsId, quantity]);
+      cartId = await insert(insertSql, [user.u_id, productDetailsId, size || null, quantity]);
     }
 
     // Get product name for response - Schema v2

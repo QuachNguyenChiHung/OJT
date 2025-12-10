@@ -5,6 +5,139 @@ import api from "../api/axios"
 import ProductTable from "../Components/ProductTable"
 import '../styles/theme.css'
 
+// Top Header with Login/Register buttons
+const TopHeader = () => {
+    const navigate = useNavigate();
+    const [user, setUser] = useState(null);
+
+    useEffect(() => {
+        const checkUser = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const res = await api.get('/auth/me');
+                setUser(res.data);
+            } catch (e) {}
+        };
+        checkUser();
+    }, []);
+
+    const handleLogout = async () => {
+        try {
+            await api.post('/auth/logout', {});
+        } catch { /* empty */ }
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        setUser(null);
+        navigate('/');
+    };
+
+    return (
+        <header style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            background: 'rgba(255,255,255,0.95)',
+            backdropFilter: 'blur(10px)',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+            padding: '12px 40px'
+        }}>
+            <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                maxWidth: '1400px',
+                margin: '0 auto'
+            }}>
+                {/* Logo */}
+                <div style={{ cursor: 'pointer' }} onClick={() => navigate('/')}>
+                    <img src="/img/logo.png" alt="Logo" style={{ height: '35px' }} />
+                </div>
+
+                {/* Auth Buttons */}
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                    {user ? (
+                        <>
+                            <span style={{ color: '#666', fontSize: '14px' }}>
+                                Xin chào, {user.fullName || user.username}
+                            </span>
+                            <button
+                                onClick={() => navigate('/home')}
+                                style={{
+                                    padding: '8px 20px',
+                                    borderRadius: '25px',
+                                    border: '2px solid #00B4DB',
+                                    background: 'transparent',
+                                    color: '#00B4DB',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s'
+                                }}
+                            >
+                                Vào Shop
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                style={{
+                                    padding: '8px 20px',
+                                    borderRadius: '25px',
+                                    border: 'none',
+                                    background: '#e31837',
+                                    color: '#fff',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Đăng Xuất
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={() => navigate('/login')}
+                                style={{
+                                    padding: '8px 24px',
+                                    borderRadius: '25px',
+                                    border: '2px solid #00B4DB',
+                                    background: 'transparent',
+                                    color: '#00B4DB',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s'
+                                }}
+                            >
+                                Đăng Nhập
+                            </button>
+                            <button
+                                onClick={() => navigate('/register')}
+                                style={{
+                                    padding: '8px 24px',
+                                    borderRadius: '25px',
+                                    border: 'none',
+                                    background: 'linear-gradient(135deg, #00B4DB 0%, #00D4AA 100%)',
+                                    color: '#fff',
+                                    fontWeight: '600',
+                                    fontSize: '13px',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 4px 15px rgba(0,180,219,0.3)'
+                                }}
+                            >
+                                Đăng Ký
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </header>
+    );
+};
+
 // Hero Banner Component
 const HeroBanner = () => {
     const navigate = useNavigate();
@@ -43,25 +176,15 @@ const HeroBanner = () => {
                             <button 
                                 className="btn btn-light btn-lg"
                                 style={{ 
-                                    fontWeight: '600', 
-                                    padding: '14px 35px',
+                                    fontWeight: '700', 
+                                    padding: '18px 50px',
                                     borderRadius: '50px',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+                                    fontSize: '1.1rem'
                                 }}
                                 onClick={() => navigate('/home')}
                             >
                                 Khám Phá Ngay
-                            </button>
-                            <button 
-                                className="btn btn-outline-light btn-lg"
-                                style={{ 
-                                    padding: '14px 35px',
-                                    borderRadius: '50px',
-                                    borderWidth: '2px'
-                                }}
-                                onClick={() => navigate('/register')}
-                            >
-                                Đăng Ký
                             </button>
                         </div>
                     </div>
@@ -138,7 +261,7 @@ const CategoriesSection = () => {
             try {
                 const res = await api.get('/categories');
                 setCategories((res.data || []).slice(0, 6));
-            } catch (e) {}
+            } catch (e) { /* empty */ }
         };
         fetchCategories();
     }, []);
@@ -265,7 +388,8 @@ export const MainPage = () => {
     }, []);
 
     return (
-        <main>
+        <main style={{ paddingTop: '60px' }}>
+            <TopHeader />
             <HeroBanner />
             <FeaturesSection />
             <CategoriesSection />

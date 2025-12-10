@@ -24,6 +24,16 @@ exports.handler = async (event) => {
       return errorResponse('Product details not found', 404);
     }
 
+    // Parse img_list JSON string to array
+    let imgList = [];
+    if (row.img_list) {
+      try {
+        imgList = typeof row.img_list === 'string' ? JSON.parse(row.img_list) : row.img_list;
+      } catch (e) {
+        imgList = [];
+      }
+    }
+
     const productDetails = {
       pdId: row.pd_id,
       colorName: row.color_name || null,
@@ -31,7 +41,7 @@ exports.handler = async (event) => {
       size: row.size || null,
       amount: row.amount || 0,
       inStock: !!row.in_stock,
-      imgList: row.img_list || null,
+      imgList: imgList,
       productId: row.p_id,
       productName: row.p_name,
       price: parseFloat(row.price || 0),

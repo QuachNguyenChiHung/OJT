@@ -16,17 +16,11 @@ const ProductTable = ({ title, data, pagination }) => {
     };
 
     // Sample product data - used as a fallback when `data` prop is empty
-    const products = Array(6).fill({
-        id: 1,
-        name: 'Áo đen Gucci Deluxe',
-        price: '100.000 đ',
-        image: clothesImg,
-        onSale: true
-    });
+    
 
     const items = data;
 
-    const pageNumbers = [1, 2, 3, 4, 5];
+    
 
     return (
         <div className="container py-2" style={{ maxWidth: '1200px' }}>
@@ -53,8 +47,9 @@ const ProductTable = ({ title, data, pagination }) => {
                                 <img
                                     className="card-img-top w-100 d-block fit-cover cloth-img"
                                     style={{ borderRadius: '19px' }}
-                                    src={product.imageUrl || product.image}
+                                    src={product.thumbnail1 || product.imageUrl || product.image || '/img/no-image.svg'}
                                     alt={product.name}
+                                    onError={(e) => { e.target.onerror = null; e.target.src = '/img/no-image.svg'; }}
                                 />
                                 {product.onSale && (
                                     <div
@@ -66,14 +61,16 @@ const ProductTable = ({ title, data, pagination }) => {
                                         }}
                                     >
                                         <p
-                                            className="text-center bg-primary"
+                                            className="text-center"
                                             style={{
                                                 padding: '9px',
                                                 borderRadius: 0,
-                                                borderTopLeftRadius: '18.5px'
+                                                borderTopLeftRadius: '18.5px',
+                                                background: '#e31837',
+                                                fontWeight: '600'
                                             }}
                                         >
-                                            SALE
+                                            {product.discountPercent ? `-${product.discountPercent}%` : 'SALE'}
                                         </p>
                                     </div>
                                 )}
@@ -88,9 +85,20 @@ const ProductTable = ({ title, data, pagination }) => {
                                     <h4 className="text-center text-white card-title">
                                         {product.name}
                                     </h4>
-                                    <p className="text-center text-white card-text">
-                                        {formatPrice(product.price)}
-                                    </p>
+                                    {product.onSale && product.salePrice ? (
+                                        <div className="text-center">
+                                            <span style={{ textDecoration: 'line-through', color: '#ccc', fontSize: '12px', marginRight: '8px' }}>
+                                                {formatPrice(product.price)}
+                                            </span>
+                                            <span className="text-white card-text" style={{ fontWeight: '600', color: '#ff6b6b' }}>
+                                                {formatPrice(product.salePrice)}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-center text-white card-text">
+                                            {formatPrice(product.price)}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         </a>

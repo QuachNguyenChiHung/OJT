@@ -6,7 +6,7 @@ const { verifyToken, isAdmin } = require('./shared/auth');
 exports.handler = async (event) => {
   try {
     // Verify admin
-    const user = verifyToken(event);
+    const user = await verifyToken(event);
     if (!user || !isAdmin(user)) {
       return errorResponse('Admin access required', 403);
     }
@@ -17,15 +17,16 @@ exports.handler = async (event) => {
       return errorResponse('Brand ID is required', 400);
     }
 
-    // Check if brand has products
-    const checkSql = `SELECT COUNT(*) as count FROM products WHERE b_id = ?`;
+    // Check if brand has products (Schema v2: Product table with brand_id)
+    const checkSql = `SELECT COUNT(*) as count FROM Product WHERE brand_id = ?`;
     const checkResult = await getOne(checkSql, [brandId]);
 
     if (checkResult && checkResult.count > 0) {
-      return errorResponse('Cannot delete brand with existing products', 400);
+      return errorResponse('Không thể xóa thương hiệu đang có sản phẩm', 400);
     }
 
-    const sql = `DELETE FROM brands WHERE b_id = ?`;
+    // Schema v2: Brand table with brand_id
+    const sql = `DELETE FROM Brand WHERE brand_id = ?`;
     const affectedRows = await remove(sql, [brandId]);
 
     if (affectedRows === 0) {

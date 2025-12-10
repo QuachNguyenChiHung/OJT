@@ -13,7 +13,7 @@ import { MainPage } from './pages/MainPage'
 import Login from './Components/Login'
 import Register from './Components/Register'
 import ProductDetailsPage from './pages/ProductDetailsPage'
-import SearchPage from './pages/SearchPage'
+// SearchPage removed - search is now inline on HomePage
 import OrderPage from './pages/OrderPage'
 import OrderForm from './Components/OrderForm'
 import AdminProducts from './admin/AdminProducts'
@@ -25,6 +25,8 @@ import AdminBrands from './admin/AdminBrands'
 import AdminUsers from './admin/AdminUsers'
 import UserDetails from './admin/UserDetails'
 import AdminOrders from './admin/AdminOrders'
+import AdminHomeSections from './admin/AdminHomeSections'
+import AdminSale from './admin/AdminSale'
 // import ChatBot from './Components/ChatBot'; // Disabled for now
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
@@ -33,6 +35,7 @@ import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import ForgotPassword from './Components/ForgotPassword';
 import HomePage from './pages/HomePage';
+import WishlistPage from './pages/WishlistPage';
 
 function Layout() {
   const location = useLocation()
@@ -67,7 +70,7 @@ function Layout() {
   }, [location.pathname, navigate]);
 
   // Pages that should NOT show footer
-  const hideFooterPages = ['/login', '/register', '/forgot-password', '/home', '/search', '/product', '/cart', '/checkout', '/orders', '/profile', '/update-profile', '/brands', '/admin', '/enter-info'];
+  const hideFooterPages = ['/login', '/register', '/forgot-password', '/home', '/product', '/cart', '/checkout', '/orders', '/profile', '/update-profile', '/brands', '/admin', '/enter-info'];
   const shouldHideFooter = hideFooterPages.some(p => location.pathname.startsWith(p)) || location.pathname !== '/';
   
   // Only show footer on MainPage (/)
@@ -83,13 +86,14 @@ function Layout() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/product/:id" element={<ProductDetailsPage />} />
-        <Route path="/search" element={<SearchPage />} />
+        {/* /search removed - search is now inline on HomePage */}
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrderPage />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/brands" element={<BrandPage />} />
+        <Route path="/wishlist" element={<WishlistPage />} />
         <Route path="/admin" element={<AdminProducts />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/products/:id" element={<AdminProductDetails />} />
@@ -98,6 +102,8 @@ function Layout() {
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/users/:id" element={<UserDetails />} />
+        <Route path="/admin/home-sections" element={<AdminHomeSections />} />
+        <Route path="/admin/sale" element={<AdminSale />} />
         <Route path="*" element={<h2 className="text-center my-5">404 - Page Not Found</h2>} />
         <Route path='/enter-info' element={<EnterInfo />} />
       </Routes>

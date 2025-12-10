@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 
@@ -159,40 +159,15 @@ export default function UserProfile() {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="mt-4">
-        <div className="row">
-          <div className="col-md-6 mb-3">
-            <div className="card h-100">
-              <div className="card-body text-center">
-                <i className="fas fa-shopping-cart fa-3x text-primary mb-3"></i>
-                <h5>Đơn Hàng Của Tôi</h5>
-                <p className="text-muted">Xem lịch sử mua hàng và theo dõi đơn hàng</p>
-                <button
-                  className="btn btn-primary"
-                  onClick={() => navigate('/orders')}
-                >
-                  Xem Đơn Hàng
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-6 mb-3">
-            <div className="card h-100">
-              <div className="card-body text-center">
-                <i className="fas fa-edit fa-3x text-success mb-3"></i>
-                <h5>Cập Nhật Thông Tin</h5>
-                <p className="text-muted">Chỉnh sửa thông tin cá nhân của bạn</p>
-                <button
-                  className="btn btn-success"
-                  onClick={() => navigate('/update-profile')}
-                >
-                  Chỉnh Sửa
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Update Button */}
+      <div className="mt-4 text-center">
+        <button
+          className="btn btn-success btn-lg px-5"
+          onClick={() => navigate('/update-profile')}
+        >
+          <i className="fas fa-edit me-2"></i>
+          Cập Nhật Thông Tin
+        </button>
       </div>
     </div>
   );

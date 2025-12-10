@@ -1,12 +1,12 @@
-// Lambda: Update Category - MySQL
-const { update } = require('./shared/database');
+// Lambda: Update Category with Hierarchy - MySQL
+const { update, getOne } = require('./shared/database');
 const { successResponse, errorResponse, parseBody, getPathParam } = require('./shared/response');
 const { verifyToken, isAdmin } = require('./shared/auth');
 
 exports.handler = async (event) => {
   try {
     // Verify admin
-    const user = verifyToken(event);
+    const user = await verifyToken(event);
     if (!user || !isAdmin(user)) {
       return errorResponse('Admin access required', 403);
     }
@@ -18,22 +18,39 @@ exports.handler = async (event) => {
       return errorResponse('Category ID is required', 400);
     }
 
-    const { cName } = body;
+    const { name, cName, parentId, displayOrder } = body;
+    const categoryName = name || cName;
 
-    if (!cName) {
+    if (!categoryName) {
       return errorResponse('Category name is required', 400);
     }
 
-    const sql = `UPDATE categories SET c_name = ?, updated_at = NOW() WHERE c_id = ?`;
-    const affectedRows = await update(sql, [cName, categoryId]);
+    // Calculate level based on parent
+    let level = 0;
+    if (parentId) {
+      const parent = await getOne('SELECT level FROM Category WHERE c_id = ?', [parentId]);
+      if (!parent) {
+        return errorResponse('Parent category not found', 404);
+      }
+      level = (parent.level || 0) + 1;
+    }
+
+    const sql = `UPDATE Category SET c_name = ?, parent_id = ?, level = ?, display_order = ? WHERE c_id = ?`;
+    const affectedRows = await update(sql, [categoryName, parentId || null, level, displayOrder || 0, categoryId]);
 
     if (affectedRows === 0) {
       return errorResponse('Category not found', 404);
     }
 
-    return successResponse({ cId: categoryId, cName });
+    return successResponse({ 
+      id: categoryId, 
+      name: categoryName,
+      parentId: parentId || null,
+      level,
+      displayOrder: displayOrder || 0
+    });
   } catch (error) {
     console.error('Update category error:', error);
-    return errorResponse('Failed to update category', 500);
+    return errorResponse('Failed to update category: ' + error.message, 500);
   }
 };

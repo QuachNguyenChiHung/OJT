@@ -34,6 +34,8 @@ exports.handler = async (event) => {
     const categoryId = body.categoryId || event.queryStringParameters?.categoryId;
     const brandId = body.brandId || event.queryStringParameters?.brandId;
     const isActive = body.isActive;
+    const thumbnail1 = body.thumbnail1;
+    const thumbnail2 = body.thumbnail2;
 
     if (!productId) {
       return errorResponse('Product ID is required', 400);
@@ -47,7 +49,7 @@ exports.handler = async (event) => {
       return errorResponse('Product not found', 404);
     }
 
-    // Schema v2: Product table with p_desc, brand_id
+    // Schema v2: Product table with p_desc, brand_id, thumbnail_1, thumbnail_2
     const updateSql = `
       UPDATE Product
       SET p_name = COALESCE(?, p_name),
@@ -55,7 +57,9 @@ exports.handler = async (event) => {
           price = COALESCE(?, price),
           c_id = COALESCE(?, c_id),
           brand_id = COALESCE(?, brand_id),
-          is_active = COALESCE(?, is_active)
+          is_active = COALESCE(?, is_active),
+          thumbnail_1 = COALESCE(?, thumbnail_1),
+          thumbnail_2 = COALESCE(?, thumbnail_2)
       WHERE p_id = ?
     `;
 
@@ -66,6 +70,8 @@ exports.handler = async (event) => {
       categoryId || null,
       brandId || null,
       isActive !== undefined ? (isActive ? 1 : 0) : null,
+      thumbnail1 || null,
+      thumbnail2 || null,
       productId
     ]);
 

@@ -22,23 +22,23 @@ exports.handler = async (event) => {
       return errorResponse('Not authorized', 403);
     }
 
-    const sql = `SELECT o.o_id, o.u_id, o.order_status, o.total_price, o.shipping_address,
-                        o.payment_method, o.created_at,
-                        (SELECT COUNT(*) FROM order_details od WHERE od.o_id = o.o_id) as item_count
-                 FROM orders o
-                 WHERE o.u_id = ? AND o.order_status = ?
-                 ORDER BY o.created_at DESC`;
+    const sql = `SELECT o.o_id, o.u_id, o.status, o.total_price, o.shipping_address,
+                        o.payment_method, o.date_created,
+                        (SELECT COUNT(*) FROM OrderDetails od WHERE od.o_id = o.o_id) as item_count
+                 FROM Orders o
+                 WHERE o.u_id = ? AND o.status = ?
+                 ORDER BY o.date_created DESC`;
 
     const rows = await getMany(sql, [userId, status]);
 
     const orders = rows.map(row => ({
       id: row.o_id,
       userId: row.u_id,
-      status: row.order_status,
+      status: row.status,
       totalPrice: parseFloat(row.total_price || 0),
       shippingAddress: row.shipping_address || null,
       paymentMethod: row.payment_method || null,
-      dateCreated: row.created_at,
+      dateCreated: row.date_created,
       itemCount: row.item_count || 0,
     }));
 

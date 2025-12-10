@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
+import OrderTimeline from './OrderTimeline';
 
 export default function OrderList() {
     const [userOrders, setUserOrders] = useState([]);
@@ -15,10 +16,39 @@ export default function OrderList() {
         address: ''
     });
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
 
     useEffect(() => {
         fetchCurrentUserAndOrders();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Auto-expand order if orderId is in URL params (from notification click)
+    useEffect(() => {
+        const orderId = searchParams.get('orderId');
+        if (orderId && userOrders.length > 0) {
+            // Find order by any id field
+            const orderExists = userOrders.find(o => o.id === orderId);
+            if (orderExists && selectedOrder !== orderExists.id) {
+                setSelectedOrder(orderExists.id);
+                // Fetch order details
+                if (!orderDetails[orderExists.id]) {
+                    api.get(`/orders/${orderExists.id}/details`)
+                        .then(res => {
+                            const items = res.data?.items || res.data || [];
+                            setOrderDetails(prev => ({
+                                ...prev,
+                                [orderExists.id]: items
+                            }));
+                        })
+                        .catch(err => {
+                            console.error('Không thể tải chi tiết đơn hàng:', err);
+                        });
+                }
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, userOrders]);
 
     const fetchCurrentUserAndOrders = async () => {
         setLoading(true);
@@ -34,7 +64,22 @@ export default function OrderList() {
             // Then get their orders - use userId from response
             const userId = userRes.data.userId || userRes.data.u_id || userRes.data.id;
             const ordersRes = await api.get(`/orders/user/${userId}`);
-            const orders = ordersRes.data || [];
+            // Handle both array and object responses
+            const ordersData = ordersRes.data;
+            const rawOrders = Array.isArray(ordersData) 
+                ? ordersData 
+                : (ordersData?.orders || ordersData?.data || []);
+            // Normalize order data - handle different field names from API
+            const orders = rawOrders.map(order => ({
+                id: order.orderId || order.id || order.o_id,
+                status: order.status || order.order_status,
+                total: order.totalPrice || order.total || order.total_price || 0,
+                dateCreated: order.createdAt || order.dateCreated || order.date_created,
+                shippingAddress: order.shippingAddress || order.shipping_address,
+                note: order.note,
+                paymentMethod: order.paymentMethod || order.payment_method,
+                itemCount: order.itemCount || 0
+            }));
             setUserOrders(orders);
         } catch (error) {
             console.error('Không thể tải đơn hàng:', error);
@@ -49,6 +94,8 @@ export default function OrderList() {
     };
 
     const toggleOrderDetails = async (orderId) => {
+        if (!orderId) return;
+        
         if (selectedOrder === orderId) {
             setSelectedOrder(null);
             return;
@@ -60,9 +107,10 @@ export default function OrderList() {
         if (!orderDetails[orderId]) {
             try {
                 const res = await api.get(`/orders/${orderId}/details`);
+                const items = res.data?.items || res.data || [];
                 setOrderDetails(prev => ({
                     ...prev,
-                    [orderId]: res.data || []
+                    [orderId]: items
                 }));
             } catch (error) {
                 console.error('Không thể tải chi tiết đơn hàng:', error);
@@ -197,7 +245,15 @@ export default function OrderList() {
                                     {/* Order Details */}
                                     {selectedOrder === order.id && (
                                         <div className="mt-3 border-top pt-3">
-                                            <h6>Chi Tiết Đơn Hàng:</h6>
+                                            {/* Order Timeline */}
+                                            <OrderTimeline 
+                                                status={order.status} 
+                                                dateCreated={order.dateCreated}
+                                            />
+
+                                            <hr style={{ margin: '16px 0' }} />
+
+                                            <h6>Chi Tiết Sản Phẩm:</h6>
                                             {orderDetails[order.id] ? (
                                                 orderDetails[order.id].length > 0 ? (
                                                     <div className="table-responsive">
@@ -212,19 +268,22 @@ export default function OrderList() {
                                                             </thead>
                                                             <tbody>
                                                                 {orderDetails[order.id].map((item, index) => (
-                                                                    <tr key={index}>
+                                                                    <tr key={item.orderDetailId || index}>
                                                                         <td>
-                                                                            <div className="fw-bold">{item.productName || 'Sản phẩm'}</div>
+                                                                            <div className="fw-bold">{item.product?.name || item.productName || 'Sản phẩm'}</div>
                                                                             <small className="text-muted">
-                                                                                ID: {item.productDetailsId}
+                                                                                {item.productDetails?.colorName && `Màu: ${item.productDetails.colorName}`}
+                                                                                {item.productDetails?.colorName && item.productDetails?.size && ' | '}
+                                                                                {item.productDetails?.size && `Size: ${item.productDetails.size}`}
+                                                                                {!item.productDetails?.colorName && !item.productDetails?.size && 'Không có thông tin'}
                                                                             </small>
                                                                         </td>
                                                                         <td>{item.quantity}</td>
                                                                         <td className="text-end">
-                                                                            <small>{formatCurrency(item.unitPrice)}</small>
+                                                                            <small>{formatCurrency(item.price || item.unitPrice)}</small>
                                                                         </td>
                                                                         <td className="text-end">
-                                                                            <small className="fw-bold">{formatCurrency(item.subtotal)}</small>
+                                                                            <small className="fw-bold">{formatCurrency(item.itemTotal || item.subtotal)}</small>
                                                                         </td>
                                                                     </tr>
                                                                 ))}

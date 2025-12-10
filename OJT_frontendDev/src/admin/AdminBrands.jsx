@@ -35,7 +35,7 @@ export default function AdminBrands() {
     const fetchCurrentUser = async () => {
       try {
         const res = await api.get('/auth/me');
-        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+        if (res?.data.role !== 'ADMIN') {
           navigate('/login');
           return;
         }

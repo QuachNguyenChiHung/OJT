@@ -65,7 +65,7 @@ const apiStack = new ApiStack(app, `${appName}-ApiStack`, {
   vpc: networkStack.vpc,
   dbSecretArn: databaseStack.dbSecret.secretArn,
   dbEndpoint: cdk.Fn.importValue(`${appName}-DBEndpoint`),
-  dbName: process.env.DB_NAME || 'demoaws',
+  dbName: process.env.DB_NAME || 'ojtdb',
   imagesBucketName: storageStack.imagesBucket.bucketName,
   dbSecurityGroupId: databaseStack.dbSecurityGroup.securityGroupId,
   // Cognito integration

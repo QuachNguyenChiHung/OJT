@@ -86,6 +86,26 @@ module.exports = {
       lambdaName: 'OJT-Ecommerce-DatabaseModule',
       description: 'Database: setup, migrations',
     },
+    'home-sections': {
+      folder: 'home-sections',
+      lambdaName: 'OJT-Ecommerce-HomeSectionsModule',
+      description: 'Home Sections: CRUD, manage products in sections',
+    },
+    'sale-products': {
+      folder: 'sale-products',
+      lambdaName: 'OJT-Ecommerce-SaleProductsModule',
+      description: 'Sale Products: manage products on sale with discounts',
+    },
+    wishlist: {
+      folder: 'wishlist',
+      lambdaName: 'OJT-Ecommerce-WishlistModule',
+      description: 'Wishlist: add, get, remove user wishlist items',
+    },
+    notifications: {
+      folder: 'notifications',
+      lambdaName: 'OJT-Ecommerce-NotificationsModule',
+      description: 'Notifications: get, mark read, unread count',
+    },
   },
 
   // Paths

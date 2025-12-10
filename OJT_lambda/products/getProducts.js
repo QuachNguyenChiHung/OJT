@@ -7,8 +7,9 @@ exports.handler = async (event) => {
     console.log('[getProducts] Starting...');
     const { isActive } = getQueryParams(event);
     
-    // Schema v2: Product table with c_id, brand_id
+    // Schema v2: Product table with c_id, brand_id, thumbnail_1, thumbnail_2
     let sql = `SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
+                      p.thumbnail_1, p.thumbnail_2,
                       c.c_id, c.c_name, b.brand_id, b.brand_name
                FROM Product p
                LEFT JOIN Category c ON p.c_id = c.c_id
@@ -32,6 +33,8 @@ exports.handler = async (event) => {
       description: row.p_desc || null,
       price: parseFloat(row.price || 0),
       isActive: !!row.is_active,
+      thumbnail1: row.thumbnail_1 || null,
+      thumbnail2: row.thumbnail_2 || null,
       categoryId: row.c_id,
       categoryName: row.c_name || null,
       category: row.c_id ? {

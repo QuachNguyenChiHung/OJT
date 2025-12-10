@@ -107,6 +107,14 @@
 |--------|----------|-----------------|-------------|
 | POST | `/images/upload` | uploadImage.js | Upload ảnh lên S3 |
 
+## 🔔 Notifications (4 endpoints)
+| Method | Endpoint | Lambda Function | Description |
+|--------|----------|-----------------|-------------|
+| GET | `/notifications` | orders/index.js | Lấy danh sách thông báo |
+| GET | `/notifications/unread-count` | orders/index.js | Đếm số thông báo chưa đọc |
+| PUT | `/notifications/{id}/read` | orders/index.js | Đánh dấu đã đọc 1 thông báo |
+| PUT | `/notifications/read-all` | orders/index.js | Đánh dấu tất cả đã đọc |
+
 ---
 
 ## 📊 Tổng kết

@@ -7,9 +7,12 @@ const deleteProduct = require('./deleteProduct');
 const searchProducts = require('./searchProducts');
 const getBestSelling = require('./getBestSelling');
 const getNewest = require('./getNewest');
+const getFeatured = require('./getFeatured');
+const setFeatured = require('./setFeatured');
 const getProductsByCategory = require('./getProductsByCategory');
 const getProductsByBrand = require('./getProductsByBrand');
 const getProductsByPriceRange = require('./getProductsByPriceRange');
+const uploadThumbnails = require('./uploadThumbnails');
 
 exports.handler = async (event) => {
   const path = event.path || event.rawPath || '';
@@ -43,6 +46,22 @@ exports.handler = async (event) => {
   // GET /products/newest
   if (path.endsWith('/newest') && method === 'GET') {
     return getNewest.handler(event);
+  }
+  // GET /products/featured
+  if (path.endsWith('/featured') && method === 'GET') {
+    return getFeatured.handler(event);
+  }
+  // POST /products/{id}/featured - Set featured status
+  if (path.match(/\/products\/[^\/]+\/featured$/) && method === 'POST') {
+    const match = path.match(/\/products\/([^\/]+)\/featured$/);
+    if (match) event.pathParameters = { ...pathParams, id: match[1] };
+    return setFeatured.handler(event);
+  }
+  // POST /products/{id}/thumbnails - Upload thumbnails
+  if (path.match(/\/products\/[^\/]+\/thumbnails$/) && method === 'POST') {
+    const match = path.match(/\/products\/([^\/]+)\/thumbnails$/);
+    if (match) event.pathParameters = { ...pathParams, id: match[1] };
+    return uploadThumbnails.handler(event);
   }
   // GET /products/price-range
   if (path.endsWith('/price-range') && method === 'GET') {

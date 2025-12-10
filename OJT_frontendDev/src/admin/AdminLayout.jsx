@@ -25,6 +25,8 @@ const menuItems = [
   { path: '/admin/brands', icon: '🏷️', label: 'Thương Hiệu' },
   { path: '/admin/orders', icon: '🛒', label: 'Đơn Hàng' },
   { path: '/admin/users', icon: '👥', label: 'Người Dùng' },
+  { path: '/admin/home-sections', icon: '🏠', label: 'Sections Trang Chủ' },
+  { path: '/admin/sale', icon: '🔥', label: 'Sale' },
 ];
 
 export default function AdminLayout({ children, title }) {

@@ -29,8 +29,13 @@ exports.handler = async (event) => {
     for (const item of items) {
       const { productDetailsId, quantity } = item;
 
-      // Get product details and check stock
-      const checkSql = `SELECT pd_id, price, amount FROM product_details WHERE pd_id = ?`;
+      // Get product details and check stock (price is in Product table)
+      const checkSql = `
+        SELECT pd.pd_id, pd.amount, p.price 
+        FROM ProductDetails pd 
+        INNER JOIN Product p ON pd.p_id = p.p_id 
+        WHERE pd.pd_id = ?
+      `;
       const product = await getOne(checkSql, [productDetailsId]);
 
       if (!product) {
@@ -53,41 +58,69 @@ exports.handler = async (event) => {
 
     // Create order
     const createOrderSql = `
-      INSERT INTO orders (o_id, u_id, total_price, additional_fee, order_status, 
-        payment_method, shipping_address, phone_number, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      INSERT INTO Orders (o_id, u_id, total_price, status, 
+        payment_method, shipping_address, phone, date_created)
+      VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
     `;
 
     await insert(createOrderSql, [
-      orderId, user.u_id, totalPrice, fee, 'PENDING',
+      orderId, user.u_id, totalPrice, 'PENDING',
       paymentMethod || 'COD', shippingAddress, phoneNumber
     ]);
 
     // Create order details and update stock
     for (const item of items) {
-      const { productDetailsId, quantity } = item;
+      const { productDetailsId, quantity, size } = item;
 
-      // Get price
-      const priceSql = `SELECT price FROM product_details WHERE pd_id = ?`;
+      // Get price (from Product table via ProductDetails)
+      const priceSql = `
+        SELECT p.price, pd.size as defaultSize FROM ProductDetails pd 
+        INNER JOIN Product p ON pd.p_id = p.p_id 
+        WHERE pd.pd_id = ?
+      `;
       const priceRow = await getOne(priceSql, [productDetailsId]);
       const price = parseFloat(priceRow?.price || 0);
+      // Use provided size or fallback to ProductDetails size
+      const itemSize = size || priceRow?.defaultSize || null;
 
-      // Insert order detail
+      // Insert order detail with size
       const orderDetailSql = `
-        INSERT INTO order_details (od_id, o_id, pd_id, quantity, price)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO OrderDetails (od_id, o_id, pd_id, quantity, price, size)
+        VALUES (?, ?, ?, ?, ?, ?)
       `;
 
-      await insert(orderDetailSql, [uuidv4(), orderId, productDetailsId, quantity, price]);
+      await insert(orderDetailSql, [uuidv4(), orderId, productDetailsId, quantity, price, itemSize]);
 
       // Update stock
-      const updateStockSql = `UPDATE product_details SET amount = amount - ? WHERE pd_id = ?`;
+      const updateStockSql = `UPDATE ProductDetails SET amount = amount - ? WHERE pd_id = ?`;
       await update(updateStockSql, [quantity, productDetailsId]);
     }
 
     // Clear user's cart
-    const clearCartSql = `DELETE FROM cart WHERE u_id = ?`;
+    const clearCartSql = `DELETE FROM Cart WHERE user_id = ?`;
     await remove(clearCartSql, [user.u_id]);
+
+    // Create notification for user
+    try {
+      const notificationId = uuidv4();
+      const createdAt = Math.floor(Date.now() / 1000);
+      const notificationSql = `
+        INSERT INTO notifications (n_id, u_id, title, message, type, reference_id, is_read, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, FALSE, ?)
+      `;
+      await insert(notificationSql, [
+        notificationId,
+        user.u_id,
+        'Đặt hàng thành công!',
+        'Đơn hàng của bạn đã được tạo thành công và đang chờ xử lý.',
+        'ORDER_CREATED',
+        orderId,
+        createdAt
+      ]);
+    } catch (notifError) {
+      console.error('Create notification error:', notifError);
+      // Don't fail the order if notification fails
+    }
 
     return successResponse({
       orderId,

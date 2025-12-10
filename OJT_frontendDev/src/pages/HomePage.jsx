@@ -2,44 +2,85 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import ProductTable from "../Components/ProductTable";
+import NotificationBell from "../Components/NotificationBell";
 import '../styles/theme.css';
 
+// Product Image with Hover Effect - shows thumbnail2 on hover
+const ProductImageHover = ({ thumbnail1, thumbnail2, alt, badge, badgeColor = '#FFD700' }) => {
+    const [isHovered, setIsHovered] = useState(false);
+    const img1 = thumbnail1 || '/img/no-image.svg';
+    const img2 = thumbnail2 || img1;
+    
+    return (
+        <div 
+            style={{ position: 'relative', overflow: 'hidden', aspectRatio: '3/4', background: '#f5f5f5' }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
+            {/* Image 1 - Default */}
+            <img 
+                src={img1}
+                alt={alt}
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    opacity: isHovered ? 0 : 1,
+                    transition: 'opacity 0.3s ease-in-out'
+                }}
+                onError={(e) => { e.target.onerror = null; e.target.src = '/img/no-image.svg'; }}
+            />
+            {/* Image 2 - On Hover */}
+            <img 
+                src={img2}
+                alt={alt}
+                style={{ 
+                    width: '100%', 
+                    height: '100%',
+                    objectFit: 'cover',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    opacity: isHovered ? 1 : 0,
+                    transition: 'opacity 0.3s ease-in-out'
+                }}
+                onError={(e) => { e.target.onerror = null; e.target.src = '/img/no-image.svg'; }}
+            />
+            {badge && (
+                <span style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    background: badgeColor,
+                    color: '#000',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    zIndex: 1
+                }}>
+                    {badge}
+                </span>
+            )}
+        </div>
+    );
+};
+
+
+
 // Navbar - Main Navigation Header
-const Navbar = ({ categories = [], brands = [], user = null }) => {
+const Navbar = ({ brands = [], user = null, activeGender = 'all', onGenderChange, showSaleOnly = false, onSaleToggle, saleDiscounts = [], selectedSaleDiscount = null, onSaleDiscountChange, selectedBrandId = null, onBrandChange, searchQuery = '', onSearchChange }) => {
     const navigate = useNavigate();
-    const [activeGender, setActiveGender] = useState('women');
-    const [activeMenu, setActiveMenu] = useState(null);
-    const [menuTimeout, setMenuTimeout] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [userMenuTimeout, setUserMenuTimeout] = useState(null);
+    const [showSaleMenu, setShowSaleMenu] = useState(false);
+    const [saleMenuTimeout, setSaleMenuTimeout] = useState(null);
+    const [showBrandMenu, setShowBrandMenu] = useState(false);
+    const [brandMenuTimeout, setBrandMenuTimeout] = useState(null);
     
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'EMPLOYEE';
-    
-    // Mega menu handlers with 1s delay
-    const handleMenuEnter = (menuId) => {
-        if (menuTimeout) {
-            clearTimeout(menuTimeout);
-            setMenuTimeout(null);
-        }
-        setActiveMenu(menuId);
-    };
-    
-    const handleMenuLeave = () => {
-        const timeout = setTimeout(() => {
-            setActiveMenu(null);
-        }, 1000); // 1s delay before hiding
-        setMenuTimeout(timeout);
-    };
-    
-    // Click toggle for mobile
-    const handleMenuClick = (menuId) => {
-        if (activeMenu === menuId) {
-            setActiveMenu(null);
-        } else {
-            setActiveMenu(menuId);
-        }
-    };
+    const isAdmin = user?.role === 'ADMIN';
     
     // User menu handlers with 1s delay
     const handleUserMenuEnter = () => {
@@ -74,158 +115,18 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
         localStorage.removeItem('refreshToken');
         navigate('/login');
     };
-    
-    // Ensure arrays
-    const safeCategories = Array.isArray(categories) ? categories : [];
-    const safeBrands = Array.isArray(brands) ? brands : [];
 
-    // Gender tabs
+    // Gender tabs - All is default
     const genderTabs = [
+        { id: 'all', label: 'All' },
         { id: 'women', label: 'Women' },
         { id: 'men', label: 'Men' },
         { id: 'unisex', label: 'Unisex' }
     ];
 
-    // Main navigation items with mega menu content
-    const navItems = [
-        { 
-            id: 'sale', 
-            label: 'Sale', 
-            isRed: true,
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'SALE',
-                        items: ['All Sale', 'Clothing', 'Jackets', 'Dresses', 'Tops', 'Shoes', 'Trainers', 'Bags', 'Accessories', 'Previous Season']
-                    },
-                    {
-                        title: "EDITOR'S PICKS",
-                        items: ['Favorite brands on sale', 'Sale for you']
-                    }
-                ],
-                featured: {
-                    image: '/img/sale-banner.jpg',
-                    category: activeGender === 'women' ? 'Women' : 'Men',
-                    title: 'FW25 SALE UPDATE: NOW UP TO 60% OFF SELECTED STYLES',
-                    link: 'Shop Now'
-                }
-            }
-        },
-        { 
-            id: 'new', 
-            label: 'New in',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'NEW IN',
-                        items: ['View All New', 'Clothing', 'Shoes', 'Bags', 'Accessories', 'Jewelry']
-                    },
-                    {
-                        title: 'TRENDING NOW',
-                        items: ['Best Sellers', 'Most Wanted', 'Back in Stock']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'brands', 
-            label: 'Brands',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'TOP BRANDS',
-                        items: safeBrands.slice(0, 10).map(b => b.bName)
-                    },
-                    {
-                        title: 'MORE BRANDS',
-                        items: safeBrands.slice(10, 20).map(b => b.bName)
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'clothing', 
-            label: 'Clothing',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'CLOTHING',
-                        items: ['All Clothing', ...safeCategories.slice(0, 8).map(c => c.cName)]
-                    },
-                    {
-                        title: 'SHOP BY STYLE',
-                        items: ['Casual', 'Formal', 'Streetwear', 'Sportswear']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'shoes', 
-            label: 'Shoes',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'SHOES',
-                        items: ['All Shoes', 'Sneakers', 'Boots', 'Sandals', 'Loafers', 'Heels', 'Flats']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'bags', 
-            label: 'Bags',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'BAGS',
-                        items: ['All Bags', 'Shoulder Bags', 'Tote Bags', 'Crossbody', 'Backpacks', 'Clutches']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'accessories', 
-            label: 'Accessories',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'ACCESSORIES',
-                        items: ['All Accessories', 'Belts', 'Hats', 'Scarves', 'Sunglasses', 'Wallets']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'watches', 
-            label: 'Watches',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'WATCHES',
-                        items: ['All Watches', 'Luxury Watches', 'Smart Watches', 'Classic']
-                    }
-                ]
-            }
-        },
-        { 
-            id: 'lifestyle', 
-            label: 'Lifestyle',
-            megaMenu: {
-                columns: [
-                    {
-                        title: 'LIFESTYLE',
-                        items: ['Home Decor', 'Tech', 'Beauty', 'Books', 'Gifts']
-                    }
-                ]
-            }
-        }
-    ];
-
     const handleSearch = (e) => {
         e.preventDefault();
-        if (searchQuery.trim()) {
-            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
-        }
+        // Search is handled inline on home page, no navigation needed
     };
 
     return (
@@ -234,7 +135,7 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
             top: 0, 
             zIndex: 1000, 
             background: '#fff',
-            boxShadow: activeMenu ? 'none' : '0 1px 0 #e5e5e5'
+            boxShadow: '0 1px 0 #e5e5e5'
         }}>
             {/* Top Bar - Gender Tabs + Logo + Icons */}
             <div style={{ 
@@ -252,7 +153,7 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                         {genderTabs.map(tab => (
                             <button
                                 key={tab.id}
-                                onClick={() => setActiveGender(tab.id)}
+                                onClick={() => onGenderChange && onGenderChange(tab.id)}
                                 style={{
                                     background: 'none',
                                     border: 'none',
@@ -304,26 +205,7 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                         )}
                         
                         {/* Notification */}
-                        <div style={{ position: 'relative', cursor: 'pointer' }}>
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="1.5">
-                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                            </svg>
-                            <span style={{
-                                position: 'absolute',
-                                top: '-5px',
-                                right: '-5px',
-                                background: '#e31837',
-                                color: '#fff',
-                                fontSize: '10px',
-                                width: '16px',
-                                height: '16px',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}>1</span>
-                        </div>
+                        <NotificationBell />
                         
                         {/* Account with Dropdown */}
                         <div 
@@ -358,7 +240,7 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                                 }}>
                                     {user ? (
                                         <>
-                                            {/* Logged in: Profile, Change Password, Sign Out */}
+                                            {/* Logged in: Profile, Change Password, Admin Panel (if admin), Sign Out */}
                                             <div 
                                                 style={{
                                                     padding: '14px 18px',
@@ -381,6 +263,31 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                                                 </svg>
                                                 Profile
                                             </div>
+                                            {/* My Orders */}
+                                            <div 
+                                                style={{
+                                                    padding: '14px 18px',
+                                                    cursor: 'pointer',
+                                                    fontSize: '13px',
+                                                    color: '#222',
+                                                    borderBottom: '1px solid #f0f0f0',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '10px',
+                                                    transition: 'background 0.2s'
+                                                }}
+                                                onClick={() => { navigate('/orders'); setShowUserMenu(false); }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f8f8f8'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="1.5">
+                                                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                                                    <line x1="3" y1="6" x2="21" y2="6"/>
+                                                    <path d="M16 10a4 4 0 0 1-8 0"/>
+                                                </svg>
+                                                Đơn Hàng Của Tôi
+                                            </div>
+                                            {/* Change Password */}
                                             <div 
                                                 style={{
                                                     padding: '14px 18px',
@@ -401,8 +308,33 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                                                     <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                                                 </svg>
-                                                Change Password
+                                                Đổi Mật Khẩu
                                             </div>
+                                            {/* Admin Panel - Only for ADMIN/EMPLOYEE */}
+                                            {isAdmin && (
+                                                <div 
+                                                    style={{
+                                                        padding: '14px 18px',
+                                                        cursor: 'pointer',
+                                                        fontSize: '13px',
+                                                        color: '#7c3aed',
+                                                        borderBottom: '1px solid #f0f0f0',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '10px',
+                                                        transition: 'background 0.2s'
+                                                    }}
+                                                    onClick={() => { navigate('/admin'); setShowUserMenu(false); }}
+                                                    onMouseEnter={(e) => e.currentTarget.style.background = '#f5f3ff'}
+                                                    onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5">
+                                                        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                                                    </svg>
+                                                    Admin Panel
+                                                </div>
+                                            )}
                                             <div 
                                                 style={{
                                                     padding: '14px 18px',
@@ -513,29 +445,246 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                 }}>
                     {/* Nav Items */}
                     <div style={{ display: 'flex', gap: '25px' }}>
-                        {navItems.map(item => (
-                            <div
-                                key={item.id}
-                                style={{ position: 'relative' }}
-                                onMouseEnter={() => handleMenuEnter(item.id)}
-                                onMouseLeave={handleMenuLeave}
+                        {/* Sale Button with Dropdown */}
+                        <div 
+                            style={{ position: 'relative' }}
+                            onMouseEnter={() => {
+                                if (saleMenuTimeout) clearTimeout(saleMenuTimeout);
+                                setShowSaleMenu(true);
+                            }}
+                            onMouseLeave={() => {
+                                const timeout = setTimeout(() => setShowSaleMenu(false), 500);
+                                setSaleMenuTimeout(timeout);
+                            }}
+                        >
+                            <button
+                                onClick={() => setShowSaleMenu(!showSaleMenu)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: '0',
+                                    fontSize: '13px',
+                                    fontWeight: showSaleOnly ? '600' : '400',
+                                    color: '#e31837',
+                                    cursor: 'pointer',
+                                    borderBottom: showSaleOnly ? '2px solid #e31837' : '2px solid transparent',
+                                    paddingBottom: '3px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
                             >
-                                <button
-                                    style={{
-                                        background: 'none',
-                                        border: 'none',
-                                        padding: '0',
-                                        fontSize: '13px',
-                                        fontWeight: '400',
-                                        color: item.isRed ? '#e31837' : '#222',
-                                        cursor: 'pointer'
-                                    }}
-                                    onClick={() => handleMenuClick(item.id)}
-                                >
-                                    {item.label}
-                                </button>
-                            </div>
-                        ))}
+                                Sale
+                                {showSaleOnly && selectedSaleDiscount && <span style={{ fontSize: '11px' }}>(-{selectedSaleDiscount}%)</span>}
+                                {showSaleOnly && !selectedSaleDiscount && <span style={{ fontSize: '11px' }}>(All)</span>}
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#e31837" strokeWidth="2">
+                                    <path d="M6 9l6 6 6-6"/>
+                                </svg>
+                            </button>
+                            
+                            {/* Sale Dropdown */}
+                            {showSaleMenu && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    marginTop: '8px',
+                                    background: '#fff',
+                                    border: '1px solid #e5e5e5',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    minWidth: '160px',
+                                    zIndex: 1001,
+                                    overflow: 'hidden'
+                                }}>
+                                    {/* All Sale */}
+                                    <div
+                                        onClick={() => {
+                                            onSaleDiscountChange && onSaleDiscountChange(null);
+                                            onSaleToggle && onSaleToggle(true);
+                                            setShowSaleMenu(false);
+                                        }}
+                                        style={{
+                                            padding: '12px 16px',
+                                            fontSize: '13px',
+                                            color: selectedSaleDiscount === null && showSaleOnly ? '#e31837' : '#222',
+                                            fontWeight: selectedSaleDiscount === null && showSaleOnly ? '600' : '400',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            background: selectedSaleDiscount === null && showSaleOnly ? '#fff5f5' : '#fff'
+                                        }}
+                                        onMouseEnter={e => e.target.style.background = '#fff5f5'}
+                                        onMouseLeave={e => e.target.style.background = selectedSaleDiscount === null && showSaleOnly ? '#fff5f5' : '#fff'}
+                                    >
+                                        🔥 Tất cả Sale
+                                    </div>
+                                    {/* Discount options */}
+                                    {saleDiscounts.length > 0 ? (
+                                        saleDiscounts.map(discount => (
+                                            <div
+                                                key={discount}
+                                                onClick={() => {
+                                                    onSaleDiscountChange && onSaleDiscountChange(discount);
+                                                    onSaleToggle && onSaleToggle(true);
+                                                    setShowSaleMenu(false);
+                                                }}
+                                                style={{
+                                                    padding: '12px 16px',
+                                                    fontSize: '13px',
+                                                    color: selectedSaleDiscount === discount ? '#e31837' : '#222',
+                                                    fontWeight: selectedSaleDiscount === discount ? '600' : '400',
+                                                    cursor: 'pointer',
+                                                    background: selectedSaleDiscount === discount ? '#fff5f5' : '#fff'
+                                                }}
+                                                onMouseEnter={e => e.target.style.background = '#fff5f5'}
+                                                onMouseLeave={e => e.target.style.background = selectedSaleDiscount === discount ? '#fff5f5' : '#fff'}
+                                            >
+                                                🏷️ Giảm {discount}%
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ padding: '12px 16px', fontSize: '12px', color: '#999', fontStyle: 'italic' }}>
+                                            Chưa có mức giảm giá
+                                        </div>
+                                    )}
+                                    {/* Turn off sale filter */}
+                                    {showSaleOnly && (
+                                        <div
+                                            onClick={() => {
+                                                onSaleToggle && onSaleToggle(false);
+                                                onSaleDiscountChange && onSaleDiscountChange(null);
+                                                setShowSaleMenu(false);
+                                            }}
+                                            style={{
+                                                padding: '12px 16px',
+                                                fontSize: '13px',
+                                                color: '#666',
+                                                cursor: 'pointer',
+                                                borderTop: '1px solid #f0f0f0',
+                                                background: '#f9f9f9'
+                                            }}
+                                            onMouseEnter={e => e.target.style.background = '#f0f0f0'}
+                                            onMouseLeave={e => e.target.style.background = '#f9f9f9'}
+                                        >
+                                            ✕ Tắt lọc Sale
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Brand Button with Dropdown */}
+                        <div 
+                            style={{ position: 'relative' }}
+                            onMouseEnter={() => {
+                                if (brandMenuTimeout) clearTimeout(brandMenuTimeout);
+                                setShowBrandMenu(true);
+                            }}
+                            onMouseLeave={() => {
+                                const timeout = setTimeout(() => setShowBrandMenu(false), 500);
+                                setBrandMenuTimeout(timeout);
+                            }}
+                        >
+                            <button
+                                onClick={() => setShowBrandMenu(!showBrandMenu)}
+                                style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    padding: '0',
+                                    fontSize: '13px',
+                                    fontWeight: selectedBrandId ? '600' : '400',
+                                    color: '#222',
+                                    cursor: 'pointer',
+                                    borderBottom: selectedBrandId ? '2px solid #222' : '2px solid transparent',
+                                    paddingBottom: '3px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                Brands
+                                {selectedBrandId && (
+                                    <span style={{ fontSize: '11px', color: '#666' }}>
+                                        ({brands.find(b => (b.brandId || b.id) === selectedBrandId)?.brandName || brands.find(b => (b.brandId || b.id) === selectedBrandId)?.bName || '...'})
+                                    </span>
+                                )}
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#222" strokeWidth="2">
+                                    <path d="M6 9l6 6 6-6"/>
+                                </svg>
+                            </button>
+                            
+                            {/* Brand Dropdown */}
+                            {showBrandMenu && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    left: 0,
+                                    marginTop: '8px',
+                                    background: '#fff',
+                                    border: '1px solid #e5e5e5',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                    minWidth: '180px',
+                                    maxHeight: '350px',
+                                    overflowY: 'auto',
+                                    zIndex: 1001
+                                }}>
+                                    {/* All Brands */}
+                                    <div
+                                        onClick={() => {
+                                            onBrandChange && onBrandChange(null);
+                                            setShowBrandMenu(false);
+                                        }}
+                                        style={{
+                                            padding: '12px 16px',
+                                            fontSize: '13px',
+                                            color: !selectedBrandId ? '#222' : '#666',
+                                            fontWeight: !selectedBrandId ? '600' : '400',
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #f0f0f0',
+                                            background: !selectedBrandId ? '#f5f5f5' : '#fff'
+                                        }}
+                                        onMouseEnter={e => e.target.style.background = '#f5f5f5'}
+                                        onMouseLeave={e => e.target.style.background = !selectedBrandId ? '#f5f5f5' : '#fff'}
+                                    >
+                                        🏷️ Tất cả thương hiệu
+                                    </div>
+                                    {/* Brand options */}
+                                    {brands.length > 0 ? (
+                                        brands.map(brand => {
+                                            const brandId = brand.brandId || brand.id;
+                                            const brandName = brand.brandName || brand.bName || brand.name;
+                                            const isSelected = selectedBrandId === brandId;
+                                            return (
+                                                <div
+                                                    key={brandId}
+                                                    onClick={() => {
+                                                        onBrandChange && onBrandChange(brandId);
+                                                        setShowBrandMenu(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '10px 16px',
+                                                        fontSize: '13px',
+                                                        color: isSelected ? '#222' : '#444',
+                                                        fontWeight: isSelected ? '600' : '400',
+                                                        cursor: 'pointer',
+                                                        background: isSelected ? '#f5f5f5' : '#fff'
+                                                    }}
+                                                    onMouseEnter={e => e.target.style.background = '#f5f5f5'}
+                                                    onMouseLeave={e => e.target.style.background = isSelected ? '#f5f5f5' : '#fff'}
+                                                >
+                                                    {brandName}
+                                                </div>
+                                            );
+                                        })
+                                    ) : (
+                                        <div style={{ padding: '12px 16px', fontSize: '12px', color: '#999', fontStyle: 'italic' }}>
+                                            Chưa có thương hiệu
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Search Bar */}
@@ -556,7 +705,7 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                                 type="text"
                                 placeholder="What are you looking for?"
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
                                 style={{
                                     border: 'none',
                                     background: 'transparent',
@@ -572,103 +721,6 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
                 </div>
             </div>
 
-            {/* Mega Menu Dropdown */}
-            {activeMenu && navItems.find(item => item.id === activeMenu)?.megaMenu && (
-                <div 
-                    style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        background: '#fff',
-                        borderBottom: '1px solid #e5e5e5',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                        padding: '30px 40px',
-                        zIndex: 999
-                    }}
-                    onMouseEnter={() => handleMenuEnter(activeMenu)}
-                    onMouseLeave={handleMenuLeave}
-                >
-                    <div style={{ display: 'flex', gap: '60px' }}>
-                        {/* Menu Columns */}
-                        <div style={{ display: 'flex', gap: '60px', flex: 1 }}>
-                            {navItems.find(item => item.id === activeMenu)?.megaMenu.columns.map((col, idx) => (
-                                <div key={idx}>
-                                    <h4 style={{ 
-                                        fontSize: '11px', 
-                                        fontWeight: '600', 
-                                        color: '#222',
-                                        letterSpacing: '0.5px',
-                                        marginBottom: '15px'
-                                    }}>
-                                        {col.title}
-                                    </h4>
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                                        {col.items.map((menuItem, i) => (
-                                            <li key={i} style={{ marginBottom: '10px' }}>
-                                                <a 
-                                                    href="#"
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        navigate(`/search?q=${encodeURIComponent(menuItem)}`);
-                                                        setActiveMenu(null);
-                                                    }}
-                                                    style={{
-                                                        fontSize: '13px',
-                                                        color: '#222',
-                                                        textDecoration: 'none'
-                                                    }}
-                                                    onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-                                                    onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-                                                >
-                                                    {menuItem}
-                                                </a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Featured Image (for Sale menu) */}
-                        {navItems.find(item => item.id === activeMenu)?.megaMenu.featured && (
-                            <div style={{ width: '350px' }}>
-                                <div style={{ 
-                                    background: '#f5f5f5', 
-                                    height: '200px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    marginBottom: '15px'
-                                }}>
-                                    <img 
-                                        src="/img/logo.png" 
-                                        alt="Featured" 
-                                        style={{ maxHeight: '120px', opacity: 0.8 }}
-                                    />
-                                </div>
-                                <p style={{ fontSize: '12px', color: '#666', marginBottom: '5px' }}>
-                                    {navItems.find(item => item.id === activeMenu)?.megaMenu.featured.category}
-                                </p>
-                                <p style={{ fontSize: '13px', fontWeight: '500', color: '#222', marginBottom: '10px' }}>
-                                    {navItems.find(item => item.id === activeMenu)?.megaMenu.featured.title}
-                                </p>
-                                <a 
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        navigate('/search?sale=true');
-                                        setActiveMenu(null);
-                                    }}
-                                    style={{ fontSize: '13px', color: '#222', textDecoration: 'underline' }}
-                                >
-                                    {navItems.find(item => item.id === activeMenu)?.megaMenu.featured.link}
-                                </a>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
         </header>
     );
 };
@@ -676,8 +728,6 @@ const Navbar = ({ categories = [], brands = [], user = null }) => {
 
 // Hero Banner - Elegant Fashion Style
 const HeroBanner = () => {
-    const navigate = useNavigate();
-    
     return (
         <section style={{
             background: '#f8f8f8',
@@ -725,7 +775,11 @@ const HeroBanner = () => {
                                 cursor: 'pointer',
                                 transition: 'all 0.3s'
                             }}
-                            onClick={() => navigate('/search')}
+                            onClick={() => {
+                                // Scroll to products section
+                                const productsSection = document.querySelector('section[style*="background: rgb(245, 245, 245)"]');
+                                if (productsSection) productsSection.scrollIntoView({ behavior: 'smooth' });
+                            }}
                             onMouseEnter={e => e.currentTarget.style.background = '#444'}
                             onMouseLeave={e => e.currentTarget.style.background = '#222'}
                         >
@@ -849,133 +903,27 @@ const ProductSection = ({ title, subtitle, products, link }) => {
     );
 };
 
-// Promo Banner with Brands Overlay
-const PromoBanner = ({ brands = [] }) => {
-    const navigate = useNavigate();
-    const [showBrands, setShowBrands] = useState(false);
+// Promo Banner - Full width
+const PromoBanner = () => {
     const bannerUrl = 'https://ojt-ecommerce-images-706302944148.s3.ap-southeast-1.amazonaws.com/banners/page1.png';
 
     return (
-        <section style={{ padding: '40px 0', background: '#fff' }}>
-            <div className="container">
-                <div 
-                    style={{ 
-                        position: 'relative',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        cursor: 'pointer'
-                    }}
-                    onClick={() => setShowBrands(!showBrands)}
-                >
-                    {/* Banner Image */}
-                    <img 
-                        src={bannerUrl}
-                        alt="Promo Banner"
-                        style={{
-                            width: '100%',
-                            height: 'auto',
-                            display: 'block',
-                            transition: 'transform 0.3s ease'
-                        }}
-                        onError={(e) => {
-                            e.target.src = '/img/logo.png';
-                            e.target.style.height = '300px';
-                            e.target.style.objectFit = 'contain';
-                            e.target.style.background = '#f5f5f5';
-                        }}
-                    />
-                    
-                    {/* Brands Overlay */}
-                    {showBrands && (
-                        <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: 'rgba(0, 0, 0, 0.85)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            padding: '30px',
-                            animation: 'fadeIn 0.3s ease'
-                        }}>
-                            <h3 style={{
-                                color: '#fff',
-                                fontSize: '24px',
-                                fontWeight: '600',
-                                marginBottom: '25px',
-                                letterSpacing: '2px'
-                            }}>
-                                OUR BRANDS
-                            </h3>
-                            <div style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                justifyContent: 'center',
-                                gap: '15px',
-                                maxWidth: '800px'
-                            }}>
-                                {brands.slice(0, 12).map((brand, idx) => (
-                                    <button
-                                        key={brand.brandId || idx}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/search?brand=${brand.brandId || brand.id}`);
-                                        }}
-                                        style={{
-                                            background: 'rgba(255, 255, 255, 0.1)',
-                                            border: '1px solid rgba(255, 255, 255, 0.3)',
-                                            color: '#fff',
-                                            padding: '10px 20px',
-                                            borderRadius: '25px',
-                                            fontSize: '13px',
-                                            fontWeight: '500',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.3s ease'
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = '#fff';
-                                            e.currentTarget.style.color = '#222';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                                            e.currentTarget.style.color = '#fff';
-                                        }}
-                                    >
-                                        {brand.brandName || brand.bName || brand.name}
-                                    </button>
-                                ))}
-                            </div>
-                            <p style={{
-                                color: 'rgba(255, 255, 255, 0.6)',
-                                fontSize: '12px',
-                                marginTop: '20px'
-                            }}>
-                                Click anywhere to close
-                            </p>
-                        </div>
-                    )}
-                    
-                    {/* Click hint when not showing brands */}
-                    {!showBrands && (
-                        <div style={{
-                            position: 'absolute',
-                            bottom: '20px',
-                            right: '20px',
-                            background: 'rgba(0, 0, 0, 0.7)',
-                            color: '#fff',
-                            padding: '8px 16px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '500'
-                        }}>
-                            Click to view brands
-                        </div>
-                    )}
-                </div>
-            </div>
+        <section style={{ background: '#000' }}>
+            <img 
+                src={bannerUrl}
+                alt="Promo Banner"
+                style={{
+                    width: '100%',
+                    height: 'auto',
+                    display: 'block'
+                }}
+                onError={(e) => {
+                    e.target.src = '/img/logo.png';
+                    e.target.style.height = '200px';
+                    e.target.style.objectFit = 'contain';
+                    e.target.style.background = '#f5f5f5';
+                }}
+            />
         </section>
     );
 };
@@ -1044,9 +992,18 @@ const HomePage = () => {
     const [user, setUser] = useState(null);
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
-    const [bestSellers, setBestSellers] = useState([]);
-    const [newestItems, setNewestItems] = useState([]);
+    const [homeSections, setHomeSections] = useState([]);
+    const [allProducts, setAllProducts] = useState([]);
+    const [saleProducts, setSaleProducts] = useState([]);
+    const [discountLevels, setDiscountLevels] = useState([]);
+    const [wishlist, setWishlist] = useState([]); // Wishlist product IDs
     const [loading, setLoading] = useState(true);
+    const [activeGender, setActiveGender] = useState('all');
+    const [selectedCategoryId, setSelectedCategoryId] = useState(null); // For deeper category navigation
+    const [showSaleOnly, setShowSaleOnly] = useState(false); // Filter to show only sale products
+    const [selectedSaleDiscount, setSelectedSaleDiscount] = useState(null); // Filter by specific discount %
+    const [selectedBrandId, setSelectedBrandId] = useState(null); // Filter by brand
+    const [searchQuery, setSearchQuery] = useState(''); // Search query for inline search
 
     useEffect(() => {
         const fetchData = async () => {
@@ -1064,18 +1021,58 @@ const HomePage = () => {
                 }
                 // No redirect for guests - allow public access to /home
 
-                // Fetch categories, brands, and products from API
-                const [catRes, brandRes, bestRes, newRes] = await Promise.all([
-                    api.get('/categories').catch(() => ({ data: [] })),
+                // Fetch categories (flat for hierarchy), brands, products, home sections, and sale products from API
+                const [catRes, brandRes, sectionsRes, productsRes, saleRes, levelsRes] = await Promise.all([
+                    api.get('/categories?flat=true').catch(() => ({ data: [] })),
                     api.get('/brands').catch(() => ({ data: [] })),
-                    api.get('/products/best-selling').catch(() => ({ data: [] })),
-                    api.get('/products/newest').catch(() => ({ data: [] }))
+                    api.get('/home-sections').catch(() => ({ data: [] })),
+                    api.get('/products').catch(() => ({ data: [] })),
+                    api.get('/sale-products').catch(() => ({ data: [] })),
+                    api.get('/sale-products/discount-levels').catch(() => ({ data: [] }))
                 ]);
-
-                setCategories(catRes.data || []);
+                
+                const saleData = Array.isArray(saleRes.data) ? saleRes.data : [];
+                setSaleProducts(saleData);
+                setDiscountLevels(Array.isArray(levelsRes.data) ? levelsRes.data : []);
+                setCategories(Array.isArray(catRes.data) ? catRes.data : []);
                 setBrands(brandRes.data || []);
-                setBestSellers((bestRes.data || []).slice(0, 8));
-                setNewestItems((newRes.data || []).slice(0, 8));
+                setHomeSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
+                
+                // Normalize products with categoryId and brandId
+                const rawProducts = Array.isArray(productsRes.data) ? productsRes.data : [];
+                const normalizedProducts = rawProducts.map(p => ({
+                    id: p.id ?? p.p_id ?? p.pId,
+                    name: p.name ?? p.p_name ?? p.PName ?? p.pName,
+                    price: p.price,
+                    thumbnail1: p.thumbnail_1 || p.thumbnail1,
+                    thumbnail2: p.thumbnail_2 || p.thumbnail2,
+                    brandId: p.brandId || p.brand_id,
+                    brandName: p.brandName || p.brand_name,
+                    categoryName: p.categoryName || p.category_name,
+                    categoryId: p.categoryId || p.c_id || p.cId,
+                    gender: p.gender,
+                    isActive: p.isActive ?? p.is_active ?? true
+                })).filter(p => p.isActive);
+                setAllProducts(normalizedProducts);
+                
+                // Fetch wishlist if user is logged in
+                if (token) {
+                    try {
+                        const userRes = await api.get('/auth/me');
+                        const userId = userRes.data?.id || userRes.data?.userId || userRes.data?.u_id;
+                        if (userId) {
+                            const wishlistRes = await api.get(`/wishlist/user/${userId}`).catch(() => ({ data: [] }));
+                            const wishlistIds = (wishlistRes.data || []).map(w => 
+                                String(w.productId || w.product_id || w.id)
+                            );
+                            setWishlist(wishlistIds);
+                        }
+                    } catch {
+                        // Use localStorage fallback
+                        const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+                        setWishlist(localWishlist.map(w => String(w.id || w.productId)));
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching data:', error);
             } finally {
@@ -1085,6 +1082,322 @@ const HomePage = () => {
 
         fetchData();
     }, [navigate]);
+
+    // Helper: Get all descendant category IDs from a parent (handles UUID strings)
+    const getDescendantCategoryIds = (parentId) => {
+        if (!parentId) return [];
+        const normalizedParentId = String(parentId);
+        const ids = [normalizedParentId];
+        
+        // Find children - compare as strings
+        const children = categories.filter(c => {
+            const catParentId = String(c.parentId || '');
+            return catParentId === normalizedParentId;
+        });
+        
+        children.forEach(child => {
+            const childId = String(child.id || child.cId || '');
+            if (childId) {
+                ids.push(...getDescendantCategoryIds(childId));
+            }
+        });
+        return ids;
+    };
+
+    // Find gender category ID (Women, Men, Unisex) - supports both English and Vietnamese names
+    const getGenderCategoryId = (genderName) => {
+        const genderMappings = {
+            'women': ['women', 'woman', 'nữ', 'nu', 'female'],
+            'men': ['men', 'man', 'nam', 'male'],
+            'unisex': ['unisex']
+        };
+        const searchTerms = genderMappings[genderName.toLowerCase()] || [genderName.toLowerCase()];
+        
+        const genderCat = categories.find(c => {
+            const catName = (c.name || c.cName || '').toLowerCase();
+            return searchTerms.some(term => catName === term || catName.includes(term));
+        });
+        return genderCat?.id || genderCat?.cId || null;
+    };
+
+    // Filter products by selected category (any level in tree)
+    const filterProductsByCategory = (products, categoryId) => {
+        if (!categoryId) return products;
+        const allowedCategoryIds = getDescendantCategoryIds(categoryId);
+        return products.filter(p => {
+            const productCatId = String(p.categoryId || '');
+            return allowedCategoryIds.includes(productCatId);
+        });
+    };
+
+    // Filter section products by selected category
+    const filterSectionByCategory = (section, categoryId) => {
+        if (!categoryId) return section;
+        const allowedCategoryIds = getDescendantCategoryIds(categoryId);
+        const filteredProducts = (section.products || []).filter(p => {
+            const productCatId = String(p.categoryId || '');
+            return allowedCategoryIds.includes(productCatId);
+        });
+        return { ...section, products: filteredProducts };
+    };
+
+    // Get category by ID (handles UUID strings)
+    const getCategoryById = (catId) => {
+        if (!catId) return null;
+        const strCatId = String(catId);
+        return categories.find(c => String(c.id || c.cId) === strCatId);
+    };
+
+    // Get children categories of a parent
+    const getChildCategories = (parentId) => {
+        if (!parentId) return [];
+        const strParentId = String(parentId);
+        return categories.filter(c => String(c.parentId || '') === strParentId);
+    };
+
+    // Build breadcrumb path from root to current category (excludes level 0 "All" category)
+    const getBreadcrumbPath = (categoryId) => {
+        const path = [];
+        let current = getCategoryById(categoryId);
+        while (current) {
+            // Skip level 0 (All) category from breadcrumb
+            if (current.level !== 0) {
+                path.unshift(current);
+            }
+            current = current.parentId ? getCategoryById(current.parentId) : null;
+        }
+        return path;
+    };
+
+    // Handle gender tab change - reset category selection
+    const handleGenderChange = (gender) => {
+        setActiveGender(gender);
+        if (gender === 'all') {
+            setSelectedCategoryId(null);
+        } else {
+            const genderCatId = getGenderCategoryId(gender);
+            // Only set if valid category ID found
+            setSelectedCategoryId(genderCatId || null);
+        }
+    };
+
+    // Handle category click - navigate deeper into tree
+    const handleCategoryClick = (categoryId) => {
+        if (!categoryId) return;
+        
+        setSelectedCategoryId(String(categoryId));
+        // Update activeGender based on root category (level 1: Women/Men/Unisex)
+        const path = getBreadcrumbPath(categoryId);
+        if (path.length > 0) {
+            // First item in path is level 1 (Women/Men/Unisex) since we exclude level 0
+            const rootCat = path[0];
+            const rootName = (rootCat.name || rootCat.cName || '').toLowerCase();
+            if (['women', 'men', 'unisex'].includes(rootName)) {
+                setActiveGender(rootName);
+            }
+        }
+    };
+
+    // Get current filter state
+    const currentCategoryId = selectedCategoryId;
+    const currentCategory = currentCategoryId ? getCategoryById(currentCategoryId) : null;
+    const childCategories = currentCategoryId ? getChildCategories(currentCategoryId) : [];
+    const breadcrumbPath = currentCategoryId ? getBreadcrumbPath(currentCategoryId) : [];
+
+    // Toggle wishlist for a product
+    const toggleWishlist = async (e, productId, product) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!user) {
+            // Not logged in - redirect to login
+            if (confirm('Bạn cần đăng nhập để lưu sản phẩm yêu thích. Đăng nhập ngay?')) {
+                navigate('/login');
+            }
+            return;
+        }
+        
+        const productIdStr = String(productId);
+        const isInWishlist = wishlist.includes(productIdStr);
+        const userId = user?.id || user?.userId || user?.u_id;
+        
+        try {
+            if (isInWishlist) {
+                // Remove from wishlist
+                await api.delete(`/wishlist/${userId}/${productId}`).catch(() => {});
+                setWishlist(prev => prev.filter(id => id !== productIdStr));
+            } else {
+                // Add to wishlist
+                await api.post('/wishlist', {
+                    userId,
+                    productId,
+                    productName: product?.name,
+                    price: product?.price,
+                    thumbnail: product?.thumbnail1
+                }).catch(() => {});
+                setWishlist(prev => [...prev, productIdStr]);
+            }
+        } catch {
+            // Fallback to localStorage
+            const localWishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+            if (isInWishlist) {
+                const updated = localWishlist.filter(w => String(w.id) !== productIdStr);
+                localStorage.setItem('wishlist', JSON.stringify(updated));
+                setWishlist(prev => prev.filter(id => id !== productIdStr));
+            } else {
+                localWishlist.push({ id: productId, name: product?.name, price: product?.price, thumbnail: product?.thumbnail1 });
+                localStorage.setItem('wishlist', JSON.stringify(localWishlist));
+                setWishlist(prev => [...prev, productIdStr]);
+            }
+        }
+    };
+
+    // Get discount percentages from DiscountLevel table (admin-managed)
+    const saleDiscounts = discountLevels.map(l => l.discountPercent).filter(Boolean).sort((a, b) => a - b);
+
+    // Get sale product IDs for filtering (optionally by specific discount)
+    const getSaleProductIds = (discountFilter = null) => {
+        let filtered = saleProducts;
+        if (discountFilter !== null) {
+            filtered = saleProducts.filter(sp => (sp.discountPercent || sp.discount_percent) === discountFilter);
+        }
+        return filtered.map(sp => String(sp.productId || sp.product_id || sp.p_id));
+    };
+    const saleProductIds = getSaleProductIds(selectedSaleDiscount);
+
+    // Helper: Get sale info for a product
+    const getSaleInfo = (productId) => {
+        const saleProduct = saleProducts.find(sp => 
+            String(sp.productId || sp.product_id || sp.p_id) === String(productId)
+        );
+        if (saleProduct) {
+            return {
+                onSale: true,
+                discountPercent: saleProduct.discountPercent || saleProduct.discount_percent || 0
+            };
+        }
+        return { onSale: false, discountPercent: 0 };
+    };
+
+    // Helper: Enrich products with sale info
+    const enrichWithSaleInfo = (products) => {
+        return products.map(p => {
+            const saleInfo = getSaleInfo(p.id);
+            const salePrice = saleInfo.onSale && p.price 
+                ? Math.round(p.price * (1 - saleInfo.discountPercent / 100))
+                : null;
+            return {
+                ...p,
+                onSale: saleInfo.onSale,
+                discountPercent: saleInfo.discountPercent,
+                salePrice
+            };
+        });
+    };
+
+    // Helper: Filter products by search query
+    const filterBySearchQuery = (products, query) => {
+        if (!query || !query.trim()) return products;
+        const searchLower = query.toLowerCase().trim();
+        return products.filter(p => {
+            const name = (p.name || p.pName || p.p_name || '').toLowerCase();
+            const brandName = (p.brandName || p.brand_name || '').toLowerCase();
+            const categoryName = (p.categoryName || p.category_name || '').toLowerCase();
+            return name.includes(searchLower) || brandName.includes(searchLower) || categoryName.includes(searchLower);
+        });
+    };
+
+    // Filter sections based on selected category, sale status, brand, and search query
+    const filteredSections = (() => {
+        // If searching, hide sections and show search results instead
+        if (searchQuery && searchQuery.trim()) {
+            return [];
+        }
+        
+        let sections = homeSections;
+        
+        // First filter by category if needed
+        if (activeGender !== 'all' || currentCategoryId) {
+            const categoryToFilter = currentCategoryId;
+            if (!categoryToFilter) {
+                return [];
+            }
+            sections = sections
+                .map(s => filterSectionByCategory(s, categoryToFilter))
+                .filter(s => s.products?.length > 0);
+        }
+        
+        // Then filter by sale if showSaleOnly is true
+        if (showSaleOnly) {
+            sections = sections.map(s => ({
+                ...s,
+                products: (s.products || []).filter(p => saleProductIds.includes(String(p.id)))
+            })).filter(s => s.products?.length > 0);
+        }
+        
+        // Filter by brand if selectedBrandId is set
+        if (selectedBrandId) {
+            sections = sections.map(s => ({
+                ...s,
+                products: (s.products || []).filter(p => {
+                    const productBrandId = p.brandId || p.brand_id;
+                    return String(productBrandId) === String(selectedBrandId);
+                })
+            })).filter(s => s.products?.length > 0);
+        }
+        
+        // Enrich all products with sale info
+        sections = sections.map(s => ({
+            ...s,
+            products: enrichWithSaleInfo(s.products || [])
+        }));
+        
+        return sections;
+    })();
+
+    // Filter products based on selected category, sale status, brand, and search query
+    const displayProducts = (() => {
+        let products;
+        
+        // If searching, search across ALL products
+        if (searchQuery && searchQuery.trim()) {
+            products = filterBySearchQuery(allProducts, searchQuery);
+        } else if (activeGender === 'all' && !currentCategoryId) {
+            // All: show products not in any section
+            products = allProducts.filter(product => {
+                const productId = product.id;
+                for (const section of homeSections) {
+                    if (section.products?.some(p => p.id === productId)) {
+                        return false;
+                    }
+                }
+                return true;
+            });
+        } else {
+            // Filter by selected category tree
+            const categoryToFilter = currentCategoryId;
+            if (!categoryToFilter) {
+                return [];
+            }
+            products = filterProductsByCategory(allProducts, categoryToFilter);
+        }
+        
+        // Filter by sale if showSaleOnly is true
+        if (showSaleOnly) {
+            products = products.filter(p => saleProductIds.includes(String(p.id)));
+        }
+        
+        // Filter by brand if selectedBrandId is set
+        if (selectedBrandId) {
+            products = products.filter(p => {
+                const productBrandId = p.brandId || p.brand_id;
+                return String(productBrandId) === String(selectedBrandId);
+            });
+        }
+        
+        // Enrich all products with sale info
+        return enrichWithSaleInfo(products);
+    })();
 
     if (loading) {
         return (
@@ -1101,80 +1414,369 @@ const HomePage = () => {
 
     return (
         <main style={{ background: '#fff', minHeight: '100vh' }}>
-            <Navbar categories={categories} brands={brands} user={user} />
+            <Navbar 
+                brands={brands} 
+                user={user} 
+                activeGender={activeGender} 
+                onGenderChange={handleGenderChange} 
+                showSaleOnly={showSaleOnly}
+                onSaleToggle={(value) => setShowSaleOnly(typeof value === 'boolean' ? value : !showSaleOnly)}
+                saleDiscounts={saleDiscounts}
+                selectedSaleDiscount={selectedSaleDiscount}
+                onSaleDiscountChange={setSelectedSaleDiscount}
+                selectedBrandId={selectedBrandId}
+                onBrandChange={setSelectedBrandId}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+            />
             
-            {/* Promo Banner with Brands */}
-            <PromoBanner brands={brands} />
-            
-            {/* Product Grid Section */}
-            <section style={{ padding: '30px 0' }}>
-                <div className="container">
-                    <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-4">
-                        {[...bestSellers, ...newestItems].slice(0, 12).map((product, index) => (
-                            <div key={index} className="col">
-                                <a href={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
-                                    <div style={{ position: 'relative' }}>
-                                        <img 
-                                            src={product.imageUrl || product.image || '/img/clothes.png'} 
-                                            alt={product.name}
-                                            style={{ 
-                                                width: '100%', 
-                                                aspectRatio: '3/4',
-                                                objectFit: 'cover',
-                                                background: '#f5f5f5'
-                                            }}
-                                        />
-                                        {product.onSale && (
-                                            <span style={{
+            {/* Promo Banner - only show when All is selected and not searching */}
+            {activeGender === 'all' && !searchQuery && <PromoBanner />}
+
+            {/* Category Navigation - Breadcrumb + Subcategories */}
+            {currentCategoryId && (
+                <section style={{ background: '#fff', borderBottom: '1px solid #eee', padding: '15px 0' }}>
+                    <div className="container">
+                        {/* Breadcrumb */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: childCategories.length > 0 ? '15px' : '0', flexWrap: 'wrap' }}>
+                            <span 
+                                onClick={() => { setActiveGender('all'); setSelectedCategoryId(null); }}
+                                style={{ fontSize: '13px', color: '#666', cursor: 'pointer' }}
+                                onMouseEnter={e => e.target.style.color = '#222'}
+                                onMouseLeave={e => e.target.style.color = '#666'}
+                            >
+                                Tất cả
+                            </span>
+                            {breadcrumbPath.map((cat, idx) => (
+                                <span key={cat.id || cat.cId} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span style={{ color: '#ccc' }}>/</span>
+                                    <span 
+                                        onClick={() => idx < breadcrumbPath.length - 1 && handleCategoryClick(cat.id || cat.cId)}
+                                        style={{ 
+                                            fontSize: '13px', 
+                                            color: idx === breadcrumbPath.length - 1 ? '#222' : '#666',
+                                            fontWeight: idx === breadcrumbPath.length - 1 ? '600' : '400',
+                                            cursor: idx < breadcrumbPath.length - 1 ? 'pointer' : 'default'
+                                        }}
+                                        onMouseEnter={e => idx < breadcrumbPath.length - 1 && (e.target.style.color = '#222')}
+                                        onMouseLeave={e => idx < breadcrumbPath.length - 1 && (e.target.style.color = '#666')}
+                                    >
+                                        {cat.name || cat.cName}
+                                    </span>
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Subcategories */}
+                        {childCategories.length > 0 && (
+                            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                                {childCategories.map(cat => (
+                                    <button
+                                        key={cat.id || cat.cId}
+                                        onClick={() => handleCategoryClick(cat.id || cat.cId)}
+                                        style={{
+                                            background: '#f5f5f5',
+                                            border: '1px solid #e5e5e5',
+                                            borderRadius: '20px',
+                                            padding: '8px 16px',
+                                            fontSize: '13px',
+                                            color: '#222',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseEnter={e => { e.target.style.background = '#222'; e.target.style.color = '#fff'; }}
+                                        onMouseLeave={e => { e.target.style.background = '#f5f5f5'; e.target.style.color = '#222'; }}
+                                    >
+                                        {cat.name || cat.cName}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
+
+            {/* Active Filters Display */}
+            {(showSaleOnly || selectedBrandId || searchQuery) && (
+                <div style={{ 
+                    padding: '15px 40px', 
+                    background: '#f8f8f8',
+                    borderBottom: '1px solid #e5e5e5',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flexWrap: 'wrap'
+                }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>Đang lọc:</span>
+                    {searchQuery && (
+                        <span style={{
+                            background: '#e3f2fd',
+                            color: '#1976d2',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            🔍 "{searchQuery}"
+                            <span 
+                                onClick={() => setSearchQuery('')}
+                                style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                            >×</span>
+                        </span>
+                    )}
+                    {showSaleOnly && (
+                        <span style={{
+                            background: '#fff0f0',
+                            color: '#e31837',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            🏷️ Sale {selectedSaleDiscount ? `(-${selectedSaleDiscount}%)` : '(Tất cả)'}
+                            <span 
+                                onClick={() => { setShowSaleOnly(false); setSelectedSaleDiscount(null); }}
+                                style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                            >×</span>
+                        </span>
+                    )}
+                    {selectedBrandId && (
+                        <span style={{
+                            background: '#f0f0f0',
+                            color: '#222',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                        }}>
+                            🏢 {brands.find(b => (b.brandId || b.id) === selectedBrandId)?.brandName || brands.find(b => (b.brandId || b.id) === selectedBrandId)?.name || 'Brand'}
+                            <span 
+                                onClick={() => setSelectedBrandId(null)}
+                                style={{ cursor: 'pointer', fontWeight: 'bold' }}
+                            >×</span>
+                        </span>
+                    )}
+                    <button
+                        onClick={() => { setShowSaleOnly(false); setSelectedSaleDiscount(null); setSelectedBrandId(null); setSearchQuery(''); }}
+                        style={{
+                            background: 'none',
+                            border: '1px solid #ddd',
+                            padding: '4px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            color: '#666',
+                            cursor: 'pointer',
+                            marginLeft: 'auto'
+                        }}
+                    >
+                        Xóa tất cả bộ lọc
+                    </button>
+                </div>
+            )}
+
+            {/* Dynamic Home Sections from Admin - filtered by gender */}
+            {filteredSections.map((section, sectionIndex) => (
+                section.products && section.products.length > 0 && (
+                    <section key={section.id || sectionIndex} style={{ padding: '30px 0', background: sectionIndex % 2 === 0 ? '#fafafa' : '#fff' }}>
+                        <div className="container">
+                            <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '8px' }}>
+                                {section.title}
+                            </h2>
+                            {section.description && (
+                                <p style={{ color: '#666', fontSize: '14px', marginBottom: '20px' }}>{section.description}</p>
+                            )}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
+                                {section.products.map((product, index) => (
+                                    <div key={`${section.id}-${product.id}-${index}`} style={{ position: 'relative' }}>
+                                        {/* Wishlist Button */}
+                                        <button
+                                            onClick={(e) => toggleWishlist(e, product.id, product)}
+                                            style={{
                                                 position: 'absolute',
                                                 top: '10px',
-                                                left: '10px',
-                                                background: '#e31837',
-                                                color: '#fff',
-                                                padding: '4px 8px',
-                                                fontSize: '11px',
-                                                fontWeight: '500'
-                                            }}>SALE</span>
-                                        )}
+                                                right: '10px',
+                                                zIndex: 10,
+                                                width: '32px',
+                                                height: '32px',
+                                                borderRadius: '50%',
+                                                border: 'none',
+                                                background: 'rgba(255,255,255,0.9)',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                                transition: 'all 0.2s'
+                                            }}
+                                            title={wishlist.includes(String(product.id)) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                        >
+                                            <svg width="16" height="16" viewBox="0 0 24 24" 
+                                                fill={wishlist.includes(String(product.id)) ? '#e31837' : 'none'} 
+                                                stroke={wishlist.includes(String(product.id)) ? '#e31837' : '#666'} 
+                                                strokeWidth="2"
+                                            >
+                                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                            </svg>
+                                        </button>
+                                        <a href={`/product/${product.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                                            <div style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
+                                                <ProductImageHover 
+                                                    thumbnail1={product.thumbnail1 || '/img/no-image.svg'}
+                                                    thumbnail2={product.thumbnail2 || product.thumbnail1 || '/img/no-image.svg'}
+                                                    alt={product.name}
+                                                    badge={product.onSale ? `-${product.discountPercent}%` : null}
+                                                    badgeColor="#e31837"
+                                                />
+                                                <div style={{ padding: '10px' }}>
+                                                    <p style={{ fontSize: '11px', color: '#666', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                                        {product.brandName || 'Brand'}
+                                                    </p>
+                                                    <p style={{ fontSize: '13px', color: '#222', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {product.name}
+                                                    </p>
+                                                    {product.onSale && product.salePrice ? (
+                                                        <div>
+                                                            <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '11px', marginRight: '6px' }}>
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                                                            </span>
+                                                            <span style={{ fontSize: '13px', color: '#e53935', fontWeight: '600' }}>
+                                                                {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.salePrice)}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ fontSize: '13px', color: '#e53935', fontWeight: '600', margin: 0 }}>
+                                                            {product.price ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price) : 'Liên hệ'}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </a>
                                     </div>
-                                    <div style={{ padding: '12px 0' }}>
-                                        <p style={{ 
-                                            fontSize: '12px', 
-                                            color: '#666', 
-                                            margin: '0 0 4px 0',
-                                            textTransform: 'uppercase'
-                                        }}>
-                                            {product.brandName || 'Brand'}
-                                        </p>
-                                        <p style={{ 
-                                            fontSize: '13px', 
-                                            color: '#222', 
-                                            margin: '0 0 6px 0',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            {product.name}
-                                        </p>
-                                        <p style={{ 
-                                            fontSize: '13px', 
-                                            fontWeight: '500', 
-                                            color: '#222',
-                                            margin: 0
-                                        }}>
-                                            {typeof product.price === 'number' 
-                                                ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)
-                                                : product.price}
-                                        </p>
-                                    </div>
-                                </a>
+                                ))}
                             </div>
-                        ))}
+                        </div>
+                    </section>
+                )
+            ))}
+
+            {/* Empty state when no sections */}
+            {homeSections.length === 0 && (
+                <section style={{ padding: '60px 0', textAlign: 'center' }}>
+                    <div className="container">
+                        <p style={{ color: '#888', fontSize: '14px' }}>
+                            Chưa có sản phẩm nào được cấu hình. Admin có thể thêm sections tại /admin/home-sections
+                        </p>
                     </div>
-                </div>
-            </section>
+                </section>
+            )}
 
+            {/* Products section - shows different content based on category filter */}
+            {displayProducts.length > 0 && (
+                <section style={{ padding: '40px 0', background: '#f5f5f5' }}>
+                    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 15px' }}>
+                        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                            <p style={{ color: '#888', fontSize: '11px', letterSpacing: '2px', marginBottom: '8px' }}>
+                                {searchQuery ? 'KẾT QUẢ TÌM KIẾM' : (activeGender === 'all' && !currentCategoryId ? 'KHÁM PHÁ THÊM' : (currentCategory?.name || currentCategory?.cName || activeGender).toUpperCase())}
+                            </p>
+                            <h2 style={{ fontSize: '1.3rem', fontWeight: '400', color: '#222', letterSpacing: '1px' }}>
+                                {searchQuery 
+                                    ? `"${searchQuery}"`
+                                    : (activeGender === 'all' && !currentCategoryId 
+                                        ? 'SẢN PHẨM KHÁC' 
+                                        : `SẢN PHẨM ${(currentCategory?.name || currentCategory?.cName || activeGender).toUpperCase()}`)}
+                            </h2>
+                            <p style={{ color: '#666', fontSize: '13px', marginTop: '8px' }}>
+                                {displayProducts.length} sản phẩm
+                            </p>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '20px' }}>
+                            {displayProducts.slice(0, searchQuery ? 50 : ((activeGender === 'all' && !currentCategoryId) ? 10 : 20)).map((product, index) => (
+                                <div key={`other-${product.id}-${index}`} style={{ position: 'relative' }}>
+                                    {/* Wishlist Button */}
+                                    <button
+                                        onClick={(e) => toggleWishlist(e, product.id, product)}
+                                        style={{
+                                            position: 'absolute',
+                                            top: '10px',
+                                            right: '10px',
+                                            zIndex: 10,
+                                            width: '32px',
+                                            height: '32px',
+                                            borderRadius: '50%',
+                                            border: 'none',
+                                            background: 'rgba(255,255,255,0.9)',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        title={wishlist.includes(String(product.id)) ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
+                                    >
+                                        <svg width="16" height="16" viewBox="0 0 24 24" 
+                                            fill={wishlist.includes(String(product.id)) ? '#e31837' : 'none'} 
+                                            stroke={wishlist.includes(String(product.id)) ? '#e31837' : '#666'} 
+                                            strokeWidth="2"
+                                        >
+                                            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                        </svg>
+                                    </button>
+                                    <a href={`/product/${product.id}`} style={{ textDecoration: 'none' }}>
+                                        <div style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+                                            <ProductImageHover 
+                                                thumbnail1={product.thumbnail1 || '/img/no-image.svg'}
+                                                thumbnail2={product.thumbnail2 || product.thumbnail1 || '/img/no-image.svg'}
+                                                alt={product.name}
+                                                badge={product.onSale ? `-${product.discountPercent}%` : null}
+                                                badgeColor="#e31837"
+                                            />
+                                            <div style={{ padding: '12px' }}>
+                                                <p style={{ fontSize: '13px', color: '#222', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '500' }}>
+                                                    {product.name}
+                                                </p>
+                                                <span style={{ fontSize: '10px', color: '#888', background: '#f0f0f0', padding: '2px 6px', borderRadius: '3px' }}>
+                                                    {product.categoryName || product.brandName || 'Xem chi tiết'}
+                                                </span>
+                                                {product.onSale && product.salePrice ? (
+                                                    <div style={{ margin: '6px 0 0' }}>
+                                                        <span style={{ textDecoration: 'line-through', color: '#999', fontSize: '11px', marginRight: '6px' }}>
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                                                        </span>
+                                                        <span style={{ fontSize: '14px', color: '#e53935', fontWeight: '600' }}>
+                                                            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.salePrice)}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <p style={{ fontSize: '14px', color: '#e53935', fontWeight: '600', margin: '6px 0 0' }}>
+                                                        {product.price ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price) : 'Liên hệ'}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            ))}
+                        </div>
+                        {!searchQuery && displayProducts.length > ((activeGender === 'all' && !currentCategoryId) ? 10 : 20) && (
+                            <div className="text-center mt-4">
+                                <p style={{ color: '#666', fontSize: '13px' }}>
+                                    Hiển thị {(activeGender === 'all' && !currentCategoryId) ? 10 : 20} / {displayProducts.length} sản phẩm. Sử dụng thanh tìm kiếm để tìm sản phẩm cụ thể.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            )}
 
+            {/* Newsletter */}
+            <NewsletterSection />
         </main>
     );
 };

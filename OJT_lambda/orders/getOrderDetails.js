@@ -18,7 +18,7 @@ exports.handler = async (event) => {
     }
 
     // Check if order exists and user has access
-    const checkOrderSql = `SELECT o_id, u_id FROM orders WHERE o_id = ?`;
+    const checkOrderSql = `SELECT o_id, u_id FROM Orders WHERE o_id = ?`;
     const order = await getOne(checkOrderSql, [orderId]);
 
     if (!order) {
@@ -36,14 +36,16 @@ exports.handler = async (event) => {
         od.od_id,
         od.quantity,
         od.price,
+        od.size as order_size,
         pd.pd_id,
-        pd.size,
+        pd.size as pd_size,
+        pd.color_name,
+        pd.img_list,
         p.p_id,
-        p.p_name,
-        p.image_url
-      FROM order_details od
-      INNER JOIN product_details pd ON od.pd_id = pd.pd_id
-      INNER JOIN products p ON pd.p_id = p.p_id
+        p.p_name
+      FROM OrderDetails od
+      INNER JOIN ProductDetails pd ON od.pd_id = pd.pd_id
+      INNER JOIN Product p ON pd.p_id = p.p_id
       WHERE od.o_id = ?
     `;
 
@@ -52,6 +54,14 @@ exports.handler = async (event) => {
     const items = rows.map(row => {
       const quantity = parseInt(row.quantity || 0);
       const price = parseFloat(row.price || 0);
+      // Parse img_list JSON if exists
+      let imageUrl = '';
+      try {
+        const imgList = row.img_list ? JSON.parse(row.img_list) : [];
+        imageUrl = imgList[0] || '';
+      } catch (e) {
+        imageUrl = '';
+      }
 
       return {
         orderDetailId: row.od_id,
@@ -60,12 +70,13 @@ exports.handler = async (event) => {
         itemTotal: price * quantity,
         productDetails: {
           pdId: row.pd_id,
-          size: row.size
+          size: row.order_size || row.pd_size,
+          colorName: row.color_name
         },
         product: {
           pId: row.p_id,
           name: row.p_name,
-          imageUrl: row.image_url || ''
+          imageUrl
         }
       };
     });

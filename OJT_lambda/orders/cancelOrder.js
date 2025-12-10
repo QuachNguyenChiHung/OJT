@@ -17,7 +17,7 @@ exports.handler = async (event) => {
     }
 
     // Check if order exists and belongs to user (or user is admin)
-    const checkSql = `SELECT o_id, u_id, order_status FROM orders WHERE o_id = ?`;
+    const checkSql = `SELECT o_id, u_id, status FROM Orders WHERE o_id = ?`;
     const order = await getOne(checkSql, [orderId]);
 
     if (!order) {
@@ -25,7 +25,7 @@ exports.handler = async (event) => {
     }
 
     const orderUserId = order.u_id;
-    const orderStatus = order.order_status;
+    const orderStatus = order.status;
 
     // Check ownership or admin
     if (orderUserId !== user.u_id && user.role !== 'ADMIN') {
@@ -38,15 +38,15 @@ exports.handler = async (event) => {
     }
 
     // Update order status to CANCELLED
-    const updateSql = `UPDATE orders SET order_status = 'CANCELLED', updated_at = NOW() WHERE o_id = ?`;
+    const updateSql = `UPDATE Orders SET status = 'CANCELLED' WHERE o_id = ?`;
     await update(updateSql, [orderId]);
 
     // Restore product stock - get order details first
-    const detailsSql = `SELECT pd_id, quantity FROM order_details WHERE o_id = ?`;
+    const detailsSql = `SELECT pd_id, quantity FROM OrderDetails WHERE o_id = ?`;
     const details = await getMany(detailsSql, [orderId]);
 
     for (const detail of details) {
-      const restoreSql = `UPDATE product_details SET amount = amount + ? WHERE pd_id = ?`;
+      const restoreSql = `UPDATE ProductDetails SET amount = amount + ? WHERE pd_id = ?`;
       await update(restoreSql, [detail.quantity, detail.pd_id]);
     }
 

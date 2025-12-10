@@ -13,6 +13,7 @@ exports.handler = async (event) => {
     // Schema v2: Product, Category, Brand tables
     const productSql = `
       SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
+             p.thumbnail_1, p.thumbnail_2,
              c.c_id, c.c_name, b.brand_id, b.brand_name
       FROM Product p
       LEFT JOIN Category c ON p.c_id = c.c_id
@@ -26,24 +27,56 @@ exports.handler = async (event) => {
       return errorResponse('Product not found', 404);
     }
 
-    // Schema v2: ProductDetails table
+    // Schema v2: ProductDetails table with sizes JSON column
     const detailsSql = `
-      SELECT pd_id, size, amount, color_name, color_code, img_list, in_stock
+      SELECT pd_id, sizes, size, amount, color_name, color_code, img_list, in_stock, description
       FROM ProductDetails
       WHERE p_id = ?
     `;
 
     const detailsRows = await getMany(detailsSql, [productId]);
 
-    const variants = detailsRows.map(row => ({
-      pdId: row.pd_id,
-      size: row.size,
-      stock: parseInt(row.amount || 0),
-      colorName: row.color_name,
-      colorCode: row.color_code,
-      imgList: row.img_list,
-      inStock: !!row.in_stock
-    }));
+    const variants = detailsRows.map(row => {
+      // Parse img_list JSON string to array
+      let imgList = [];
+      if (row.img_list) {
+        try {
+          imgList = typeof row.img_list === 'string' ? JSON.parse(row.img_list) : row.img_list;
+        } catch (e) {
+          imgList = [];
+        }
+      }
+      
+      // Parse sizes JSON array
+      let sizes = [];
+      if (row.sizes) {
+        try {
+          sizes = typeof row.sizes === 'string' ? JSON.parse(row.sizes) : row.sizes;
+        } catch (e) {
+          sizes = [];
+        }
+      }
+      // Fallback: if no sizes array but has single size/amount
+      if (sizes.length === 0 && row.size) {
+        sizes = [{ size: row.size, amount: parseInt(row.amount || 0) }];
+      }
+      
+      // Calculate total stock from sizes array
+      const totalStock = sizes.reduce((sum, s) => sum + (parseInt(s.amount) || 0), 0);
+      
+      return {
+        pdId: row.pd_id,
+        sizes: sizes,
+        size: row.size, // Keep for backward compatibility
+        stock: totalStock,
+        amount: totalStock,
+        colorName: row.color_name,
+        colorCode: row.color_code,
+        description: row.description || '',
+        imgList: imgList,
+        inStock: !!row.in_stock && totalStock > 0
+      };
+    });
 
     // Schema v2: Rating table
     const ratingsSql = `
@@ -72,6 +105,8 @@ exports.handler = async (event) => {
       desc: product.p_desc || '',
       price: parseFloat(product.price || 0),
       isActive: !!product.is_active,
+      thumbnail1: product.thumbnail_1 || null,
+      thumbnail2: product.thumbnail_2 || null,
       categoryId: product.c_id,
       categoryName: product.c_name,
       category: product.c_id ? {

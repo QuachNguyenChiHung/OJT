@@ -6,6 +6,7 @@ const createProductDetails = require('./createProductDetails');
 const updateProductDetails = require('./updateProductDetails');
 const deleteProductDetails = require('./deleteProductDetails');
 const uploadProductImages = require('./uploadProductImages');
+const migrateAddSizes = require('./migrateAddSizes');
 
 exports.handler = async (event) => {
   const path = event.path || event.rawPath || '';
@@ -21,6 +22,10 @@ exports.handler = async (event) => {
   // POST /product-details (Admin)
   if (path === '/product-details' && method === 'POST') {
     return createProductDetails.handler(event);
+  }
+  // POST /product-details/migrate (Admin - run once)
+  if (path === '/product-details/migrate' && method === 'POST') {
+    return migrateAddSizes.handler(event);
   }
   // GET /product-details/product/{productId}
   if (path.includes('/product-details/product/') && method === 'GET') {

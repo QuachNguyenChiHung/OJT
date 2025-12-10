@@ -19,21 +19,22 @@ exports.handler = async (event) => {
       return errorResponse('Forbidden - Admin access required', 403);
     }
 
-    const { name, description, price, categoryId, brandId, isActive } = parseBody(event);
+    const { name, description, price, categoryId, brandId, gender, isActive, thumbnail1, thumbnail2 } = parseBody(event);
 
     if (!name || !categoryId) {
       return errorResponse('Product name and category are required', 400);
     }
 
     const productId = uuidv4();
+    const validGender = ['male', 'female', 'unisex'].includes(gender) ? gender : 'unisex';
 
-    // Schema v2: Product table with p_desc, brand_id
+    // Schema v2: Product table with p_desc, brand_id, gender, thumbnail_1, thumbnail_2
     const sql = `
-      INSERT INTO Product (p_id, p_name, p_desc, price, c_id, brand_id, is_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO Product (p_id, p_name, p_desc, price, c_id, brand_id, gender, is_active, thumbnail_1, thumbnail_2)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
-    await insert(sql, [productId, name, description || '', price || 0, categoryId, brandId || null, isActive !== false ? 1 : 0]);
+    await insert(sql, [productId, name, description || '', price || 0, categoryId, brandId || null, validGender, isActive !== false ? 1 : 0, thumbnail1 || null, thumbnail2 || null]);
 
     return successResponse({
       id: productId,
@@ -45,7 +46,10 @@ exports.handler = async (event) => {
       price: price || 0,
       categoryId,
       brandId: brandId || null,
+      gender: validGender,
       isActive: isActive !== false,
+      thumbnail1: thumbnail1 || null,
+      thumbnail2: thumbnail2 || null,
       message: 'Product created successfully'
     }, 201);
 

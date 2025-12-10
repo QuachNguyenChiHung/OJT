@@ -14,18 +14,30 @@ exports.handler = async (event) => {
 
     const rows = await getMany(sql);
 
-    const productDetails = rows.map(row => ({
-      pdId: row.pd_id,
-      colorName: row.color_name || null,
-      colorCode: row.color_code || null,
-      size: row.size || null,
-      amount: row.amount || 0,
-      inStock: !!row.in_stock,
-      imgList: row.img_list || null,
-      productId: row.p_id,
-      productName: row.p_name,
-      price: parseFloat(row.price || 0),
-    }));
+    const productDetails = rows.map(row => {
+      // Parse img_list JSON string to array
+      let imgList = [];
+      if (row.img_list) {
+        try {
+          imgList = typeof row.img_list === 'string' ? JSON.parse(row.img_list) : row.img_list;
+        } catch (e) {
+          imgList = [];
+        }
+      }
+      
+      return {
+        pdId: row.pd_id,
+        colorName: row.color_name || null,
+        colorCode: row.color_code || null,
+        size: row.size || null,
+        amount: row.amount || 0,
+        inStock: !!row.in_stock,
+        imgList: imgList,
+        productId: row.p_id,
+        productName: row.p_name,
+        price: parseFloat(row.price || 0),
+      };
+    });
 
     return successResponse(productDetails);
   } catch (error) {

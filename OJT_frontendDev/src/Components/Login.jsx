@@ -29,7 +29,7 @@ const Login = () => {
                 return;
             }
 
-            if (res?.data.role === 'ADMIN' || res?.data.role === 'EMPLOYEE') {
+            if (res?.data.role === 'ADMIN') {
                 navigate('/admin');
             } else {
                 navigate('/home');

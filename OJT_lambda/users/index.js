@@ -2,6 +2,7 @@
 const getAllUsers = require('./getAllUsers');
 const getUserById = require('./getUserById');
 const updateProfile = require('./updateProfile');
+const syncUsers = require('./syncUsers');
 
 exports.handler = async (event) => {
   const path = event.path || event.rawPath || '';
@@ -14,12 +15,28 @@ exports.handler = async (event) => {
   if (path === '/users' && method === 'GET') {
     return getAllUsers.handler(event);
   }
+
+  // POST /users/sync - Sync RDS with Cognito
+  if (path === '/users/sync' && method === 'POST') {
+    return syncUsers.handler(event);
+  }
   
   // PUT /users/profile/{userId} - extract userId from path
   if (path.includes('/profile/') && method === 'PUT') {
     const match = path.match(/\/users\/profile\/([^\/]+)/);
     if (match) {
       event.pathParameters = { ...pathParams, id: match[1] };
+    }
+    return updateProfile.handler(event);
+  }
+  
+  // PUT /users/{id} - Update user
+  if (path.match(/\/users\/[^\/]+$/) && method === 'PUT') {
+    if (!pathParams.id) {
+      const match = path.match(/\/users\/([^\/]+)$/);
+      if (match) {
+        event.pathParameters = { ...pathParams, id: match[1] };
+      }
     }
     return updateProfile.handler(event);
   }

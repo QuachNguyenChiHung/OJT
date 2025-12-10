@@ -34,7 +34,7 @@ const SearchPage = () => {
     useEffect(() => {
         const fetchBestSelling = async () => {
             try {
-                const response = await axios.get(import.meta.env.VITE_API_URL + '/products/best-selling');
+                const response = await api.get('/products/best-selling');
                 const bestSellingProductIds = new Set(response.data.map(product => product.id));
                 setBestSellingIds(bestSellingProductIds);
             } catch (error) {
@@ -186,7 +186,7 @@ const SearchPage = () => {
             setError(null);
             setFilteredResults([]); // Clear previous results immediately
             try {
-                const searchParam = searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : '';
+                const searchParam = searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : '';
                 const url = `/products/list${searchParam}`;
                 const resp = await api.get(url);
                 const data = resp?.data || [];

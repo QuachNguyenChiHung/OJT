@@ -1,4 +1,4 @@
-// Lambda: Search Products - MySQL
+// Lambda: Search Products - MySQL (Schema v2)
 const { getMany } = require('./shared/database');
 const { successResponse, errorResponse, getQueryParams } = require('./shared/response');
 
@@ -6,18 +6,19 @@ exports.handler = async (event) => {
   try {
     const { q, categoryId, brandId, minPrice, maxPrice } = getQueryParams(event);
     
-    let sql = `SELECT p.p_id, p.p_name, p.description, p.image_url, p.is_active,
-                      c.c_id, c.c_name, b.b_id, b.b_name,
-                      (SELECT MIN(pd.price) FROM product_details pd WHERE pd.p_id = p.p_id) as min_price
-               FROM products p
-               LEFT JOIN categories c ON p.c_id = c.c_id
-               LEFT JOIN brands b ON p.b_id = b.b_id
+    // Schema v2: Product, Category, Brand tables
+    let sql = `SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
+                      p.thumbnail_1, p.thumbnail_2,
+                      c.c_id, c.c_name, b.brand_id, b.brand_name
+               FROM Product p
+               LEFT JOIN Category c ON p.c_id = c.c_id
+               LEFT JOIN Brand b ON p.brand_id = b.brand_id
                WHERE p.is_active = 1`;
     
     const params = [];
     
     if (q) {
-      sql += ' AND (p.p_name LIKE ? OR p.description LIKE ?)';
+      sql += ' AND (p.p_name LIKE ? OR p.p_desc LIKE ?)';
       params.push(`%${q}%`, `%${q}%`);
     }
     
@@ -27,17 +28,17 @@ exports.handler = async (event) => {
     }
     
     if (brandId) {
-      sql += ' AND p.b_id = ?';
+      sql += ' AND p.brand_id = ?';
       params.push(brandId);
     }
     
     if (minPrice) {
-      sql += ' AND EXISTS (SELECT 1 FROM product_details pd WHERE pd.p_id = p.p_id AND pd.price >= ?)';
+      sql += ' AND p.price >= ?';
       params.push(parseFloat(minPrice));
     }
     
     if (maxPrice) {
-      sql += ' AND EXISTS (SELECT 1 FROM product_details pd WHERE pd.p_id = p.p_id AND pd.price <= ?)';
+      sql += ' AND p.price <= ?';
       params.push(parseFloat(maxPrice));
     }
     
@@ -46,19 +47,26 @@ exports.handler = async (event) => {
     const rows = await getMany(sql, params);
 
     const products = rows.map(row => ({
+      id: row.p_id,
       pId: row.p_id,
+      name: row.p_name,
       pName: row.p_name,
-      description: row.description || null,
-      imageUrl: row.image_url || null,
-      price: parseFloat(row.min_price || 0),
+      description: row.p_desc || null,
+      price: parseFloat(row.price || 0),
+      thumbnail1: row.thumbnail_1 || null,
+      thumbnail2: row.thumbnail_2 || null,
       isActive: !!row.is_active,
+      categoryId: row.c_id,
+      categoryName: row.c_name,
       category: row.c_id ? {
         cId: row.c_id,
         cName: row.c_name
       } : null,
-      brand: row.b_id ? {
-        bId: row.b_id,
-        bName: row.b_name
+      brandId: row.brand_id,
+      brandName: row.brand_name,
+      brand: row.brand_id ? {
+        brandId: row.brand_id,
+        brandName: row.brand_name
       } : null,
     }));
 

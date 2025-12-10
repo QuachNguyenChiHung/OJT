@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
 
@@ -7,25 +7,16 @@ export default function AdminUsers() {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [userForm, setUserForm] = useState({
-    email: '',
-    phoneNumber: '',
-    fullName: '',
-    address: '',
-    role: 'USER',
-    active: true,
-    dateOfBirth: '',
-    password: ''
-  });
-
   const [editingUser, setEditingUser] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
         const res = await api.get('/auth/me');
-        if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+        if (res?.data.role !== 'ADMIN') {
           navigate('/login');
           return;
         }
@@ -35,33 +26,31 @@ export default function AdminUsers() {
     };
     fetchCurrentUser();
   }, [navigate]);
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await api.get('/users');
-        // Backend returns { users: [...] } or array directly
-        const data = res?.data?.users || res?.data;
-        if (Array.isArray(data) && data.length > 0) {
-          // Map backend field names to frontend expected names
-          const mappedUsers = data.map(u => ({
-            id: u.userId || u.u_id || u.id,
-            email: u.email,
-            fullName: u.name || u.fullName || u.full_name || '',
-            phoneNumber: u.phoneNumber || u.phone_number || '',
-            address: u.address || '',
-            dateOfBirth: u.dateOfBirth || u.date_of_birth || null,
-            role: u.role,
-            active: u.isActive !== undefined ? u.isActive : (u.is_active !== undefined ? u.is_active : true)
-          }));
-          setUsers(mappedUsers);
-          return;
-        }
-      } catch (err) {
-        console.error('Load users failed:', err);
-        // ignore network/backend errors and fallback to local sample data
+
+  const loadUsers = async () => {
+    try {
+      const res = await api.get('/users');
+      const data = res?.data?.users || res?.data;
+      if (Array.isArray(data) && data.length > 0) {
+        const mappedUsers = data.map(u => ({
+          id: u.userId || u.u_id || u.id,
+          email: u.email,
+          fullName: u.name || u.fullName || u.full_name || '',
+          phoneNumber: u.phoneNumber || u.phone_number || '',
+          address: u.address || '',
+          dateOfBirth: u.dateOfBirth || u.date_of_birth || null,
+          role: u.role,
+          active: u.isActive !== undefined ? u.isActive : (u.is_active !== undefined ? u.is_active : true)
+        }));
+        setUsers(mappedUsers);
       }
-    };
-    load();
+    } catch (err) {
+      console.error('Load users failed:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
   }, []);
 
   // Filter users based on search term
@@ -73,94 +62,33 @@ export default function AdminUsers() {
         user.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.phoneNumber?.includes(searchTerm) ||
-        user.role?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(user.active).toLowerCase().includes(searchTerm.toLowerCase())
+        user.role?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
   }, [users, searchTerm]);
 
-  const handleUserChange = (e) => {
-    const { name, value } = e.target;
-    // Coerce active to boolean when changed via select
-    if (name === 'active') {
-      setUserForm((f) => ({ ...f, [name]: value === 'true' }));
-    } else {
-      setUserForm((f) => ({ ...f, [name]: value }));
-    }
-  };
-
-  const addUser = async (e) => {
-    e.preventDefault();
-    if (!userForm.email.trim() || !userForm.fullName.trim()) {
-      alert('Email và tên là bắt buộc');
-      return;
-    }
-
-    // Validate age if dateOfBirth is provided
-    if (userForm.dateOfBirth && userForm.dateOfBirth.trim() !== '') {
-      const birthDate = new Date(userForm.dateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-
-      // Adjust age if birthday hasn't occurred this year
-      const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
-        ? age - 1 : age;
-
-      if (actualAge < 18 || actualAge > 100) {
-        alert('Tuổi phải từ 18 đến 100 tuổi.');
-        return;
-      }
-    }
-
-    // Check if email already exists locally
-    const emailExists = users.some(user => user.email.toLowerCase() === userForm.email.toLowerCase());
-    if (emailExists) {
-      alert('Email đã tồn tại');
-      return;
-    }
-
-    const payload = {
-      email: userForm.email.trim(),
-      fullName: userForm.fullName.trim(),
-      password: userForm.password.trim(),
-      phoneNumber: userForm.phoneNumber.trim() || null,
-      role: userForm.role || 'USER',
-      dateOfBirth: userForm.dateOfBirth || null,
-      address: userForm.address.trim() || null
-    };
-
+  // Sync users between RDS and Cognito
+  const syncUsers = async () => {
+    setSyncing(true);
+    setSyncResult(null);
     try {
-      const res = await api.post('/users', payload);
-      // ensure created user has `active: true` by default when server doesn't return it
-      const created = res?.data ? ({ ...res.data, active: typeof res.data.active !== 'undefined' ? res.data.active : true }) : ({ ...payload, active: true });
-      setUsers(u => [created, ...u]);
-      setUserForm({
-        email: '',
-        phoneNumber: '',
-        fullName: '',
-        address: '',
-        role: 'USER',
-        active: true,
-        dateOfBirth: '',
-        password: ''
+      const res = await api.post('/users/sync');
+      setSyncResult({
+        success: true,
+        message: res.data?.message || 'Đồng bộ thành công!',
+        details: res.data
       });
+      // Reload users after sync
+      await loadUsers();
     } catch (err) {
-      console.error('Create user failed', err);
-      alert('Không thể tạo người dùng');
-      setUserForm({
-        email: '',
-        phoneNumber: '',
-        fullName: '',
-        address: '',
-        role: 'USER',
-        active: true,
-        dateOfBirth: '',
-        password: ''
+      console.error('Sync failed:', err);
+      setSyncResult({
+        success: false,
+        message: err?.response?.data?.message || 'Đồng bộ thất bại'
       });
-      // surface error to user
-      alert('Không thể tạo người dùng');
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -170,95 +98,37 @@ export default function AdminUsers() {
 
   const updateUser = async (e) => {
     e.preventDefault();
-    if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
-      alert('Email và tên là bắt buộc');
+    if (!editingUser.fullName.trim()) {
+      alert('Tên là bắt buộc');
       return;
     }
 
-    // Validate age if dateOfBirth is provided
-    if (editingUser.dateOfBirth && editingUser.dateOfBirth.trim() !== '') {
-      const birthDate = new Date(editingUser.dateOfBirth);
-      const today = new Date();
-      const age = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-
-      // Adjust age if birthday hasn't occurred this year
-      const actualAge = (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate()))
-        ? age - 1 : age;
-
-      if (actualAge < 18 || actualAge > 100) {
-        alert('Tuổi phải từ 18 đến 100 tuổi.');
-        return;
-      }
-    }
-
-    // Check if email already exists (excluding current user)
-    const emailExists = users.some(user =>
-      user.id !== editingUser.id &&
-      user.email.toLowerCase() === editingUser.email.toLowerCase()
-    );
-    if (emailExists) {
-      alert('Email đã tồn tại');
-      return;
-    }
-
-    // Build payload matching backend CreateUserRequest
     const payload = {
-      email: editingUser.email.trim(),
       fullName: editingUser.fullName.trim(),
-      // include active/boolean field so server can update status
       isActive: Boolean(editingUser.active),
       phoneNumber: editingUser.phoneNumber?.trim() || null,
       role: editingUser.role || 'USER',
       dateOfBirth: editingUser.dateOfBirth || null,
-      address: editingUser.address?.trim() || null,
-      // only include password when provided (omit to keep current)
-      ...(editingUser.password ? { password: editingUser.password.trim() } : {})
+      address: editingUser.address?.trim() || null
     };
 
     try {
-      const res = await api.put(`/users/${editingUser.id}`, payload);
-      const updated = res?.data;
-      // Update local list from server response if available
-      if (updated) {
-        setUsers(users => users.map(u => u.id === editingUser.id ? ({
-          ...u,
-          email: updated.email ?? u.email,
-          phoneNumber: updated.phoneNumber ?? u.phoneNumber,
-          fullName: updated.fullName ?? u.fullName,
-          address: updated.address ?? u.address,
-          role: updated.role ?? u.role,
-          active: typeof updated.active !== 'undefined' ? updated.active : u.active,
-          dateOfBirth: updated.dateOfBirth ?? u.dateOfBirth
-        }) : u));
-      }
+      await api.put(`/users/${editingUser.id}`, payload);
+      setUsers(users => users.map(u => u.id === editingUser.id ? ({
+        ...u,
+        ...payload,
+        active: payload.isActive
+      }) : u));
       setEditingUser(null);
+      alert('Cập nhật thành công!');
     } catch (err) {
       console.error('Update user failed', err);
       alert('Không thể cập nhật người dùng');
-      // fallback: update locally
-      setUsers(users => users.map(u => u.id === editingUser.id ? ({
-        ...u,
-        email: editingUser.email.trim(),
-        phoneNumber: editingUser.phoneNumber?.trim() || null,
-        fullName: editingUser.fullName.trim(),
-        address: editingUser.address?.trim() || null,
-        role: editingUser.role,
-        active: Boolean(editingUser.active),
-        dateOfBirth: editingUser.dateOfBirth || null,
-        password: editingUser.password?.trim() || u.password
-      }) : u));
-      setEditingUser(null);
     }
   };
 
   const cancelEdit = () => {
     setEditingUser(null);
-  };
-
-  const removeUser = (user_id) => {
-    if (!confirm('Xóa người dùng này? Hành động này không thể hoàn tác.')) return;
-    setUsers((u) => u.filter(x => x.id !== user_id));
   };
 
   const getRoleColor = (role) => {
@@ -270,264 +140,217 @@ export default function AdminUsers() {
   };
 
   const getStatusColor = (active) => {
-    if (active === true || String(active).toLowerCase() === 'true') return 'success';
-    return 'warning';
+    return active ? 'success' : 'warning';
   };
+
+  // Count by role
+  const adminCount = users.filter(u => u.role === 'ADMIN').length;
+  const userCount = users.filter(u => u.role === 'USER').length;
 
   return (
     <AdminLayout title="Quản Lý Người Dùng">
       <div style={{ maxWidth: 1200 }}>
-        <div className="d-flex justify-content-end mb-3">
-          <button className="btn" style={{ background: '#008B8B', color: '#fff' }} onClick={() => navigate('/admin/users')}>🔄 Làm Mới</button>
-        </div>
-
-      {/* Search Bar */}
-      <div className="mb-3">
-        <div className="row">
-          <div className="col-md-6">
-            <div className="input-group">
-              <span className="input-group-text">
-                <i className="fas fa-search"></i>
-              </span>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Tìm kiếm người dùng theo tên, email, số điện thoại, vai trò hoặc trạng thái..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              {searchTerm && (
-                <button
-                  className="btn btn-outline-secondary"
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                >
-                  Xóa
-                </button>
-              )}
-            </div>
+        {/* Header with stats and actions */}
+        <div className="d-flex justify-content-between align-items-center mb-3">
+          <div className="d-flex gap-3">
+            <span className="badge bg-danger fs-6">👑 Admin: {adminCount}</span>
+            <span className="badge bg-primary fs-6">👤 User: {userCount}</span>
+            <span className="badge bg-secondary fs-6">📊 Tổng: {users.length}</span>
           </div>
-          <div className="col-md-6 text-end">
-            <small className="text-muted">
-              Hiển thị {filteredUsers.length} trong tổng số {users.length} người dùng
-            </small>
+          <div className="d-flex gap-2">
+            <button 
+              className="btn btn-outline-info"
+              onClick={syncUsers}
+              disabled={syncing}
+            >
+              {syncing ? '⏳ Đang đồng bộ...' : '🔄 Sync RDS ↔ Cognito'}
+            </button>
+            <button 
+              className="btn" 
+              style={{ background: '#008B8B', color: '#fff' }} 
+              onClick={loadUsers}
+            >
+              🔄 Làm Mới
+            </button>
           </div>
         </div>
-      </div>
 
-      {/* User Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
-        <h4>{editingUser ? 'Chỉnh Sửa Người Dùng' : 'Tạo Người Dùng Mới'}</h4>
-        <form onSubmit={editingUser ? updateUser : addUser}>
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label">Email *</label>
-              <input
-                className="form-control"
-                name="email"
-                type="email"
-                placeholder="user@example.com"
-                value={editingUser ? editingUser.email : userForm.email}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, email: e.target.value }) :
-                  handleUserChange
-                }
-                required
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Họ Tên *</label>
-              <input
-                className="form-control"
-                name="fullName"
-                placeholder="Họ Tên"
-                value={editingUser ? editingUser.fullName : userForm.fullName}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, fullName: e.target.value }) :
-                  handleUserChange
-                }
-                required
-              />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Số Điện Thoại</label>
-              <input
-                className="form-control"
-                name="phoneNumber"
-                placeholder="0123456789"
-                maxLength="13"
-                value={editingUser ? (editingUser.phoneNumber || '') : userForm.phoneNumber}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value }) :
-                  handleUserChange
-                }
-              />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Vai Trò</label>
-              <select
-                className="form-select"
-                name="role"
-                value={editingUser ? editingUser.role : userForm.role}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, role: e.target.value }) :
-                  handleUserChange
-                }
-              >
-                <option value="USER">Người Dùng</option>
-                <option value="ADMIN">Quản Trị Viên</option>
-              </select>
-            </div>
-            {editingUser && (
-              <div className="col-md-4">
-                <label className="form-label">Trạng Thái</label>
-                <select
-                  className="form-select"
-                  name="active"
-                  value={editingUser ? String(editingUser.active) : String(userForm.active)}
-                  onChange={editingUser ?
-                    (e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' }) :
-                    handleUserChange
-                  }
-                >
-                  <option value={true}>Hoạt Động</option>
-                  <option value={false}>Không Hoạt Động</option>
-                </select>
+        {/* Sync Result Alert */}
+        {syncResult && (
+          <div className={`alert ${syncResult.success ? 'alert-success' : 'alert-danger'} alert-dismissible`}>
+            <strong>{syncResult.success ? '✅' : '❌'}</strong> {syncResult.message}
+            {syncResult.details && (
+              <div className="mt-2 small">
+                {syncResult.details.synced && <div>Đã đồng bộ: {syncResult.details.synced} users</div>}
+                {syncResult.details.skipped && <div>Bỏ qua (Admin): {syncResult.details.skipped} users</div>}
+                {syncResult.details.errors && <div>Lỗi: {syncResult.details.errors}</div>}
               </div>
             )}
-            <div className="col-md-6">
-              <label className="form-label">Ngày Sinh (18-100 tuổi)</label>
-              <input
-                className="form-control"
-                name="dateOfBirth"
-                type="date"
-                value={editingUser ? (editingUser.dateOfBirth || '') : userForm.dateOfBirth}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value }) :
-                  handleUserChange
-                }
-                min={new Date(new Date().getFullYear() - 100, 0, 1).toISOString().split('T')[0]}
-                max={new Date(new Date().getFullYear() - 18, 11, 31).toISOString().split('T')[0]}
-              />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Mật Khẩu {!editingUser && '*'}</label>
-              <input
-                className="form-control"
-                name="password"
-                type="password"
-                placeholder={editingUser ? "Để trống để giữ mật khẩu hiện tại" : "Nhập mật khẩu"}
-                value={editingUser ? (editingUser.password || '') : userForm.password}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, password: e.target.value }) :
-                  handleUserChange
-                }
-                required={!editingUser}
-              />
-            </div>
-            <div className="col-md-12">
-              <label className="form-label">Địa Chỉ</label>
-              <textarea
-                className="form-control"
-                name="address"
-                placeholder="Địa chỉ đầy đủ"
-                rows="2"
-                value={editingUser ? (editingUser.address || '') : userForm.address}
-                onChange={editingUser ?
-                  (e) => setEditingUser({ ...editingUser, address: e.target.value }) :
-                  handleUserChange
-                }
-              />
-            </div>
-            <div className="col-md-12">
-              {editingUser ? (
-                <div className="d-flex gap-2">
-                  <button className="btn btn-success" type="submit">Cập Nhật Người Dùng</button>
-                  <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
-                </div>
-              ) : (
-                <button className="btn" style={{ background: '#008B8B', color: '#fff' }} type="submit">Tạo Người Dùng</button>
-              )}
-            </div>
+            <button type="button" className="btn-close" onClick={() => setSyncResult(null)}></button>
           </div>
-        </form>
-      </div>
+        )}
 
-      {/* Users List */}
-      <div className="list-group">
-        {filteredUsers.length === 0 ? (
-          <div className="text-center py-4">
-            <div className="text-muted">
-              {searchTerm ? `Không tìm thấy người dùng nào với từ khóa "${searchTerm}"` : 'Không có người dùng nào'}
-            </div>
-            {searchTerm && (
-              <button
-                className="btn btn-link btn-sm"
-                onClick={() => setSearchTerm('')}
-              >
-                Xóa tìm kiếm để hiển thị tất cả người dùng
-              </button>
-            )}
-          </div>
-        ) : (
-          filteredUsers.map((user) => (
-            <div key={user.id} className="list-group-item">
-              <div className="d-flex justify-content-between align-items-start">
-                <div style={{ flex: 1 }}>
-                  <div className="d-flex align-items-center mb-2">
-                    <h5 className="mb-0 me-3">{user.fullName || '(Chưa có tên)'}</h5>
-                    <span className={`badge bg-${getRoleColor(user.role)} me-2`}>{user.role === 'ADMIN' ? 'QUẢN TRỊ' : 'NGƯÒI DÙNG'}</span>
-                    <span className={`badge bg-${getStatusColor(user.active)}`}>{user.active ? 'HOẠT ĐỔNG' : 'KHÔNG HOẠT ĐỔNG'}</span>
-                  </div>
-                  <div className="text-muted small mb-1">
-                    <strong>Email:</strong> {user.email}
-                  </div>
-                  {user.phoneNumber && (
-                    <div className="text-muted small mb-1">
-                      <strong>Điện thoại:</strong> {user.phoneNumber}
-                    </div>
-                  )}
-                  {user.dateOfBirth && (
-                    <div className="text-muted small mb-1">
-                      <strong>Ngày sinh:</strong> {new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}
-                    </div>
-                  )}
-                  {user.address && (
-                    <div className="text-muted small">
-                      <strong>Địa chỉ:</strong> {user.address.length > 100 ? `${user.address.substring(0, 100)}...` : user.address}
-                    </div>
-                  )}
-                </div>
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-sm btn-outline-secondary"
-                    onClick={() => startEditUser(user)}
-                    disabled={editingUser && editingUser.id === user.id}
-                  >
-                    Sửa
-                  </button>
-                  <button
-                    className="btn btn-sm btn-outline-danger"
-                    onClick={() => removeUser(user.id)}
-                  >
+        {/* Info Box */}
+        <div className="alert alert-info mb-3">
+          <strong>💡 Lưu ý:</strong> Danh sách này hiển thị users từ RDS database. 
+          Click "Sync RDS ↔ Cognito" để đồng bộ dữ liệu giữa RDS và Cognito (trừ Admin vì Admin chỉ tồn tại trong RDS).
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-3">
+          <div className="row">
+            <div className="col-md-6">
+              <div className="input-group">
+                <span className="input-group-text">🔍</span>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Tìm kiếm theo tên, email, số điện thoại..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                {searchTerm && (
+                  <button className="btn btn-outline-secondary" onClick={() => setSearchTerm('')}>
                     Xóa
                   </button>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-primary"
-                    onClick={() => {
-                      navigate(`/admin/users/${user.id}`);
-                      return;
-                    }}
-                  >
-                    Xem Chi Tiết
-                  </button>
-                </div>
+                )}
               </div>
             </div>
-          ))
+            <div className="col-md-6 text-end">
+              <small className="text-muted">
+                Hiển thị {filteredUsers.length} / {users.length} người dùng
+              </small>
+            </div>
+          </div>
+        </div>
+
+        {/* Edit User Modal */}
+        {editingUser && (
+          <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
+            <h5>✏️ Chỉnh Sửa Người Dùng</h5>
+            <form onSubmit={updateUser}>
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">Email (không thể sửa)</label>
+                  <input className="form-control" value={editingUser.email} disabled />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Họ Tên *</label>
+                  <input
+                    className="form-control"
+                    value={editingUser.fullName}
+                    onChange={(e) => setEditingUser({ ...editingUser, fullName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Số Điện Thoại</label>
+                  <input
+                    className="form-control"
+                    value={editingUser.phoneNumber || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value })}
+                  />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Vai Trò</label>
+                  <select
+                    className="form-select"
+                    value={editingUser.role}
+                    onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                  >
+                    <option value="USER">Người Dùng</option>
+                    <option value="ADMIN">Quản Trị Viên</option>
+                  </select>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Trạng Thái</label>
+                  <select
+                    className="form-select"
+                    value={String(editingUser.active)}
+                    onChange={(e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' })}
+                  >
+                    <option value="true">Hoạt Động</option>
+                    <option value="false">Không Hoạt Động</option>
+                  </select>
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Ngày Sinh</label>
+                  <input
+                    className="form-control"
+                    type="date"
+                    value={editingUser.dateOfBirth || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value })}
+                  />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Địa Chỉ</label>
+                  <input
+                    className="form-control"
+                    value={editingUser.address || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                  />
+                </div>
+                <div className="col-md-12">
+                  <div className="d-flex gap-2">
+                    <button className="btn btn-success" type="submit">💾 Lưu</button>
+                    <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
         )}
-      </div>
+
+        {/* Users List */}
+        <div className="list-group">
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-4 text-muted">
+              {searchTerm ? `Không tìm thấy người dùng với "${searchTerm}"` : 'Không có người dùng nào'}
+            </div>
+          ) : (
+            filteredUsers.map((user) => (
+              <div key={user.id} className="list-group-item">
+                <div className="d-flex justify-content-between align-items-start">
+                  <div style={{ flex: 1 }}>
+                    <div className="d-flex align-items-center mb-2">
+                      <h5 className="mb-0 me-3">{user.fullName || '(Chưa có tên)'}</h5>
+                      <span className={`badge bg-${getRoleColor(user.role)} me-2`}>
+                        {user.role === 'ADMIN' ? '👑 ADMIN' : '👤 USER'}
+                      </span>
+                      <span className={`badge bg-${getStatusColor(user.active)}`}>
+                        {user.active ? '✅ Hoạt động' : '⏸️ Tạm dừng'}
+                      </span>
+                      {user.role === 'ADMIN' && (
+                        <span className="badge bg-dark ms-2" title="Admin chỉ tồn tại trong RDS">
+                          📦 RDS Only
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-muted small">
+                      <span className="me-3">📧 {user.email}</span>
+                      {user.phoneNumber && <span className="me-3">📱 {user.phoneNumber}</span>}
+                      {user.dateOfBirth && (
+                        <span className="me-3">🎂 {new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}</span>
+                      )}
+                    </div>
+                    {user.address && (
+                      <div className="text-muted small mt-1">📍 {user.address}</div>
+                    )}
+                  </div>
+                  <div className="d-flex gap-2">
+                    <button
+                      className="btn btn-sm btn-outline-primary"
+                      onClick={() => startEditUser(user)}
+                      disabled={editingUser?.id === user.id}
+                    >
+                      ✏️ Sửa
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </AdminLayout>
   );

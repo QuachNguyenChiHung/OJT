@@ -73,7 +73,7 @@ const EnterInfo = () => {
             // Re-fetch user to determine role and redirect
             const me = await api.get('/auth/me');
             const role = me?.data?.role;
-            if (role === 'ADMIN' || role === 'EMPLOYEE') {
+            if (role === 'ADMIN') {
                 navigate('/admin/products');
             } else {
                 navigate('/');

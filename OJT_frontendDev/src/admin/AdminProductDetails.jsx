@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import ReactCrop from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
@@ -9,20 +9,286 @@ const STORAGE_KEY = 'admin_products_v1';
 
 const generateId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
 
+// Column headers by level
+const LEVEL_HEADERS = ['Tất cả', 'Giới tính', 'Loại SP', 'Phân loại', 'Chi tiết', 'Cụ thể'];
+// Column colors by level
+const LEVEL_COLORS = [
+  { hover: '#e3f2fd', selected: '#bbdefb' },
+  { hover: '#e8f5e9', selected: '#c8e6c9' },
+  { hover: '#fff3e0', selected: '#ffe0b2' },
+  { hover: '#fce4ec', selected: '#f8bbd9' },
+  { hover: '#e1f5fe', selected: '#b3e5fc' },
+  { hover: '#f3e5f5', selected: '#e1bee7' }
+];
+
+// Cascading Category Selector Component
+const CascadingCategorySelector = ({ categories, value, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredPath, setHoveredPath] = useState({});
+  const containerRef = useRef(null);
+
+  const childrenMap = useMemo(() => {
+    const map = { root: [] };
+    categories.forEach(cat => {
+      const parentKey = cat.parentId || 'root';
+      if (!map[parentKey]) map[parentKey] = [];
+      map[parentKey].push(cat);
+    });
+    Object.keys(map).forEach(key => {
+      map[key].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    });
+    return map;
+  }, [categories]);
+
+  const maxLevel = useMemo(() => {
+    return Math.max(0, ...categories.map(c => c.level || 0));
+  }, [categories]);
+
+  const getFullPath = (catId) => {
+    const cat = categories.find(c => c.id === catId);
+    if (!cat) return '';
+    const parts = [cat.name];
+    let current = cat;
+    while (current.parentId) {
+      const parent = categories.find(c => c.id === current.parentId);
+      if (parent) {
+        parts.unshift(parent.name);
+        current = parent;
+      } else break;
+    }
+    return parts.join(' → ');
+  };
+
+  const getChildren = (parentId) => childrenMap[parentId] || [];
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (catId) => {
+    onChange(catId);
+    setIsOpen(false);
+  };
+
+  const handleHover = (level, catId) => {
+    const newPath = {};
+    for (let i = 0; i < level; i++) {
+      if (hoveredPath[i]) newPath[i] = hoveredPath[i];
+    }
+    newPath[level] = catId;
+    setHoveredPath(newPath);
+  };
+
+  const buildColumns = () => {
+    const columns = [];
+    const rootCats = getChildren('root');
+    if (rootCats.length > 0) {
+      columns.push({ level: 0, parentId: 'root', categories: rootCats });
+    }
+    for (let level = 0; level <= maxLevel; level++) {
+      const hoveredCatId = hoveredPath[level];
+      if (hoveredCatId) {
+        const children = getChildren(hoveredCatId);
+        if (children.length > 0) {
+          columns.push({ level: level + 1, parentId: hoveredCatId, categories: children });
+        }
+      }
+    }
+    return columns;
+  };
+
+  const columns = isOpen ? buildColumns() : [];
+
+  const getGenderColor = (name) => {
+    const lower = (name || '').toLowerCase();
+    if (lower === 'women' || lower === 'nữ') return '#e91e63';
+    if (lower === 'men' || lower === 'nam') return '#2196f3';
+    if (lower === 'unisex') return '#9c27b0';
+    return '#333';
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative' }}>
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          padding: '6px 12px',
+          border: '1px solid #ced4da',
+          borderRadius: '4px',
+          background: '#fff',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          minHeight: '38px',
+          fontSize: '14px'
+        }}
+      >
+        <span style={{ color: value ? '#212529' : '#6c757d', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {value ? getFullPath(value) : '-- Chọn danh mục --'}
+        </span>
+        <span style={{ marginLeft: '8px', color: '#6c757d', flexShrink: 0 }}>▼</span>
+      </div>
+
+      {isOpen && columns.length > 0 && (
+        <div style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          zIndex: 1000,
+          display: 'flex',
+          background: '#fff',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          marginTop: '4px',
+          maxWidth: '90vw',
+          overflowX: 'auto'
+        }}>
+          {columns.map((col, colIdx) => {
+            const levelColors = LEVEL_COLORS[col.level % LEVEL_COLORS.length];
+            const header = LEVEL_HEADERS[col.level] || `Cấp ${col.level}`;
+            
+            return (
+              <div
+                key={`col-${col.level}-${col.parentId}`}
+                style={{
+                  minWidth: '130px',
+                  maxWidth: '180px',
+                  borderRight: colIdx < columns.length - 1 ? '1px solid #eee' : 'none',
+                  maxHeight: '350px',
+                  overflowY: 'auto'
+                }}
+              >
+                <div style={{
+                  padding: '8px 12px',
+                  background: '#f8f9fa',
+                  fontWeight: '600',
+                  fontSize: '11px',
+                  color: '#666',
+                  borderBottom: '1px solid #eee',
+                  position: 'sticky',
+                  top: 0
+                }}>
+                  {header}
+                </div>
+                
+                {col.categories.map(cat => {
+                  const hasChildren = getChildren(cat.id).length > 0;
+                  const isHovered = hoveredPath[col.level] === cat.id;
+                  const isSelected = value === cat.id;
+                  
+                  return (
+                    <div
+                      key={cat.id}
+                      onMouseEnter={() => handleHover(col.level, cat.id)}
+                      onClick={() => handleSelect(cat.id)}
+                      style={{
+                        padding: '9px 12px',
+                        cursor: 'pointer',
+                        background: isHovered ? levelColors.hover : (isSelected ? levelColors.selected : '#fff'),
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '13px',
+                        transition: 'background 0.15s',
+                        borderBottom: '1px solid #f5f5f5'
+                      }}
+                    >
+                      <span style={{
+                        color: col.level === 1 ? getGenderColor(cat.name) : '#333',
+                        fontWeight: isSelected ? '600' : '400',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {cat.name}
+                      </span>
+                      {hasChildren && (
+                        <span style={{ color: '#999', marginLeft: '4px', flexShrink: 0 }}>›</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Resize image to max dimensions while maintaining aspect ratio
+const resizeImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.85) => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        
+        // Calculate new dimensions
+        if (width > maxWidth || height > maxHeight) {
+          const ratio = Math.min(maxWidth / width, maxHeight / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+        
+        // Create canvas and resize
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Convert to blob
+        canvas.toBlob((blob) => {
+          const resizedFile = new File([blob], file.name, { type: 'image/jpeg' });
+          const preview = canvas.toDataURL('image/jpeg', quality);
+          resolve({ file: resizedFile, preview, width, height });
+        }, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function AdminProductDetails() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [brands, setBrands] = useState([]);
+  // Default sizes với tất cả options
+  const defaultSizes = ['S', 'M', 'L', 'XL', 'XXL', 'Oversize', 'Free Size'].map(size => ({ size, amount: 0 }));
+  
   const [variantForm, setVariantForm] = useState({
-    size: '',
     colorName: '',
     colorCode: '',
-    amount: 1,
+    description: '', // Mô tả cho phân loại
+    sizes: defaultSizes, // Tất cả sizes với amount = 0
     status: 'available'
   });
   const [showVariantForm, setShowVariantForm] = useState(false);
   const [editingVariant, setEditingVariant] = useState(null);
+  
+  // Product edit state
+  const [editingProduct, setEditingProduct] = useState(false);
+  const [productForm, setProductForm] = useState({
+    name: '',
+    description: '',
+    price: '',
+    categoryId: '',
+    brandId: ''
+  });
 
   // Separate image management state
   const [showImageManager, setShowImageManager] = useState(false);
@@ -58,7 +324,7 @@ export default function AdminProductDetails() {
   const fetchCurrentUser = async () => {
     try {
       const res = await api.get('/auth/me');
-      if (res?.data.role !== 'ADMIN' && res?.data.role !== 'EMPLOYEE') {
+      if (res?.data.role !== 'ADMIN') {
         navigate('/login');
         return;
       }
@@ -70,7 +336,7 @@ export default function AdminProductDetails() {
 
   useEffect(() => {
     fetchCurrentUser();
-  }, []);
+  }, [fetchCurrentUser]);
 
   useEffect(() => {
     let mounted = true;
@@ -91,6 +357,30 @@ export default function AdminProductDetails() {
 
     const tryFetchFromApi = async () => {
       try {
+        // Fetch categories and brands from API
+        const [catRes, brandRes] = await Promise.all([
+          api.get('/categories?flat=true').catch(() => ({ data: [] })),
+          api.get('/brands').catch(() => ({ data: [] }))
+        ]);
+        
+        // Normalize categories with hierarchy info
+        const cats = (Array.isArray(catRes.data) ? catRes.data : []).map(c => ({
+          c_id: c.id || c.cId || c.c_id,
+          c_name: c.name || c.cName || c.c_name,
+          id: c.id || c.cId || c.c_id,
+          name: c.name || c.cName || c.c_name,
+          parentId: c.parentId || c.parent_id || null,
+          level: c.level || 0
+        }));
+        if (mounted) setCategories(cats);
+        
+        // Normalize brands
+        const brs = (Array.isArray(brandRes.data) ? brandRes.data : []).map(b => ({
+          brand_id: b.brandId || b.id || b.brand_id,
+          brand_name: b.brandName || b.name || b.brand_name
+        }));
+        if (mounted) setBrands(brs);
+
         const res = await api.get(`/product-details/product/${id}`);
         const data = res && res.data ? res.data : null;
         // backend may return an array of detail objects for the product
@@ -99,7 +389,7 @@ export default function AdminProductDetails() {
         let p = null;
         try {
           p = await api.get(`/products/${id}`);
-        } catch (error) {
+        } catch {
           // ignore product fetch errors for now; we'll decide fallback below
         }
 
@@ -115,6 +405,8 @@ export default function AdminProductDetails() {
             brandName: p?.data?.brandName ?? first?.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
             price: p?.data?.price ? `${p.data.price} VND` : null,
+            thumbnail1: p?.data?.thumbnail1 || null,
+            thumbnail2: p?.data?.thumbnail2 || null,
             details: (data || []).map(d => {
               // imgList may be JSON string or already array
               let imgs = [];
@@ -124,13 +416,27 @@ export default function AdminProductDetails() {
               } catch (e) {
                 imgs = [];
               }
+              // Parse sizes array
+              let sizes = [];
+              if (d.sizes) {
+                try {
+                  sizes = typeof d.sizes === 'string' ? JSON.parse(d.sizes) : d.sizes;
+                } catch (e) { sizes = []; }
+              }
+              // Fallback: if no sizes but has single size/amount
+              if (sizes.length === 0 && d.size) {
+                sizes = [{ size: d.size, amount: d.amount || 0 }];
+              }
+              
               return {
                 pd_id: d.pdId ?? d.pd_id ?? d.pdId,
                 img_list: imgs,
-                size: d.size ?? d.sz ?? '',
+                sizes: sizes,
+                size: d.size ?? d.sz ?? '', // Keep for backward compatibility
                 color: d.colorName ?? d.color ?? '',
                 colorId: d.colorId ?? d.color_id ?? null,
                 colorCode: d.colorCode ?? null,
+                description: d.description ?? d.desc ?? '',
                 amount: d.amount ?? d.qty ?? 0,
                 price: d.price ?? null,
                 status: d.inStock === false ? 'out_of_stock' : 'available'
@@ -161,18 +467,34 @@ export default function AdminProductDetails() {
             categoryName: p?.data?.categoryName ?? data.categoryName ?? '',
             brandName: p?.data?.brandName ?? data.brandName ?? '',
             desc: p?.data?.desc ?? p?.data?.description ?? '',
+            thumbnail1: p?.data?.thumbnail1 || null,
+            thumbnail2: p?.data?.thumbnail2 || null,
             price: p?.data?.price ? `${p.data.price} VND` : null,
-            details: [{
-              pd_id: data.pdId ?? data.pd_id ?? null,
-              img_list: imgs,
-              size: data.size ?? data.sz ?? '',
-              color: data.colorName ?? data.color ?? '',
-              colorId: data.colorId ?? data.color_id ?? null,
-              colorCode: data.colorCode ?? null,
-              amount: data.amount ?? data.qty ?? 0,
-              price: data.price ?? null,
-              status: data.inStock === false ? 'out_of_stock' : 'available'
-            }]
+            details: [(() => {
+              // Parse sizes array
+              let sizes = [];
+              if (data.sizes) {
+                try {
+                  sizes = typeof data.sizes === 'string' ? JSON.parse(data.sizes) : data.sizes;
+                } catch (e) { sizes = []; }
+              }
+              if (sizes.length === 0 && data.size) {
+                sizes = [{ size: data.size, amount: data.amount || 0 }];
+              }
+              return {
+                pd_id: data.pdId ?? data.pd_id ?? null,
+                img_list: imgs,
+                sizes: sizes,
+                size: data.size ?? data.sz ?? '',
+                color: data.colorName ?? data.color ?? '',
+                colorId: data.colorId ?? data.color_id ?? null,
+                colorCode: data.colorCode ?? null,
+                description: data.description ?? data.desc ?? '',
+                amount: data.amount ?? data.qty ?? 0,
+                price: data.price ?? null,
+                status: data.inStock === false ? 'out_of_stock' : 'available'
+              };
+            })()]
           };
 
           if (mounted) setProduct(normalized);
@@ -188,6 +510,8 @@ export default function AdminProductDetails() {
               brandName: p.data.brandName ?? '',
               desc: p.data.desc ?? p.data.description ?? '',
               price: p?.data?.price ? `${p.data.price} VND` : null,
+              thumbnail1: p.data.thumbnail1 || null,
+              thumbnail2: p.data.thumbnail2 || null,
               details: []
             };
             if (mounted) setProduct(normalized);
@@ -220,6 +544,23 @@ export default function AdminProductDetails() {
     setVariantForm((f) => ({ ...f, [name]: value }));
   };
 
+  // Available sizes - hiển thị sẵn tất cả
+  const availableSizes = ['S', 'M', 'L', 'XL', 'XXL', 'Oversize', 'Free Size'];
+
+  // Tạo object sizes với tất cả size, amount mặc định = 0
+  const createDefaultSizes = () => {
+    return availableSizes.map(size => ({ size, amount: 0 }));
+  };
+
+  // Handle size amount changes
+  const handleSizeAmountChange = (index, amount) => {
+    setVariantForm((f) => {
+      const newSizes = [...f.sizes];
+      newSizes[index] = { ...newSizes[index], amount: parseInt(amount) || 0 };
+      return { ...f, sizes: newSizes };
+    });
+  };
+
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     console.log(files);
@@ -247,23 +588,23 @@ export default function AdminProductDetails() {
         return;
       }
 
-      // Store file locally for preview
-      const reader = new FileReader();
-      reader.onload = (event) => {
+      // Resize image before storing (max 800x800, quality 85%)
+      resizeImage(file, 800, 800, 0.85).then(({ file: resizedFile, preview, width, height }) => {
+        console.log(`Image resized: ${file.name} -> ${width}x${height}, size: ${(resizedFile.size / 1024).toFixed(1)}KB`);
+        
         const newImages = [...variantImages, {
-          file: file, // Store the actual file for later upload
-          preview: event.target.result, // Store preview URL
+          file: resizedFile, // Store the resized file for later upload
+          preview: preview, // Store preview URL
           name: file.name,
           isExisting: false // Flag to identify new uploads
         }];
         setVariantImages(newImages);
-        console.log(newImages);
+        
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
         }
-      };
-      reader.readAsDataURL(file);
+      });
     }
   };
 
@@ -362,41 +703,43 @@ export default function AdminProductDetails() {
   const addVariant = async (e) => {
     e.preventDefault();
 
-    // For basic variant addition, don't require images
-    // Validate form fields
-    if (!variantForm.size || !variantForm.colorName) {
-      alert('Please fill in all required fields (size, color name).');
+    // Validate form fields - lấy tất cả sizes (kể cả amount = 0)
+    const allSizes = variantForm.sizes.filter(s => s.size);
+    const sizesWithStock = allSizes.filter(s => s.amount > 0);
+    if (!variantForm.colorName || sizesWithStock.length === 0) {
+      alert('Vui lòng điền tên màu và ít nhất 1 size có số lượng > 0.');
       return;
     }
 
     try {
-      const newVariantLocal = {
-        pd_id: generateId(),
-        img_list: [], // Empty initially
-        size: variantForm.size.trim(),
-        color: variantForm.colorName.trim(),
-        colorCode: variantForm.colorCode || '#000000',
-        amount: Number(variantForm.amount) || 0,
-        status: variantForm.status || 'available'
-      };
-
-      // Build payload according to backend ProductDetailsDTO
+      // Create ONE product-detail with sizes array (new structure)
       const payload = {
         productId: product?.p_id || null,
         productName: product?.p_name || null,
         colorName: variantForm.colorName.trim(),
         colorCode: variantForm.colorCode || '#000000',
-        imgList: JSON.stringify([]), // Empty initially
-        size: variantForm.size.trim(),
-        amount: Number(variantForm.amount) || 0,
+        description: variantForm.description?.trim() || '',
+        sizes: allSizes, // Send full sizes array
+        imgList: JSON.stringify([]),
         inStock: variantForm.status !== 'out_of_stock'
       };
 
       if (!import.meta.env.VITE_API_URL) throw new Error('API URL not configured');
       const res = await api.post('/product-details', payload);
       const created = res?.data;
+      
+      // Parse sizes from response
+      let createdSizes = [];
+      if (created?.sizes) {
+        try {
+          createdSizes = typeof created.sizes === 'string' ? JSON.parse(created.sizes) : created.sizes;
+        } catch (e) { createdSizes = allSizes; }
+      } else {
+        createdSizes = allSizes;
+      }
+      
       const createdVariant = {
-        pd_id: created?.pdId ?? created?.pd_id ?? newVariantLocal.pd_id,
+        pd_id: created?.pdId ?? created?.pd_id ?? generateId(),
         img_list: (() => {
           try {
             if (!created?.imgList) return [];
@@ -405,18 +748,20 @@ export default function AdminProductDetails() {
             return [];
           } catch (e) { return []; }
         })(),
-        size: created?.size ?? newVariantLocal.size,
-        color: created?.colorName ?? newVariantLocal.color,
-        colorCode: created?.colorCode ?? newVariantLocal.colorCode,
-        amount: created?.amount ?? newVariantLocal.amount,
-        status: (typeof created?.inStock !== 'undefined') ? (created.inStock ? 'available' : 'out_of_stock') : newVariantLocal.status
+        sizes: createdSizes,
+        color: created?.colorName ?? variantForm.colorName.trim(),
+        colorCode: created?.colorCode ?? (variantForm.colorCode || '#000000'),
+        description: created?.description ?? variantForm.description?.trim() ?? '',
+        amount: created?.amount ?? sizesWithStock.reduce((sum, s) => sum + (s.amount || 0), 0),
+        status: (typeof created?.inStock !== 'undefined') ? (created.inStock ? 'available' : 'out_of_stock') : variantForm.status
       };
 
       setProduct(prev => ({ ...prev, details: [...(prev?.details || []), createdVariant] }));
 
       // Reset form
-      setVariantForm({ size: '', colorName: '', colorCode: '', amount: 1, status: 'available' });
+      setVariantForm({ colorName: '', colorCode: '', description: '', sizes: createDefaultSizes(), status: 'available' });
       setShowVariantForm(false);
+      alert('Đã tạo phân loại thành công!');
     } catch (err) {
       console.error('Create product-detail failed', err);
       alert('Không thể tạo chi tiết sản phẩm. Xem console để biết thêm chi tiết.');
@@ -424,21 +769,7 @@ export default function AdminProductDetails() {
   };
 
   const startEditVariant = (variant) => {
-    // Close image manager if it's open
-    setShowImageManager(false);
-    setSelectedVariantForImages(null);
-    setVariantImages([]);
-
-    // Set variant editing state
-    setEditingVariant({ ...variant });
-    setShowVariantForm(true);
-
-    // Scroll to top automatically
-    setTimeout(() => {
-      window.scrollTo(0, 0);
-      document.body.scrollTop = 0; // For Safari
-      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
-    }, 100);
+    startEditVariantSingle(variant);
   };
 
   // Separate function for managing images
@@ -447,10 +778,10 @@ export default function AdminProductDetails() {
     setShowVariantForm(false);
     setEditingVariant(null);
     setVariantForm({
-      size: '',
       colorName: '',
       colorCode: '',
-      amount: 1,
+      description: '',
+      sizes: createDefaultSizes(),
       status: 'available'
     });
 
@@ -507,6 +838,48 @@ export default function AdminProductDetails() {
     if (showImageManager) {
       closeImageManager();
     }
+  };
+
+  // Start editing variant - load all sizes from variant
+  const startEditVariantSingle = (variant) => {
+    console.log('Editing variant:', variant); // Debug log
+    setShowImageManager(false);
+    setSelectedVariantForImages(null);
+    setVariantImages([]);
+    
+    // Load sizes from variant or create default with existing data
+    let editSizes = [];
+    if (variant.sizes && variant.sizes.length > 0) {
+      // Merge with default sizes to show all options
+      editSizes = availableSizes.map(size => {
+        const existing = variant.sizes.find(s => s.size === size);
+        return { size, amount: existing ? (existing.amount || 0) : 0 };
+      });
+    } else if (variant.size) {
+      // Old format - convert to new format
+      editSizes = availableSizes.map(size => ({
+        size,
+        amount: size === variant.size ? (parseInt(variant.amount) || 0) : 0
+      }));
+    } else {
+      editSizes = createDefaultSizes();
+    }
+    
+    setEditingVariant({ ...variant });
+    setVariantForm({
+      colorName: variant.color || '',
+      colorCode: variant.colorCode || '#000000',
+      description: variant.description || '',
+      sizes: editSizes,
+      status: variant.status || 'available'
+    });
+    setShowVariantForm(true);
+
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+      document.body.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+    }, 100);
   };
 
   // Update variant images separately - backend expects exactly 5 files
@@ -595,10 +968,10 @@ export default function AdminProductDetails() {
   const cancelEditVariant = () => {
     setEditingVariant(null);
     setVariantForm({
-      size: '',
       colorName: '',
       colorCode: '',
-      amount: 1,
+      description: '',
+      sizes: createDefaultSizes(),
       status: 'available'
     });
     setShowVariantForm(false);
@@ -608,36 +981,40 @@ export default function AdminProductDetails() {
     e.preventDefault();
     if (!editingVariant) return;
 
-    // Get updated values or keep existing ones
-    const size = variantForm.size || editingVariant.size;
     const colorName = variantForm.colorName || editingVariant.color;
     const colorCode = variantForm.colorCode || editingVariant.colorCode || '#000000';
+    const description = variantForm.description?.trim() || editingVariant.description || '';
+    
+    // Get sizes - use form sizes or existing variant sizes
+    const allSizes = variantForm.sizes.filter(s => s.size);
+    const totalAmount = allSizes.reduce((sum, s) => sum + (s.amount || 0), 0);
 
     // Validate required fields
-    if (!size || !colorName) {
-      alert('Please fill in all required fields (size, color name).');
+    if (!colorName) {
+      alert('Vui lòng điền tên màu.');
       return;
     }
 
     try {
       const updatedVariantLocal = {
         ...editingVariant,
-        size: size.trim(),
+        sizes: allSizes,
         color: colorName.trim(),
         colorCode: colorCode,
-        amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
+        description: description,
+        amount: totalAmount,
         status: variantForm.status || editingVariant.status
       };
 
-      // Build payload according to backend ProductDetailsDTO - keep existing images
+      // Build payload with sizes array
       const payload = {
         productId: product?.p_id || null,
         productName: product?.p_name || null,
         colorName: colorName.trim(),
         colorCode: colorCode,
-        imgList: JSON.stringify(editingVariant.img_list || []), // Keep existing images
-        size: size.trim(),
-        amount: variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount,
+        description: description,
+        sizes: allSizes, // Send sizes array
+        imgList: JSON.stringify(editingVariant.img_list || []),
         inStock: (variantForm.status || editingVariant.status) !== 'out_of_stock'
       };
 
@@ -655,10 +1032,18 @@ export default function AdminProductDetails() {
             return editingVariant.img_list || [];
           } catch (e) { return editingVariant.img_list || []; }
         })(),
-        size: updated?.size ?? size.trim(),
+        sizes: (() => {
+          try {
+            if (updated?.sizes) {
+              return typeof updated.sizes === 'string' ? JSON.parse(updated.sizes) : updated.sizes;
+            }
+            return allSizes;
+          } catch (e) { return allSizes; }
+        })(),
         color: updated?.colorName ?? colorName.trim(),
         colorCode: updated?.colorCode ?? colorCode,
-        amount: updated?.amount ?? (variantForm.amount ? parseInt(variantForm.amount) : editingVariant.amount),
+        description: updated?.description ?? description,
+        amount: updated?.amount ?? totalAmount,
         status: (typeof updated?.inStock !== 'undefined') ? (updated.inStock ? 'available' : 'out_of_stock') : updatedVariantLocal.status
       };
 
@@ -666,6 +1051,7 @@ export default function AdminProductDetails() {
 
       // Reset form after successful update
       cancelEditVariant();
+      alert('Cập nhật thành công!');
     } catch (err) {
       console.error('Update product-detail failed', err);
       alert('Không thể cập nhật chi tiết sản phẩm. Xem console để biết thêm chi tiết.');
@@ -673,13 +1059,71 @@ export default function AdminProductDetails() {
   };
 
   const getCategoryName = (c_id) => {
-    const cat = categories.find(c => c.c_id === c_id);
-    return cat ? cat.c_name : 'N/A';
+    const cat = categories.find(c => (c.c_id || c.id) === c_id);
+    return cat ? (cat.c_name || cat.name) : 'N/A';
   };
 
   const getBrandName = (brand_id) => {
     const brand = brands.find(b => b.brand_id === brand_id);
     return brand ? brand.brand_name : 'N/A';
+  };
+
+  // Product edit functions
+  const startEditProduct = () => {
+    setProductForm({
+      name: product.p_name || '',
+      description: product.desc || '',
+      price: product.price?.toString().replace(' VND', '') || '',
+      categoryId: product.c_id || '',
+      brandId: product.brand_id || ''
+    });
+    setEditingProduct(true);
+  };
+
+  const cancelEditProduct = () => {
+    setEditingProduct(false);
+    setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '' });
+  };
+
+  const updateProduct = async (e) => {
+    e.preventDefault();
+    if (!productForm.name.trim()) {
+      alert('Tên sản phẩm là bắt buộc');
+      return;
+    }
+    try {
+      const payload = {
+        PName: productForm.name.trim(),
+        pDesc: productForm.description.trim(),
+        price: parseFloat(productForm.price) || 0,
+        isActive: true
+      };
+      const categoryParam = productForm.categoryId ? `?categoryId=${productForm.categoryId}` : '';
+      const brandParam = productForm.brandId ? `${categoryParam ? '&' : '?'}brandId=${productForm.brandId}` : '';
+      const query = `${categoryParam}${brandParam}`;
+      
+      await api.put(`/products/${product.p_id}${query}`, payload);
+      
+      // Update local state
+      const selectedCat = categories.find(c => (c.c_id || c.id) === productForm.categoryId);
+      const selectedBrand = brands.find(b => b.brand_id === productForm.brandId);
+      setProduct(prev => ({
+        ...prev,
+        p_name: productForm.name.trim(),
+        desc: productForm.description.trim(),
+        price: `${productForm.price} VND`,
+        c_id: productForm.categoryId,
+        brand_id: productForm.brandId,
+        categoryName: selectedCat?.c_name || selectedCat?.name || prev.categoryName,
+        brandName: selectedBrand?.brand_name || prev.brandName
+      }));
+      
+      setEditingProduct(false);
+      alert('Cập nhật sản phẩm thành công!');
+    } catch (err) {
+      console.error('Update product failed', err);
+      alert('Không thể cập nhật sản phẩm');
+    }
   };
 
   if (!product) return (
@@ -719,36 +1163,142 @@ export default function AdminProductDetails() {
           <div className="mb-4">
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h4>Thông Tin Sản Phẩm</h4>
+              {!editingProduct && (
+                <button className="btn btn-outline-primary btn-sm" onClick={startEditProduct}>
+                  ✏️ Chỉnh sửa
+                </button>
+              )}
             </div>
 
-            <table className="table table-bordered">
-              <tbody>
+            {editingProduct ? (
+              <form onSubmit={updateProduct} className="p-3 border rounded" style={{ background: '#f8f9fa' }}>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label className="form-label">Tên Sản Phẩm *</label>
+                    <input
+                      className="form-control"
+                      value={productForm.name}
+                      onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Giá (VND)</label>
+                    <input
+                      className="form-control"
+                      type="number"
+                      value={productForm.price}
+                      onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Danh Mục</label>
+                    <CascadingCategorySelector
+                      categories={categories.map(c => ({
+                        id: c.c_id || c.id,
+                        name: c.c_name || c.name,
+                        parentId: c.parentId || c.parent_id || null,
+                        level: c.level || 0
+                      }))}
+                      value={productForm.categoryId}
+                      onChange={(catId) => setProductForm({ ...productForm, categoryId: catId })}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label className="form-label">Thương Hiệu</label>
+                    <select
+                      className="form-select"
+                      value={productForm.brandId}
+                      onChange={(e) => setProductForm({ ...productForm, brandId: e.target.value })}
+                    >
+                      <option value="">-- Chọn thương hiệu --</option>
+                      {brands.map(b => (
+                        <option key={b.brand_id} value={b.brand_id}>{b.brand_name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-md-12">
+                    <label className="form-label">Mô Tả</label>
+                    <textarea
+                      className="form-control"
+                      rows="2"
+                      value={productForm.description}
+                      onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                    />
+                  </div>
+                  <div className="col-md-12">
+                    <div className="d-flex gap-2">
+                      <button className="btn btn-success" type="submit">💾 Lưu</button>
+                      <button className="btn btn-secondary" type="button" onClick={cancelEditProduct}>Hủy</button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            ) : (
+              <table className="table table-bordered">
+                <tbody>
+                  <tr>
+                    <th style={{ width: '30%' }}>Mã Sản Phẩm</th>
+                    <td>{product.p_id}</td>
+                  </tr>
+                  <tr>
+                    <th>Tên Sản Phẩm</th>
+                    <td>{product.p_name}</td>
+                  </tr>
+                  <tr>
+                    <th>Danh Mục</th>
+                    <td>{product.categoryName || getCategoryName(product.c_id)}</td>
+                  </tr>
+                  <tr>
+                    <th>Thương Hiệu</th>
+                    <td>{product.brandName || getBrandName(product.brand_id)}</td>
+                  </tr>
+                  <tr>
+                    <th>Mô Tả</th>
+                    <td>{product.desc || 'N/A'}</td>
+                  </tr>
+                  <tr>
+                    <th>Giá</th>
+                    <td>{product.price || 'N/A'}</td>
+                  </tr>
                 <tr>
-                  <th style={{ width: '30%' }}>Mã Sản Phẩm</th>
-                  <td>{product.p_id}</td>
+                  <th>Ảnh Thumbnail</th>
+                  <td>
+                    <div className="d-flex gap-3">
+                      <div className="text-center">
+                        <small className="d-block text-muted mb-1">Ảnh 1 (Mặc định)</small>
+                        {product.thumbnail1 ? (
+                          <img 
+                            src={product.thumbnail1} 
+                            alt="Thumbnail 1" 
+                            style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                          />
+                        ) : (
+                          <div style={{ width: 100, height: 100, background: '#f0f0f0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #ccc' }}>
+                            <span className="text-muted small">Chưa có</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-center">
+                        <small className="d-block text-muted mb-1">Ảnh 2 (Khi hover)</small>
+                        {product.thumbnail2 ? (
+                          <img 
+                            src={product.thumbnail2} 
+                            alt="Thumbnail 2" 
+                            style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                          />
+                        ) : (
+                          <div style={{ width: 100, height: 100, background: '#f0f0f0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #ccc' }}>
+                            <span className="text-muted small">Chưa có</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
                 </tr>
-                <tr>
-                  <th>Tên Sản Phẩm</th>
-                  <td>{product.p_name}</td>
-                </tr>
-                <tr>
-                  <th>Danh Mục</th>
-                  <td>{product.categoryName || getCategoryName(product.c_id)}</td>
-                </tr>
-                <tr>
-                  <th>Thương Hiệu</th>
-                  <td>{product.brandName || getBrandName(product.brand_id)}</td>
-                </tr>
-                <tr>
-                  <th>Mô Tả</th>
-                  <td>{product.desc || 'N/A'}</td>
-                </tr>
-                <tr>
-                  <th>Giá</th>
-                  <td>{product.price || 'N/A'}</td>
-                </tr>
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Add/Edit Variant Form - Basic Info Only */}
@@ -774,70 +1324,97 @@ export default function AdminProductDetails() {
               </div>
               <form onSubmit={editingVariant ? updateVariant : addVariant}>
                 <div className="row g-3">
-                  <div className="col-md-3">
-                    <label className="form-label">Kích Cỡ *</label>
-                    <input
-                      className="form-control"
-                      name="size"
-                      placeholder="S, M, L, XL"
-                      value={editingVariant ? (variantForm.size || editingVariant.size) : variantForm.size}
-                      onChange={handleVariantChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-3">
+                  <div className="col-md-4">
                     <label className="form-label">Tên Màu *</label>
                     <input
                       className="form-control"
                       name="colorName"
                       placeholder="Đỏ, Xanh, Vàng..."
-                      value={editingVariant ? (variantForm.colorName || editingVariant.color) : variantForm.colorName}
+                      value={variantForm.colorName}
                       onChange={handleVariantChange}
                       required
                     />
                   </div>
-                  <div className="col-md-2">
+                  <div className="col-md-3">
                     <label className="form-label">Mã Màu</label>
                     <input
                       className="form-control"
                       name="colorCode"
                       type="color"
-                      value={editingVariant ? (variantForm.colorCode || editingVariant.colorCode || '#000000') : (variantForm.colorCode || '#000000')}
+                      value={variantForm.colorCode || '#000000'}
                       onChange={handleVariantChange}
                     />
                   </div>
-                  <div className="col-md-2">
-                    <label className="form-label">Số Lượng *</label>
-                    <input
-                      className="form-control"
-                      name="amount"
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={editingVariant ? (variantForm.amount || editingVariant.amount) : variantForm.amount}
-                      onChange={handleVariantChange}
-                      required
-                    />
-                  </div>
-                  <div className="col-md-2">
+                  <div className="col-md-3">
                     <label className="form-label">Trạng Thái</label>
                     <select
                       className="form-select"
                       name="status"
-                      value={editingVariant ? (variantForm.status || editingVariant.status) : variantForm.status}
+                      value={variantForm.status}
                       onChange={handleVariantChange}
                     >
                       <option value="available">Còn Hàng</option>
                       <option value="out_of_stock">Hết Hàng</option>
                     </select>
                   </div>
+                  <div className="col-md-12">
+                    <label className="form-label">Mô Tả Phân Loại</label>
+                    <textarea
+                      className="form-control"
+                      name="description"
+                      placeholder="Mô tả chi tiết cho phân loại này (chất liệu, đặc điểm...)"
+                      value={variantForm.description}
+                      onChange={handleVariantChange}
+                      rows="2"
+                    />
+                  </div>
                 </div>
+
+                {/* Size and Amount Section */}
+                <div className="mt-3">
+                  <label className="form-label mb-2"><strong>📏 Số lượng theo size (nhập 0 nếu không có):</strong></label>
+                  
+                  <div className="d-flex flex-wrap gap-2 p-2 border rounded" style={{ background: '#f8f9fa' }}>
+                    {/* Hiện tất cả sizes có thể sửa - cả khi thêm mới và edit */}
+                    {variantForm.sizes.map((sizeItem, index) => (
+                      <div key={index} className="d-flex align-items-center gap-1" style={{ minWidth: '100px' }}>
+                        <span 
+                          className={`badge ${sizeItem.amount > 0 ? 'bg-primary' : 'bg-secondary'}`} 
+                          style={{ minWidth: '60px', textAlign: 'center' }}
+                        >
+                          {sizeItem.size}
+                        </span>
+                        <input
+                          type="number"
+                          className="form-control form-control-sm"
+                          min="0"
+                          value={sizeItem.amount}
+                          onChange={(e) => handleSizeAmountChange(index, e.target.value)}
+                          style={{ width: '65px' }}
+                          title={`Số lượng size ${sizeItem.size}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {editingVariant ? (
+                    <small className="text-muted mt-1 d-block">
+                      Đang chỉnh sửa size <strong>{variantForm.sizes[0]?.size}</strong> - Số lượng: {variantForm.sizes[0]?.amount || 0}
+                    </small>
+                  ) : (
+                    <small className="text-muted mt-1 d-block">
+                      Tổng: {variantForm.sizes.reduce((sum, s) => sum + (s.amount || 0), 0)} sản phẩm | 
+                      {' '}{variantForm.sizes.filter(s => s.amount > 0).length} size có hàng sẽ được tạo
+                    </small>
+                  )}
+                </div>
+
                 <div className="mt-3">
                   <button
                     className={`btn ${editingVariant ? 'btn-warning' : 'btn-success'}`}
                     type="submit"
                   >
-                    {editingVariant ? 'Cập Nhật Thông Tin' : 'Thêm Phân Loại'}
+                    {editingVariant ? 'Cập Nhật Thông Tin' : `Thêm ${variantForm.sizes.filter(s => s.amount > 0).length || 0} Phân Loại`}
                   </button>
                 </div>
               </form>
@@ -1054,10 +1631,23 @@ export default function AdminProductDetails() {
                 <div className="row">
                   <div className="col-md-6">
                     <p><strong>Mã Chi Tiết:</strong> {d.pd_id}</p>
-                    <p><strong>Kích Cỡ:</strong> {d.size || 'N/A'}</p>
                     <p><strong>Màu Sắc:</strong> {d.color || 'N/A'} {d.colorCode && <span style={{ display: 'inline-block', width: '20px', height: '20px', backgroundColor: d.colorCode, border: '1px solid #ccc', marginLeft: '8px', verticalAlign: 'middle' }}></span>}</p>
-
-                    <p><strong>Số Lượng:</strong> {d.amount || 0}</p>
+                    <p><strong>Mô Tả:</strong> {d.description || <span className="text-muted">Chưa có mô tả</span>}</p>
+                    <div className="mb-2">
+                      <strong>Kích Cỡ & Số Lượng:</strong>
+                      <div className="d-flex flex-wrap gap-2 mt-1">
+                        {(d.sizes && d.sizes.length > 0) ? (
+                          d.sizes.map((s, idx) => (
+                            <span key={idx} className={`badge ${s.amount > 0 ? 'bg-primary' : 'bg-secondary'}`}>
+                              {s.size}: {s.amount}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="badge bg-secondary">{d.size || 'N/A'}: {d.amount || 0}</span>
+                        )}
+                      </div>
+                    </div>
+                    <p><strong>Tổng Số Lượng:</strong> {d.sizes ? d.sizes.reduce((sum, s) => sum + (s.amount || 0), 0) : (d.amount || 0)}</p>
                     {(() => {
                       const inStock = (d.status === 'available') && (Number(d.amount || 0) > 0);
                       const statusText = inStock ? 'Còn Hàng' : 'Hết Hàng';
@@ -1075,14 +1665,19 @@ export default function AdminProductDetails() {
                         d.img_list.map((src, i) => (
                           <img
                             key={i}
-                            src={src}
+                            src={src || '/img/no-image.svg'}
                             alt={`img-${i}`}
                             style={{
                               width: 100,
                               height: 120,
                               objectFit: 'cover',
                               border: '2px solid orange',
-                              borderRadius: '5px'
+                              borderRadius: '5px',
+                              background: '#f0f0f0'
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/img/no-image.svg';
                             }}
                           />
                         ))

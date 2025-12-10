@@ -7,10 +7,10 @@ exports.handler = async (event) => {
     const productId = event.pathParameters?.productId;
 
     const sql = `
-      SELECT r.r_id, r.rating_value, r.comment, r.created_at,
-             u.u_id, u.u_name, u.email
-      FROM ratings r
-      INNER JOIN app_users u ON r.u_id = u.u_id
+      SELECT r.r_id, r.rating_value, r.review as comment, r.created_at,
+             u.user_id as u_id, u.u_name, u.email
+      FROM Rating r
+      INNER JOIN Users u ON r.u_id = u.user_id
       WHERE r.p_id = ?
       ORDER BY r.created_at DESC
     `;

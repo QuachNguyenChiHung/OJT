@@ -2,6 +2,8 @@
 const getProductRatings = require('./getProductRatings');
 const getRatingStats = require('./getRatingStats');
 const createRating = require('./createRating');
+const checkUserRating = require('./checkUserRating');
+const getUserRatings = require('./getUserRatings');
 
 exports.handler = async (event) => {
   const path = event.path || event.rawPath || '';
@@ -13,6 +15,14 @@ exports.handler = async (event) => {
   // POST /ratings
   if (path === '/ratings' && method === 'POST') {
     return createRating.handler(event);
+  }
+  // GET /ratings/check?userId=xxx&productId=xxx
+  if (path === '/ratings/check' && method === 'GET') {
+    return checkUserRating.handler(event);
+  }
+  // GET /ratings/user/{userId}
+  if (path.includes('/ratings/user/') && method === 'GET') {
+    return getUserRatings.handler(event);
   }
   // GET /ratings/product/{productId}/stats
   if (path.includes('/stats') && method === 'GET') {

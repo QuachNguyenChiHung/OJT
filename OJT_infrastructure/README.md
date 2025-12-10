@@ -387,7 +387,7 @@ APP_NAME=OJT
 ENVIRONMENT=dev
 
 # Database
-DB_NAME=demoaws
+DB_NAME=ojtdb
 DB_USERNAME=admin
 DB_PASSWORD=YourSecurePassword123!
 

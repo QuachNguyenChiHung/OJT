@@ -56,12 +56,21 @@ const verifyCognitoToken = async (token) => {
       return null;
     }
 
+    // Determine role from Cognito groups or custom attribute
+    const groups = payload['cognito:groups'] || [];
+    let role = payload['custom:role'] || 'USER';
+    
+    // If user is in 'admin' group, set role to ADMIN
+    if (groups.some(g => g.toLowerCase() === 'admin')) {
+      role = 'ADMIN';
+    }
+
     // Return user info from Cognito token
     return {
       u_id: payload.sub,
       email: payload.email || payload['cognito:username'],
-      role: payload['custom:role'] || 'CUSTOMER',
-      groups: payload['cognito:groups'] || [],
+      role: role,
+      groups: groups,
     };
   } catch (error) {
     console.error('Cognito token verification failed:', error.message);
@@ -102,23 +111,14 @@ const verifyToken = async (event) => {
 
 /**
  * Check if user has admin role
+ * Project uses only 2 roles: ADMIN and USER
  */
 const isAdmin = (user) => {
   if (!user) return false;
   
   // Check role (case-insensitive)
   const role = (user.role || '').toUpperCase();
-  if (role === 'ADMIN') return true;
-  
-  // Check Cognito groups (case-insensitive)
-  if (user.groups && Array.isArray(user.groups)) {
-    const hasAdminGroup = user.groups.some(g => 
-      g.toLowerCase() === 'admin' || g.toLowerCase() === 'admins'
-    );
-    if (hasAdminGroup) return true;
-  }
-  
-  return false;
+  return role === 'ADMIN';
 };
 
 /**

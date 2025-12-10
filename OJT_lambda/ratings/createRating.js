@@ -18,15 +18,15 @@ exports.handler = async (event) => {
     }
 
     // Check if user already rated
-    const checkSql = `SELECT r_id FROM ratings WHERE u_id = ? AND p_id = ?`;
+    const checkSql = `SELECT r_id FROM Rating WHERE u_id = ? AND p_id = ?`;
     const existingRating = await getOne(checkSql, [user.u_id, productId]);
 
     if (existingRating) {
       // Update existing
       const ratingId = existingRating.r_id;
       const updateSql = `
-        UPDATE ratings
-        SET rating_value = ?, comment = ?, updated_at = NOW()
+        UPDATE Rating
+        SET rating_value = ?, review = ?
         WHERE r_id = ?
       `;
 
@@ -37,8 +37,8 @@ exports.handler = async (event) => {
       // Create new
       const ratingId = uuidv4();
       const insertSql = `
-        INSERT INTO ratings (r_id, u_id, p_id, rating_value, comment, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+        INSERT INTO Rating (r_id, u_id, p_id, rating_value, review, created_at)
+        VALUES (?, ?, ?, ?, ?, NOW())
       `;
 
       await insert(insertSql, [ratingId, user.u_id, productId, ratingValue, comment || '']);

@@ -22,7 +22,9 @@ exports.handler = async (event) => {
     }
 
     const { status, page = '1', limit = '20' } = getQueryParams(event);
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 20;
+    const offset = (pageNum - 1) * limitNum;
 
     // Schema v2: Orders table with u_id, Users table with user_id, u_name
     let sql = `SELECT o.o_id, o.u_id, o.status, o.total_price, o.shipping_address,
@@ -38,8 +40,8 @@ exports.handler = async (event) => {
       params.push(status);
     }
 
-    sql += ' ORDER BY o.date_created DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), offset);
+    // Use string interpolation for LIMIT/OFFSET to avoid MySQL prepared statement issues
+    sql += ` ORDER BY o.date_created DESC LIMIT ${limitNum} OFFSET ${offset}`;
 
     console.log('[getAllOrders] Executing SQL:', sql);
     const rows = await getMany(sql, params);

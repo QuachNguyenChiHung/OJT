@@ -183,6 +183,15 @@ exports.handler = async (event) => {
     // 12. Database Admin Module (setup, migrations)
     const databaseModule = createLambdaModule('DatabaseModule', 'Database: setup, migrations', 256, 120);
 
+    // 13. Home Sections Module (CRUD sections, manage products)
+    const homeSectionsModule = createLambdaModule('HomeSectionsModule', 'Home Sections: CRUD, products', 256, 15);
+
+    // 14. Sale Products Module (manage products on sale)
+    const saleProductsModule = createLambdaModule('SaleProductsModule', 'Sale Products: CRUD, discounts', 128, 10);
+
+    // 15. Wishlist Module (user wishlist management)
+    const wishlistModule = createLambdaModule('WishlistModule', 'Wishlist: add, get, remove', 128, 10);
+
     // ========================================
     // API GATEWAY
     // ========================================
@@ -206,7 +215,6 @@ exports.handler = async (event) => {
           'X-Api-Key',
           'X-Amz-Security-Token',
         ],
-        allowCredentials: true,
       },
     });
 
@@ -223,6 +231,9 @@ exports.handler = async (event) => {
     const usersIntegration = new apigateway.LambdaIntegration(usersModule);
     const imagesIntegration = new apigateway.LambdaIntegration(imagesModule);
     const databaseIntegration = new apigateway.LambdaIntegration(databaseModule);
+    const homeSectionsIntegration = new apigateway.LambdaIntegration(homeSectionsModule);
+    const saleProductsIntegration = new apigateway.LambdaIntegration(saleProductsModule);
+    const wishlistIntegration = new apigateway.LambdaIntegration(wishlistModule);
 
     // ========================================
     // API ROUTES
@@ -247,6 +258,8 @@ exports.handler = async (event) => {
     productId.addMethod('GET', productsIntegration);    // Get by ID
     productId.addMethod('PUT', productsIntegration);    // Update (Admin)
     productId.addMethod('DELETE', productsIntegration); // Delete (Admin)
+    productId.addResource('featured').addMethod('POST', productsIntegration); // Toggle featured (Admin)
+    productId.addResource('thumbnails').addMethod('POST', productsIntegration); // Upload thumbnails (Admin)
     products.addResource('detail').addResource('{productId}').addMethod('GET', productsIntegration);
     products.addResource('search').addMethod('GET', productsIntegration);
     products.addResource('list').addMethod('GET', productsIntegration);
@@ -256,10 +269,11 @@ exports.handler = async (event) => {
     products.addResource('brand').addResource('{brandId}').addMethod('GET', productsIntegration);
     products.addResource('price-range').addMethod('GET', productsIntegration);
 
-    // --- PRODUCT DETAILS ROUTES (7 endpoints) ---
+    // --- PRODUCT DETAILS ROUTES (8 endpoints) ---
     const productDetails = this.api.root.addResource('product-details');
     productDetails.addMethod('GET', productDetailsIntegration);  // Get all
     productDetails.addMethod('POST', productDetailsIntegration); // Create (Admin)
+    productDetails.addResource('migrate').addMethod('POST', productDetailsIntegration); // Migration (Admin - run once)
     const pdId = productDetails.addResource('{id}');
     pdId.addMethod('GET', productDetailsIntegration);    // Get by ID
     pdId.addMethod('PUT', productDetailsIntegration);    // Update
@@ -320,17 +334,23 @@ exports.handler = async (event) => {
     bannerId.addMethod('DELETE', bannersIntegration); // Delete
     bannerId.addResource('toggle').addMethod('PATCH', bannersIntegration);
 
-    // --- RATINGS ROUTES (3 endpoints) ---
+    // --- RATINGS ROUTES (5 endpoints) ---
     const ratings = this.api.root.addResource('ratings');
     ratings.addMethod('POST', ratingsIntegration); // Create rating
+    ratings.addResource('check').addMethod('GET', ratingsIntegration); // Check if user rated
+    const ratingUser = ratings.addResource('user').addResource('{userId}');
+    ratingUser.addMethod('GET', ratingsIntegration); // Get user's ratings
     const ratingProduct = ratings.addResource('product').addResource('{productId}');
     ratingProduct.addMethod('GET', ratingsIntegration); // Get product ratings
     ratingProduct.addResource('stats').addMethod('GET', ratingsIntegration);
 
-    // --- USERS ROUTES (3 endpoints) ---
+    // --- USERS ROUTES (5 endpoints) ---
     const users = this.api.root.addResource('users');
     users.addMethod('GET', usersIntegration); // Get all (Admin)
-    users.addResource('{id}').addMethod('GET', usersIntegration); // Get by ID
+    users.addResource('sync').addMethod('POST', usersIntegration); // Sync RDS with Cognito
+    const userId = users.addResource('{id}');
+    userId.addMethod('GET', usersIntegration); // Get by ID
+    userId.addMethod('PUT', usersIntegration); // Update user
     users.addResource('profile').addResource('{userId}').addMethod('PUT', usersIntegration);
 
     // --- IMAGES ROUTES (1 endpoint) ---
@@ -342,6 +362,49 @@ exports.handler = async (event) => {
     database.addResource('test').addMethod('POST', databaseIntegration);
     database.addResource('setup').addMethod('POST', databaseIntegration);
     database.addResource('query').addMethod('POST', databaseIntegration);
+
+    // --- HOME SECTIONS ROUTES (7 endpoints) ---
+    const homeSections = this.api.root.addResource('home-sections');
+    homeSections.addMethod('GET', homeSectionsIntegration);  // Get all sections with products
+    homeSections.addMethod('POST', homeSectionsIntegration); // Create section (Admin)
+    const sectionId = homeSections.addResource('{id}');
+    sectionId.addMethod('PUT', homeSectionsIntegration);    // Update section (Admin)
+    sectionId.addMethod('DELETE', homeSectionsIntegration); // Delete section (Admin)
+    const sectionProducts = sectionId.addResource('products');
+    sectionProducts.addMethod('GET', homeSectionsIntegration);  // Get products in section
+    sectionProducts.addMethod('POST', homeSectionsIntegration); // Add product to section (Admin)
+    sectionProducts.addResource('{productId}').addMethod('DELETE', homeSectionsIntegration); // Remove product
+
+    // --- SALE PRODUCTS ROUTES (7 endpoints) ---
+    const saleProducts = this.api.root.addResource('sale-products');
+    saleProducts.addMethod('GET', saleProductsIntegration);  // Get all sale products
+    saleProducts.addMethod('POST', saleProductsIntegration); // Add product to sale (Admin)
+    const saleProductId = saleProducts.addResource('{productId}');
+    saleProductId.addMethod('PUT', saleProductsIntegration);    // Update discount (Admin)
+    saleProductId.addMethod('DELETE', saleProductsIntegration); // Remove from sale (Admin)
+    
+    // Discount Levels
+    const discountLevels = saleProducts.addResource('discount-levels');
+    discountLevels.addMethod('GET', saleProductsIntegration);  // Get all discount levels
+    discountLevels.addMethod('POST', saleProductsIntegration); // Create discount level (Admin)
+    const discountLevelId = discountLevels.addResource('{discountPercent}');
+    discountLevelId.addMethod('DELETE', saleProductsIntegration); // Delete discount level (Admin)
+
+    // --- WISHLIST ROUTES (3 endpoints) ---
+    const wishlist = this.api.root.addResource('wishlist');
+    wishlist.addMethod('POST', wishlistIntegration); // Add to wishlist
+    const wishlistUser = wishlist.addResource('user').addResource('{userId}');
+    wishlistUser.addMethod('GET', wishlistIntegration); // Get user's wishlist
+    const wishlistItem = wishlist.addResource('{userId}').addResource('{productId}');
+    wishlistItem.addMethod('DELETE', wishlistIntegration); // Remove from wishlist
+
+    // --- NOTIFICATIONS ROUTES (4 endpoints) - handled by Orders Module ---
+    const notifications = this.api.root.addResource('notifications');
+    notifications.addMethod('GET', ordersIntegration); // Get user notifications
+    notifications.addResource('unread-count').addMethod('GET', ordersIntegration); // Get unread count
+    notifications.addResource('read-all').addMethod('PUT', ordersIntegration); // Mark all as read
+    const notificationId = notifications.addResource('{id}');
+    notificationId.addResource('read').addMethod('PUT', ordersIntegration); // Mark as read
 
     // ========================================
     // OUTPUTS
@@ -372,8 +435,11 @@ exports.handler = async (event) => {
         users: usersModule.functionName,
         images: imagesModule.functionName,
         database: databaseModule.functionName,
+        homeSections: homeSectionsModule.functionName,
+        saleProducts: saleProductsModule.functionName,
+        wishlist: wishlistModule.functionName,
       }),
-      description: '12 Lambda module names',
+      description: '15 Lambda module names',
     });
   }
 }

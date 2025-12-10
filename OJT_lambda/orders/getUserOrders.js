@@ -23,20 +23,20 @@ exports.handler = async (event) => {
       SELECT 
         o.o_id,
         o.total_price,
-        o.additional_fee,
-        o.order_status,
+        0 as additional_fee,
+        o.status as order_status,
         o.payment_method,
         o.shipping_address,
-        o.phone_number,
-        o.created_at,
-        o.updated_at,
+        o.phone as phone_number,
+        o.date_created as created_at,
+        o.date_created as updated_at,
         COUNT(od.od_id) as item_count
-      FROM orders o
-      LEFT JOIN order_details od ON o.o_id = od.o_id
+      FROM Orders o
+      LEFT JOIN OrderDetails od ON o.o_id = od.o_id
       WHERE o.u_id = ?
-      GROUP BY o.o_id, o.total_price, o.additional_fee, o.order_status, 
-        o.payment_method, o.shipping_address, o.phone_number, o.created_at, o.updated_at
-      ORDER BY o.created_at DESC
+      GROUP BY o.o_id, o.total_price, o.status, 
+        o.payment_method, o.shipping_address, o.phone, o.date_created
+      ORDER BY o.date_created DESC
     `;
 
     const rows = await getMany(sql, [userId]);

@@ -27,8 +27,9 @@ exports.handler = async (event) => {
 
     // Validate items and calculate total
     for (const item of items) {
-      const checkSql = `SELECT pd.pd_id, pd.amount, pd.price 
-                        FROM product_details pd 
+      const checkSql = `SELECT pd.pd_id, pd.amount, p.price 
+                        FROM ProductDetails pd 
+                        INNER JOIN Product p ON pd.p_id = p.p_id
                         WHERE pd.pd_id = ?`;
       const product = await getOne(checkSql, [item.productDetailsId]);
 
@@ -46,28 +47,30 @@ exports.handler = async (event) => {
     }
 
     // Create order
-    const createOrderSql = `INSERT INTO orders (o_id, u_id, order_status, total_price, shipping_address, phone_number, note, payment_method, created_at, updated_at)
-                            VALUES (?, ?, 'PENDING', ?, ?, ?, ?, 'COD', NOW(), NOW())`;
+    const createOrderSql = `INSERT INTO Orders (o_id, u_id, status, total_price, shipping_address, phone, payment_method, date_created)
+                            VALUES (?, ?, 'PENDING', ?, ?, ?, 'COD', NOW())`;
     await insert(createOrderSql, [
-      orderId, user.u_id, totalPrice, shippingAddress, phoneNumber || null, note || null
+      orderId, user.u_id, totalPrice, shippingAddress, phoneNumber || null
     ]);
 
     // Create order details and update stock
     for (const item of items) {
       const detailId = uuidv4();
       
-      // Get price
-      const priceSql = `SELECT price FROM product_details WHERE pd_id = ?`;
+      // Get price (from Product table via ProductDetails)
+      const priceSql = `SELECT p.price FROM ProductDetails pd 
+                        INNER JOIN Product p ON pd.p_id = p.p_id 
+                        WHERE pd.pd_id = ?`;
       const priceRow = await getOne(priceSql, [item.productDetailsId]);
       const price = parseFloat(priceRow?.price || 0);
 
       // Insert order detail
-      const detailSql = `INSERT INTO order_details (od_id, o_id, pd_id, quantity, price)
+      const detailSql = `INSERT INTO OrderDetails (od_id, o_id, pd_id, quantity, price)
                          VALUES (?, ?, ?, ?, ?)`;
       await insert(detailSql, [detailId, orderId, item.productDetailsId, item.quantity, price]);
 
       // Update stock
-      const updateStockSql = `UPDATE product_details SET amount = amount - ? WHERE pd_id = ?`;
+      const updateStockSql = `UPDATE ProductDetails SET amount = amount - ? WHERE pd_id = ?`;
       await update(updateStockSql, [item.quantity, item.productDetailsId]);
     }
 

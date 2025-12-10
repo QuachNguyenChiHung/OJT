@@ -15,7 +15,7 @@ exports.handler = async (event) => {
         SUM(CASE WHEN rating_value = 3 THEN 1 ELSE 0 END) as three_star,
         SUM(CASE WHEN rating_value = 2 THEN 1 ELSE 0 END) as two_star,
         SUM(CASE WHEN rating_value = 1 THEN 1 ELSE 0 END) as one_star
-      FROM ratings
+      FROM Rating
       WHERE p_id = ?
     `;
 
@@ -42,6 +42,14 @@ exports.handler = async (event) => {
     });
   } catch (error) {
     console.error('Get rating stats error:', error);
+    // If table doesn't exist, return empty stats
+    if (error.message?.includes("doesn't exist") || error.message?.includes("Unknown column")) {
+      return successResponse({
+        avgRating: 0,
+        totalRatings: 0,
+        distribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+      });
+    }
     return errorResponse(error.message, 500);
   }
 };

@@ -17,32 +17,32 @@ exports.handler = async (event) => {
       return errorResponse('Start date and end date are required', 400);
     }
 
-    let sql = `SELECT o.o_id, o.u_id, o.order_status, o.total_price, o.shipping_address,
-                      o.payment_method, o.created_at, u.u_name, u.email,
-                      (SELECT COUNT(*) FROM order_details od WHERE od.o_id = o.o_id) as item_count
-               FROM orders o
-               LEFT JOIN app_users u ON o.u_id = u.u_id
-               WHERE o.created_at >= ? AND o.created_at <= ?`;
+    let sql = `SELECT o.o_id, o.u_id, o.status, o.total_price, o.shipping_address,
+                      o.payment_method, o.date_created, u.u_name, u.email,
+                      (SELECT COUNT(*) FROM OrderDetails od WHERE od.o_id = o.o_id) as item_count
+               FROM Orders o
+               LEFT JOIN Users u ON o.u_id = u.user_id
+               WHERE o.date_created >= ? AND o.date_created <= ?`;
 
     const params = [startDate, endDate];
 
     if (status) {
-      sql += ' AND o.order_status = ?';
+      sql += ' AND o.status = ?';
       params.push(status);
     }
 
-    sql += ' ORDER BY o.created_at DESC';
+    sql += ' ORDER BY o.date_created DESC';
 
     const rows = await getMany(sql, params);
 
     const orders = rows.map(row => ({
       id: row.o_id,
       userId: row.u_id,
-      status: row.order_status,
+      status: row.status,
       totalPrice: parseFloat(row.total_price || 0),
       shippingAddress: row.shipping_address || null,
       paymentMethod: row.payment_method || null,
-      dateCreated: row.created_at,
+      dateCreated: row.date_created,
       customerName: row.u_name || null,
       customerEmail: row.email,
       itemCount: row.item_count || 0,

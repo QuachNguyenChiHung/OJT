@@ -33,7 +33,7 @@ https://i1wipz2fzc.execute-api.ap-southeast-1.amazonaws.com/prod
 ### Database
 - Endpoint: `ojt-ecommerce-databasesta-sqlserverinstance93b7c65-nkdhmvafjntq.ct4omg804mlf.ap-southeast-1.rds.amazonaws.com`
 - Port: 1433
-- Database: demoaws
+- Database: ojtdb
 
 ### CloudWatch Dashboard
 ```
