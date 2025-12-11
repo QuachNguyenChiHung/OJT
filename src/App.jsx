@@ -5,7 +5,7 @@ import './styles.min.css'
 import Filter from './Components/Filter'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/axios'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ProductTable from './Components/ProductTable'
 import Navbar from './Components/Navbar'
 import Footer from './Components/Footer'
@@ -40,16 +40,24 @@ import WishlistPage from './pages/WishlistPage';
 function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const [loggedin, setLoggedin] = useState(false);
 
   // Pages that require complete profile (phone + name)
   const profileRequiredPages = ['/checkout', '/orders', '/profile', '/update-profile'];
-  const loggedin = false;
+
   useEffect(() => {
     const checkProfile = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) return; // Not logged in, skip check
 
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoggedin(false);
+        return; // Not logged in, skip check
+      }
+
+      setLoggedin(true);
       // Only check profile for pages that require it
+
+
       const needsProfileCheck = profileRequiredPages.some(p => location.pathname.startsWith(p));
       if (!needsProfileCheck) return;
 
@@ -61,7 +69,7 @@ function Layout() {
           navigate('/enter-info');
           return;
         }
-        loggedin = true;
+
       } catch (err) {
         console.debug('Profile check error:', err.message);
       }
