@@ -27,6 +27,8 @@ export default function AdminProductDetails() {
   const [showImageManager, setShowImageManager] = useState(false);
   const [selectedVariantForImages, setSelectedVariantForImages] = useState(null);
   const [variantImages, setVariantImages] = useState([]);
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [cropperData, setCropperData] = useState({
     show: false,
     originalImage: null,
@@ -223,9 +225,13 @@ export default function AdminProductDetails() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     console.log(files);
-    // Count existing images (both from server and newly added)
-    const totalImages = variantImages.length;
-    if (totalImages >= 5) {
+
+    // Count filled slots (images that have either existing URLs or new files)
+    const filledSlots = variantImages.filter(img =>
+      (img.isExisting && img.url) || (!img.isExisting && img.file)
+    ).length;
+
+    if (filledSlots >= 5) {
       alert('Cần đúng 5 hình ảnh. Vui lòng xóa hình ảnh trước.');
       return;
     }
@@ -250,14 +256,28 @@ export default function AdminProductDetails() {
       // Store file locally for preview
       const reader = new FileReader();
       reader.onload = (event) => {
-        const newImages = [...variantImages, {
-          file: file, // Store the actual file for later upload
-          preview: event.target.result, // Store preview URL
-          name: file.name,
-          isExisting: false // Flag to identify new uploads
-        }];
-        setVariantImages(newImages);
-        console.log(newImages);
+        // Find the first empty slot and fill it
+        const updatedImages = [...variantImages];
+        const emptySlotIndex = updatedImages.findIndex(img =>
+          (!img.isExisting || !img.url) && (!img.file)
+        );
+
+        if (emptySlotIndex !== -1) {
+          // Fill the empty slot
+          updatedImages[emptySlotIndex] = {
+            file: file, // Store the actual file for later upload
+            preview: event.target.result, // Store preview URL
+            name: file.name,
+            isExisting: false, // Flag to identify new uploads
+            url: null,
+            id: `new_${emptySlotIndex}_${Date.now()}`,
+            position: emptySlotIndex
+          };
+        }
+
+        setVariantImages(updatedImages);
+        console.log('Updated images after upload:', updatedImages);
+
         // Reset file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -342,7 +362,7 @@ export default function AdminProductDetails() {
   };
 
   const removeImage = (index) => {
-    console.log(variantImages);
+    console.log('Removing image at index:', index, variantImages);
     const imageToRemove = variantImages[index];
 
     // If it's an existing image from server, you might want to handle deletion differently
@@ -350,13 +370,87 @@ export default function AdminProductDetails() {
       if (!confirm('Bạn có chắc muốn xóa hình ảnh này? Thao tác này sẽ xóa vĩnh viễn hình ảnh khỏi server.')) {
         return;
       }
-      // Here you could call an API to delete the image from server
-      // For now, we'll just remove it from the UI
     }
 
-    const updatedImages = variantImages.filter((_, i) => i !== index);
-    console.log("yo:" + updatedImages);
+    // Instead of filtering, replace the slot with an empty slot to maintain 5-slot structure
+    const updatedImages = [...variantImages];
+    updatedImages[index] = {
+      preview: null,
+      url: null,
+      isExisting: false,
+      file: null,
+      name: null,
+      id: `empty_${index}_${Date.now()}`,
+      position: index
+    };
+
+    console.log('Updated images after removal:', updatedImages);
     setVariantImages(updatedImages);
+  };
+
+  const handleDragStart = (e, index) => {
+    // Only allow dragging if there's actually an image in this slot
+    const imageData = variantImages[index];
+    if (!imageData.preview && !imageData.url) {
+      e.preventDefault();
+      return;
+    }
+
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', index.toString());
+  };
+
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear drag over if we're actually leaving the container
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    // Swap the images
+    const updatedImages = [...variantImages];
+    const draggedImage = updatedImages[draggedIndex];
+    const droppedOnImage = updatedImages[dropIndex];
+
+    // Swap the images while maintaining their position properties
+    updatedImages[draggedIndex] = {
+      ...droppedOnImage,
+      position: draggedIndex,
+      id: droppedOnImage.id || `swapped_${draggedIndex}_${Date.now()}`
+    };
+
+    updatedImages[dropIndex] = {
+      ...draggedImage,
+      position: dropIndex,
+      id: draggedImage.id || `swapped_${dropIndex}_${Date.now()}`
+    };
+
+    setVariantImages(updatedImages);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    console.log('Images reordered:', updatedImages);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const addVariant = async (e) => {
@@ -561,11 +655,11 @@ export default function AdminProductDetails() {
 
       // Always send exactly 5 files to backend as required
       const formData = new FormData();
-      
+
       // Create exactly 5 files for the backend
       for (let i = 0; i < 5; i++) {
         const imageData = variantImages[i];
-        
+
         if (imageData && !imageData.isExisting && imageData.file) {
           // New file to upload
           formData.append('files', imageData.file);
@@ -910,12 +1004,12 @@ export default function AdminProductDetails() {
                     className="form-control"
                     accept="image/jpeg,image/jpg,image/png,image/gif"
                     onChange={handleImageUpload}
-                    disabled={variantImages.length >= 5}
+                    disabled={variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length >= 5}
                   />
                   <div className="mb-3">
-                    <small className={`${variantImages.length >= 5 ? 'text-warning' : 'text-info'}`}>
-                      <strong>{variantImages.length} hình ảnh hiện tại.</strong>
-                      {variantImages.length >= 5 ? ' Đã đạt giới hạn tối đa 5 hình!' : ` Có thể chọn thêm ${5 - variantImages.length} hình nữa.`}
+                    <small className={`${variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length >= 5 ? 'text-warning' : 'text-info'}`}>
+                      <strong>{variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length} hình ảnh hiện tại.</strong>
+                      {variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length >= 5 ? ' Đã đạt giới hạn tối đa 5 hình!' : ` Có thể chọn thêm ${5 - variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length} hình nữa.`}
                     </small>
                     <br />
                     <small className="text-muted">
@@ -937,40 +1031,92 @@ export default function AdminProductDetails() {
                 {variantImages.length > 0 && (
                   <div className="row g-2 mb-3">
                     {variantImages.map((imageData, index) => (
-                      <div key={index} className="col-md-2">
-                        <div className="position-relative">
-                          <img
-                            src={imageData.preview || imageData} // Handle both file objects and direct URLs
-                            alt={`Image ${index + 1}`}
-                            className="img-fluid rounded"
-                            style={{
-                              width: '100%',
-                              height: '120px',
-                              objectFit: 'cover',
-                              border: imageData.isExisting ? '2px solid #28a745' : '2px solid #dc3545'
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm position-absolute top-0 end-0"
-                            style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0' }}
-                            onClick={() => removeImage(index)}
-                          >
-                            ×
-                          </button>
-                          {imageData.isExisting && (
-                            <small className="badge bg-success position-absolute bottom-0 start-0 m-1">
-                              Đã có
-                            </small>
-                          )}
-                          {!imageData.isExisting && imageData.name && (
-                            <small className="text-muted d-block text-center mt-1">
-                              {imageData.name.length > 15 ? imageData.name.substring(0, 15) + '...' : imageData.name}
-                            </small>
+                      <div key={imageData.id || index} className="col-md-2">
+                        <div
+                          className="position-relative"
+                          draggable={(imageData.preview || imageData.url) ? true : false}
+                          onDragStart={(e) => handleDragStart(e, index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, index)}
+                          onDragEnd={handleDragEnd}
+                          style={{
+                            opacity: draggedIndex === index ? 0.5 : 1,
+                            cursor: (imageData.preview || imageData.url) ? 'grab' : 'default',
+                            transform: dragOverIndex === index && draggedIndex !== index ? 'scale(1.05)' : 'scale(1)',
+                            transition: 'transform 0.2s ease, opacity 0.2s ease'
+                          }}
+                        >
+                          {/* Show image if there's content, otherwise show empty placeholder */}
+                          {(imageData.preview || imageData.url) ? (
+                            <>
+                              <img
+                                src={imageData.preview || imageData.url}
+                                alt={`Image ${index + 1}`}
+                                className="img-fluid rounded"
+                                style={{
+                                  width: '100%',
+                                  height: '120px',
+                                  objectFit: 'cover',
+                                  border: imageData.isExisting ?
+                                    (dragOverIndex === index && draggedIndex !== index ? '3px solid #28a745' : '2px solid #28a745') :
+                                    (dragOverIndex === index && draggedIndex !== index ? '3px solid #dc3545' : '2px solid #dc3545'),
+                                  borderRadius: '5px',
+                                  boxShadow: dragOverIndex === index && draggedIndex !== index ? '0 4px 12px rgba(0,0,0,0.3)' : 'none'
+                                }}
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0', zIndex: 10 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeImage(index);
+                                }}
+                              >
+                                ×
+                              </button>
+                              {imageData.isExisting && (
+                                <small className="badge bg-success position-absolute bottom-0 start-0 m-1">
+                                  Đã có
+                                </small>
+                              )}
+                              {!imageData.isExisting && imageData.name && (
+                                <small className="text-muted d-block text-center mt-1">
+                                  {imageData.name.length > 15 ? imageData.name.substring(0, 15) + '...' : imageData.name}
+                                </small>
+                              )}
+                              {/* Drag handle indicator */}
+                              <div className="position-absolute top-0 start-0 m-1 text-white bg-dark rounded px-1" style={{ fontSize: '10px', opacity: 0.7 }}>
+                                ⋮⋮
+                              </div>
+                            </>
+                          ) : (
+                            <div
+                              className="d-flex align-items-center justify-content-center bg-light rounded"
+                              style={{
+                                width: '100%',
+                                height: '120px',
+                                border: dragOverIndex === index && draggedIndex !== null ? '3px dashed #007bff' : '2px dashed #ccc',
+                                borderRadius: '5px',
+                                color: '#666',
+                                backgroundColor: dragOverIndex === index && draggedIndex !== null ? '#f8f9fa' : '#e9ecef'
+                              }}
+                            >
+                              <span>Vị trí {index + 1}</span>
+                            </div>
                           )}
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+
+                {variantImages.length > 0 && (
+                  <div className="alert alert-info py-2 mb-3">
+                    <small>
+                      <strong>💡 Mẹo:</strong> Kéo thả hình ảnh để thay đổi thứ tự. Hình ảnh có thể được kéo thả giữa các vị trí để sắp xếp lại.
+                    </small>
                   </div>
                 )}
 

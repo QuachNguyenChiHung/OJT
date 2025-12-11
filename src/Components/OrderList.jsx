@@ -172,7 +172,7 @@ export default function OrderList() {
                                     <div className="mb-3">
                                         <small className="text-muted">
                                             <strong>Địa chỉ giao hàng:</strong><br />
-                                            {order.shippingAddress  || 'Chưa có thông tin'}
+                                            {order.shippingAddress || 'Chưa có thông tin'}
                                         </small>
                                     </div>
 
@@ -194,57 +194,66 @@ export default function OrderList() {
                                     </button>
 
                                     {/* Order Details */}
-                                    {selectedOrder === order.id && (
+                                    {selectedOrder === order.id && orderDetails[order.id] && (
                                         <div className="mt-3 border-top pt-3">
                                             <h6>Chi Tiết Đơn Hàng:</h6>
-                                            {orderDetails[order.id] ? (
-                                                orderDetails[order.id].length > 0 ? (
-                                                    <div className="table-responsive">
-                                                        <table className="table table-sm">
-                                                            <thead>
-                                                                <tr>
-                                                                    <th>Sản phẩm</th>
-                                                                    <th>SL</th>
-                                                                    <th>Đơn giá</th>
-                                                                    <th>Thành tiền</th>
+                                            {orderDetails[order.id].length > 0 ? (
+                                                <div className="table-responsive">
+                                                    <table className="table table-sm">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Sản phẩm</th>
+                                                                <th>SL</th>
+                                                                <th>Đơn giá</th>
+                                                                <th>Thành tiền</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {orderDetails[order.id].map((item, index) => (
+                                                                <tr key={index}>
+                                                                    <td>
+                                                                        <div className="fw-bold">{item.productName || 'Sản phẩm'}</div>
+                                                                        <small className="text-muted">
+                                                                            ID: {item.productDetailsId}
+                                                                        </small>
+                                                                    </td>
+                                                                    <td>{item.quantity}</td>
+                                                                    <td className="text-end">
+                                                                        <small>{formatCurrency(item.unitPrice)}</small>
+                                                                    </td>
+                                                                    <td className="text-end">
+                                                                        <small className="fw-bold">{formatCurrency(item.subtotal)}</small>
+                                                                    </td>
                                                                 </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {orderDetails[order.id].map((item, index) => (
-                                                                    <tr key={index}>
-                                                                        <td>
-                                                                            <div className="fw-bold">{item.productName || 'Sản phẩm'}</div>
-                                                                            <small className="text-muted">
-                                                                                ID: {item.productDetailsId}
-                                                                            </small>
-                                                                        </td>
-                                                                        <td>{item.quantity}</td>
-                                                                        <td className="text-end">
-                                                                            <small>{formatCurrency(item.unitPrice)}</small>
-                                                                        </td>
-                                                                        <td className="text-end">
-                                                                            <small className="fw-bold">{formatCurrency(item.subtotal)}</small>
-                                                                        </td>
-                                                                    </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
-                                                        <div className="d-flex justify-content-end mt-2 pt-2 border-top">
-                                                            <strong className="text-primary">
-                                                                Tổng cộng: {formatCurrency(order.total)}
-                                                            </strong>
-                                                        </div>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                    <div className="d-flex justify-content-end mt-2 pt-2 border-top">
+                                                        <strong className="text-primary">
+                                                            Tổng cộng: {formatCurrency(order.total)}
+                                                        </strong>
                                                     </div>
-                                                ) : (
-                                                    <p className="text-muted small">Không có chi tiết đơn hàng</p>
-                                                )
-                                            ) : (
-                                                <div className="text-center py-2">
-                                                    <div className="spinner-border spinner-border-sm" role="status">
-                                                        <span className="visually-hidden">Đang tải...</span>
+                                                    <div>
+                                                        <h5>Chuyển khoản ghi chú</h5>
+                                                        <h5>ID Đơn hàng: {order.id}</h5>
+                                                        <img className="w-100" src="/img/qr.jpg" alt="" />
                                                     </div>
                                                 </div>
+                                            ) : (
+                                                <p className="text-muted small">Không có chi tiết đơn hàng</p>
                                             )}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Loading State for Selected Order */}
+                                    {selectedOrder === order.id && !orderDetails[order.id] && (
+                                        <div className="mt-3 border-top pt-3">
+                                            <h6>Chi Tiết Đơn Hàng:</h6>
+                                            <div className="text-center py-2">
+                                                <div className="spinner-border spinner-border-sm" role="status">
+                                                    <span className="visually-hidden">Đang tải...</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>

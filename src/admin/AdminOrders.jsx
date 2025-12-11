@@ -10,6 +10,8 @@ export default function AdminOrders() {
     const [statusFilter, setStatusFilter] = useState('');
     const [editingId, setEditingId] = useState(null);
     const [editingStatus, setEditingStatus] = useState('');
+    const [viewingDetailsId, setViewingDetailsId] = useState(null);
+    const [orderDetails, setOrderDetails] = useState({});
     const navigate = useNavigate();
 
     // Memoize statuses to prevent recreation
@@ -25,6 +27,36 @@ export default function AdminOrders() {
             alert('Không thể tải đơn hàng');
         }
     }, []);
+
+    const fetchOrderDetails = useCallback(async (orderId) => {
+        try {
+            const response = await axios.get(`${import.meta.env.VITE_API_URL}/orders/${orderId}/details`, { withCredentials: true });
+            setOrderDetails(prev => ({
+                ...prev,
+                [orderId]: response.data || []
+            }));
+        } catch (error) {
+            console.error('Error fetching order details:', error);
+            setOrderDetails(prev => ({
+                ...prev,
+                [orderId]: []
+            }));
+        }
+    }, []);
+
+    const toggleOrderDetails = useCallback(async (orderId) => {
+        if (viewingDetailsId === orderId) {
+            setViewingDetailsId(null);
+            return;
+        }
+
+        setViewingDetailsId(orderId);
+
+        // Fetch details if not already loaded
+        if (!orderDetails[orderId]) {
+            await fetchOrderDetails(orderId);
+        }
+    }, [viewingDetailsId, orderDetails, fetchOrderDetails]);
 
     const fetchCurrentUser = useCallback(async () => {
         try {
@@ -130,7 +162,7 @@ export default function AdminOrders() {
     const saveEdit = useCallback(async (orderId) => {
         if (!editingStatus) return alert('Trạng thái không được để trống');
         try {
-            await axios.put(`${import.meta.env.VITE_API_URL}/orders/${orderId}`,
+            await axios.patch(`${import.meta.env.VITE_API_URL}/orders/${orderId}/status`,
                 { status: editingStatus },
                 { withCredentials: true }
             );
@@ -252,20 +284,85 @@ export default function AdminOrders() {
                             </tr>
                         ) : (
                             filteredOrders.map(order => (
-                                <OrderRow
-                                    key={order.id}
-                                    order={order}
-                                    editingId={editingId}
-                                    editingStatus={editingStatus}
-                                    setEditingStatus={setEditingStatus}
-                                    statuses={statuses}
-                                    getStatusBadge={getStatusBadge}
-                                    formatDate={formatDate}
-                                    formatCurrency={formatCurrency}
-                                    startEdit={startEdit}
-                                    saveEdit={saveEdit}
-                                    cancelEdit={cancelEdit}
-                                />
+                                <React.Fragment key={order.id}>
+                                    <OrderRow
+                                        order={order}
+                                        editingId={editingId}
+                                        editingStatus={editingStatus}
+                                        setEditingStatus={setEditingStatus}
+                                        statuses={statuses}
+                                        getStatusBadge={getStatusBadge}
+                                        formatDate={formatDate}
+                                        formatCurrency={formatCurrency}
+                                        startEdit={startEdit}
+                                        saveEdit={saveEdit}
+                                        cancelEdit={cancelEdit}
+                                        toggleOrderDetails={toggleOrderDetails}
+                                        viewingDetailsId={viewingDetailsId}
+                                    />
+                                    {/* Order Details Row */}
+                                    {viewingDetailsId === order.id && (
+                                        <tr>
+                                            <td colSpan="7" className="p-0">
+                                                <div className="bg-light border-top">
+                                                    <div className="p-3">
+                                                        <h6 className="mb-3">Chi Tiết Đơn Hàng #{order.id}</h6>
+                                                        {orderDetails[order.id] ? (
+                                                            orderDetails[order.id].length > 0 ? (
+                                                                <div className="table-responsive">
+                                                                    <table className="table table-sm table-bordered">
+                                                                        <thead className="table-secondary">
+                                                                            <tr>
+                                                                                <th>Product Details ID</th>
+                                                                                <th>Tên Sản Phẩm</th>
+                                                                                <th className="text-center">Số Lượng</th>
+                                                                                <th className="text-end">Đơn Giá</th>
+                                                                                <th className="text-end">Thành Tiền</th>
+                                                                            </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                            {orderDetails[order.id].map((item, index) => (
+                                                                                <tr key={index}>
+                                                                                    <td>
+                                                                                        <small className="text-monospace">{item.productDetailsId}</small>
+                                                                                    </td>
+                                                                                    <td className="fw-bold">{item.productName}</td>
+                                                                                    <td className="text-center">{item.quantity}</td>
+                                                                                    <td className="text-end">{formatCurrency(item.unitPrice)}</td>
+                                                                                    <td className="text-end fw-bold">{formatCurrency(item.subtotal)}</td>
+                                                                                </tr>
+                                                                            ))}
+                                                                        </tbody>
+                                                                        <tfoot>
+                                                                            <tr className="table-info">
+                                                                                <td colSpan="4" className="text-end fw-bold">Tổng cộng:</td>
+                                                                                <td className="text-end fw-bold fs-6">
+                                                                                    {formatCurrency(order.total)}
+                                                                                </td>
+                                                                            </tr>
+                                                                        </tfoot>
+                                                                    </table>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="text-muted text-center py-3">
+                                                                    <i className="fas fa-inbox fa-2x mb-2"></i>
+                                                                    <p>Không có chi tiết đơn hàng</p>
+                                                                </div>
+                                                            )
+                                                        ) : (
+                                                            <div className="text-center py-3">
+                                                                <div className="spinner-border spinner-border-sm me-2" role="status">
+                                                                    <span className="visually-hidden">Đang tải...</span>
+                                                                </div>
+                                                                Đang tải chi tiết đơn hàng...
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             ))
                         )}
                     </tbody>

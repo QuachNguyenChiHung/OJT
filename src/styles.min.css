@@ -1,7 +1,10 @@
 .fit-cover {
     object-fit: cover
 }
-
+a{
+    text-decoration: none;
+    color: inherit
+}
 .foot-list li::marker {
     font-size: .75rem;
     color: #fff
@@ -276,9 +279,9 @@ footer {
 }
 
 .size-btn.active {
-    background: #ff7a00;
+    background: #06BAE9;
     color: #fff;
-    border-color: #ff7a00
+    border-color: #06BAE9
 }
 
 .qty-wrap {

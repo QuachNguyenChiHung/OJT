@@ -319,7 +319,7 @@ export default function AdminUsers() {
       </div>
 
       {/* User Creation/Edit Form */}
-      <div className="mb-4 p-3" style={{ border: '2px solid #06BAE9', borderRadius: '5px' }}>
+      {/* <div className="mb-4 p-3" style={{ border: '2px solid #06BAE9', borderRadius: '5px' }}>
         <h4>{editingUser ? 'Chỉnh Sửa Người Dùng' : 'Tạo Người Dùng Mới'}</h4>
         <form onSubmit={editingUser ? updateUser : addUser}>
           <div className="row g-3">
@@ -454,7 +454,7 @@ export default function AdminUsers() {
             </div>
           </div>
         </form>
-      </div>
+      </div> */}
 
       {/* Users List */}
       <div className="list-group">

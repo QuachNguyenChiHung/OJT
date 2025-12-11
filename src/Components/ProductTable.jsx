@@ -38,7 +38,7 @@ const ProductTable = ({ title, data, pagination }) => {
             <div className="row gy-4 row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4">
                 {items.map((product, index) => (
 
-                    <div key={index} className="col">
+                    <div key={index} className="col" >
                         {/** Replace products with data prop when available */}
                         <a href={`/product/${product.id}`}>
                             <div
@@ -47,12 +47,16 @@ const ProductTable = ({ title, data, pagination }) => {
                                     position: 'relative',
                                     borderWidth: '3px',
                                     borderStyle: 'none',
-                                    borderRadius: 0
+                                    borderRadius: 0,
+                                    border: '2px solid #e0e0e0',
+                                    borderRadius: '19px',
+                                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1), 0 6px 20px rgba(0, 0, 0, 0.1)',
+                                    transition: 'transform 0.3s ease, box-shadow 0.3s ease'
                                 }}
                             >
                                 <img
                                     className="card-img-top w-100 d-block fit-cover cloth-img"
-                                    style={{ borderRadius: '19px' }}
+                                    style={{ borderRadius: '19px', borderBottomRightRadius: '0', borderBottomLeftRadius: '0' }}
                                     src={product.imageUrl || product.image}
                                     alt={product.name}
                                 />
@@ -85,13 +89,25 @@ const ProductTable = ({ title, data, pagination }) => {
                                         bottom: 0
                                     }}
                                 >
-                                    <h4 className="text-center text-white card-title">
-                                        {product.name}
-                                    </h4>
-                                    <p className="text-center text-white card-text">
-                                        {formatPrice(product.price)}
-                                    </p>
+
+
                                 </div>
+                            </div>
+                            <div
+                                className='py-2'
+                                style={{
+                                    backgroundColor: "#06BAE9",
+                                    borderBottomLeftRadius: '19px',
+                                    borderBottomRightRadius: '19px',
+                                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+                                }}
+                            >
+                                <h4 className="text-center text-white card-title">
+                                    {product.name}
+                                </h4>
+                                <p className="text-center text-white card-text">
+                                    {formatPrice(product.price)}
+                                </p>
                             </div>
                         </a>
                     </div>

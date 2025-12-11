@@ -433,7 +433,7 @@ const ProductDetails = () => {
                         top: 0,
                         width: `${diff * 100}%`,
                         overflow: 'hidden',
-                        color: 'orange'
+                        color: '#06BAE9'
                     }}>★</span>
                 </span>
             );
@@ -520,7 +520,7 @@ const ProductDetails = () => {
                                             style={{ position: 'relative', display: 'inline-block' }}
                                         >
                                             {isFull ? (
-                                                <span style={{ color: 'orange' }}>★</span>
+                                                <span style={{ color: '#06BAE9' }}>★</span>
                                             ) : isHalf ? (
                                                 <>
                                                     <span style={{ color: '#ddd' }}>★</span>
@@ -530,7 +530,7 @@ const ProductDetails = () => {
                                                         top: 0,
                                                         width: `${diff * 100}%`,
                                                         overflow: 'hidden',
-                                                        color: 'orange'
+                                                        color: '#06BAE9'
                                                     }}>★</span>
                                                 </>
                                             ) : (

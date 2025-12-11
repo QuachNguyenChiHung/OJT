@@ -12,19 +12,22 @@ const OrderRow = memo(({
     formatCurrency,
     startEdit,
     saveEdit,
-    cancelEdit
+    cancelEdit,
+    toggleOrderDetails,
+    viewingDetailsId
 }) => {
     const navigate = useNavigate();
 
     const isEditing = editingId === order.id;
+    const isViewingDetails = viewingDetailsId === order.id;
 
     return (
         <tr>
             <td>
-                <small className="text-monospace">{order.id.substring(0, 8)}...</small>
+                <small className="text-monospace">{order.id}</small>
             </td>
             <td>
-                <small className="text-monospace">{order.userId.substring(0, 8)}...</small>
+                <small className="text-monospace">{order.userId}</small>
             </td>
             <td>
                 {isEditing ? (
@@ -73,11 +76,11 @@ const OrderRow = memo(({
                     ) : (
                         <>
                             <button
-                                className="btn btn-sm btn-outline-info"
-                                onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                title="Xem chi tiết"
+                                className={`btn btn-sm ${isViewingDetails ? 'btn-info' : 'btn-outline-info'}`}
+                                onClick={() => toggleOrderDetails(order.id)}
+                                title={isViewingDetails ? "Ẩn chi tiết" : "Xem chi tiết"}
                             >
-                                Chi Tiết
+                                {isViewingDetails ? 'Ẩn' : 'Chi Tiết'}
                             </button>
                             <button
                                 className="btn btn-sm btn-outline-secondary"

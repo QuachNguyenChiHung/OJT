@@ -47,7 +47,7 @@ export default function ChatBot() {
                 }}>
                     {/* Chat Header */}
                     <div style={{
-                        backgroundColor: 'rgb(228, 148, 0)',
+                        backgroundColor: '#06BAE9',
                         color: 'white',
                         padding: '15px',
                         display: 'flex',
@@ -90,7 +90,7 @@ export default function ChatBot() {
                                     maxWidth: '70%',
                                     padding: '10px 15px',
                                     borderRadius: '10px',
-                                    backgroundColor: msg.sender === 'user' ? 'rgb(228, 148, 0)' : 'white',
+                                    backgroundColor: msg.sender === 'user' ? '#06BAE9' : 'white',
                                     color: msg.sender === 'user' ? 'white' : 'black',
                                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
                                 }}>
@@ -127,7 +127,7 @@ export default function ChatBot() {
                         <button
                             type="submit"
                             style={{
-                                backgroundColor: 'rgb(228, 148, 0)',
+                                backgroundColor: '#06BAE9',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '50%',
