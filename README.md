@@ -15,7 +15,7 @@ npm run dev
 npm run build
 ```
 
-## 📦 Deploy to AWS S3 + CloudFront
+## 📦 Deploy to AWS S3 + CloudFronts
 
 ### Prerequisites
 1. AWS CLI đã cài đặt và cấu hình (`aws configure`)
