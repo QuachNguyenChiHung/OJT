@@ -20,7 +20,7 @@ npm run build
 ### Prerequisites
 1. AWS CLI đã cài đặt và cấu hình (`aws configure`)
 2. CDK Infrastructure đã deploy (OJT_infrastructure)
-3. Có quyền S3 và CloudFront
+3. Có quyền S3 và CloudFronts
 
 ### Step 1: Cấu hình .env
 
