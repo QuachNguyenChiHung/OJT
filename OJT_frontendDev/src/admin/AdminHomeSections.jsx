@@ -202,110 +202,144 @@ export default function AdminHomeSections() {
     <AdminLayout title="Quản Lý Trang Chủ">
       <div style={{ maxWidth: 1400 }}>
         {/* Header với hướng dẫn */}
-        <div className="mb-4 p-4 rounded-3" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff' }}>
-          <h4 className="mb-2">🏠 Cấu Hình Hiển Thị Trang Chủ</h4>
-          <p className="mb-3 opacity-75">Quản lý các nhóm sản phẩm (sections) hiển thị trên trang chủ của website</p>
+        <div style={{ 
+          marginBottom: 24, 
+          padding: 28, 
+          borderRadius: 20, 
+          background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)', 
+          color: '#fff',
+          boxShadow: '0 10px 40px rgba(13, 148, 136, 0.3)',
+        }}>
+          <h4 style={{ marginBottom: 8, fontWeight: 700, fontSize: 22 }}>🏠 Cấu Hình Hiển Thị Trang Chủ</h4>
+          <p style={{ marginBottom: 20, opacity: 0.85, fontSize: 14 }}>Quản lý các nhóm sản phẩm (sections) hiển thị trên trang chủ của website</p>
           
           <div className="row g-3">
-            <div className="col-md-4">
-              <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <div className="d-flex align-items-center mb-2">
-                  <span className="badge bg-light text-dark me-2">1</span>
-                  <strong>Tạo Section</strong>
+            {[
+              { num: 1, title: 'Tạo Section', desc: 'Tạo các nhóm sản phẩm như "Bán chạy", "Mới nhất"...' },
+              { num: 2, title: 'Thêm Sản Phẩm', desc: 'Chọn section và thêm sản phẩm vào từ danh sách' },
+              { num: 3, title: 'Sắp Xếp Thứ Tự', desc: 'Số thứ tự nhỏ hơn sẽ hiển thị trước trên trang chủ' },
+            ].map((step, idx) => (
+              <div key={idx} className="col-md-4">
+                <div style={{ 
+                  padding: 16, 
+                  borderRadius: 14, 
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8, gap: 10 }}>
+                    <span style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: '50%',
+                      background: '#fff',
+                      color: '#0d9488',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: 700,
+                      fontSize: 13,
+                    }}>{step.num}</span>
+                    <strong style={{ fontSize: 14 }}>{step.title}</strong>
+                  </div>
+                  <small style={{ opacity: 0.9, fontSize: 12 }}>{step.desc}</small>
                 </div>
-                <small>Tạo các nhóm sản phẩm như "Bán chạy", "Mới nhất", "Khuyến mãi"...</small>
               </div>
-            </div>
-            <div className="col-md-4">
-              <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <div className="d-flex align-items-center mb-2">
-                  <span className="badge bg-light text-dark me-2">2</span>
-                  <strong>Thêm Sản Phẩm</strong>
-                </div>
-                <small>Chọn section và thêm sản phẩm vào từ danh sách bên phải</small>
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="p-3 rounded" style={{ background: 'rgba(255,255,255,0.15)' }}>
-                <div className="d-flex align-items-center mb-2">
-                  <span className="badge bg-light text-dark me-2">3</span>
-                  <strong>Sắp Xếp Thứ Tự</strong>
-                </div>
-                <small>Số thứ tự nhỏ hơn sẽ hiển thị trước trên trang chủ</small>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
         {/* Thống kê nhanh */}
-        <div className="row g-3 mb-4">
-          <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center">
-                <div className="display-6 text-primary mb-1">{sections.length}</div>
-                <div className="text-muted small">Sections</div>
+        <div className="row g-4 mb-4">
+          {[
+            { label: 'Sections', value: sections.length, icon: '📂', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' },
+            { label: 'SP trong sections', value: productsInSections.size, icon: '✅', color: '#10b981', bg: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
+            { label: 'SP chưa phân loại', value: productsNotInAnySections.length, icon: '⚠️', color: '#0891b2', bg: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)' },
+            { label: 'Tổng sản phẩm', value: products.length, icon: '📦', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)' },
+          ].map((stat, idx) => (
+            <div key={idx} className="col-md-3">
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: '1px solid rgba(0,0,0,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '14px',
+                  background: stat.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                  boxShadow: `0 4px 12px ${stat.color}40`,
+                }}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#1e293b' }}>{stat.value}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{stat.label}</div>
+                </div>
               </div>
             </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center">
-                <div className="display-6 text-success mb-1">{productsInSections.size}</div>
-                <div className="text-muted small">SP trong sections</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center">
-                <div className="display-6 text-warning mb-1">{productsNotInAnySections.length}</div>
-                <div className="text-muted small">SP chưa phân loại</div>
-              </div>
-            </div>
-          </div>
-          <div className="col-md-3">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-body text-center">
-                <div className="display-6 text-info mb-1">{products.length}</div>
-                <div className="text-muted small">Tổng sản phẩm</div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
 
         {/* Form tạo/sửa Section */}
-        <div className="card border-0 shadow-sm mb-4">
-          <div className="card-header bg-white py-3">
-            <h6 className="mb-0">
-              {editingSection ? '✏️ Chỉnh Sửa Section' : '➕ Tạo Section Mới'}
-            </h6>
+        <div style={{
+          background: '#fff',
+          borderRadius: '16px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          border: editingSection ? '2px solid #0d9488' : '1px solid rgba(0,0,0,0.05)',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '16px 24px',
+            background: editingSection ? 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' : '#f8fafc',
+            color: editingSection ? '#fff' : '#1e293b',
+            fontWeight: 600,
+            fontSize: 14,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>{editingSection ? '✏️' : '➕'}</span>
+            {editingSection ? 'Chỉnh Sửa Section' : 'Tạo Section Mới'}
           </div>
-          <div className="card-body">
+          <div style={{ padding: 24 }}>
             <form onSubmit={editingSection ? updateSection : createSection}>
               <div className="row g-3 align-items-end">
                 <div className="col-md-4">
-                  <label className="form-label small text-muted">Tên Section *</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Tên Section *</label>
                   <input 
                     className="form-control" 
                     name="title" 
-                    placeholder="VD: Sản phẩm bán chạy, Bộ sưu tập mới..." 
+                    placeholder="VD: Sản phẩm bán chạy..." 
                     value={sectionForm.title} 
                     onChange={handleFormChange} 
                     required 
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0', padding: '10px 14px' }}
                   />
                 </div>
                 <div className="col-md-3">
-                  <label className="form-label small text-muted">Mô tả (tùy chọn)</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Mô tả (tùy chọn)</label>
                   <input 
                     className="form-control" 
                     name="description" 
-                    placeholder="Mô tả ngắn về section" 
+                    placeholder="Mô tả ngắn" 
                     value={sectionForm.description} 
                     onChange={handleFormChange} 
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0', padding: '10px 14px' }}
                   />
                 </div>
                 <div className="col-md-2">
-                  <label className="form-label small text-muted">Thứ tự hiển thị</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Thứ tự</label>
                   <input 
                     className="form-control" 
                     name="displayOrder" 
@@ -314,29 +348,57 @@ export default function AdminHomeSections() {
                     placeholder="0" 
                     value={sectionForm.displayOrder} 
                     onChange={handleFormChange} 
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0', padding: '10px 14px' }}
                   />
                 </div>
                 <div className="col-md-1">
-                  <div className="form-check mt-2">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
                     <input 
-                      className="form-check-input" 
                       type="checkbox" 
                       id="isActive" 
                       name="isActive" 
                       checked={sectionForm.isActive} 
-                      onChange={handleFormChange} 
+                      onChange={handleFormChange}
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
                     />
-                    <label className="form-check-label small" htmlFor="isActive">Hiện</label>
+                    <label htmlFor="isActive" style={{ fontSize: 13, color: '#64748b', cursor: 'pointer' }}>Hiện</label>
                   </div>
                 </div>
                 <div className="col-md-2">
                   {editingSection ? (
                     <div className="d-flex gap-2">
-                      <button className="btn btn-success flex-grow-1" type="submit">Lưu</button>
-                      <button className="btn btn-outline-secondary" type="button" onClick={cancelEdit}>Hủy</button>
+                      <button style={{
+                        flex: 1,
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '10px 16px',
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                      }} type="submit">Lưu</button>
+                      <button style={{
+                        background: '#f1f5f9',
+                        color: '#64748b',
+                        border: 'none',
+                        padding: '10px 16px',
+                        borderRadius: 10,
+                        cursor: 'pointer',
+                      }} type="button" onClick={cancelEdit}>Hủy</button>
                     </div>
                   ) : (
-                    <button className="btn btn-primary w-100" type="submit">
+                    <button style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      padding: '10px 16px',
+                      borderRadius: 10,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)',
+                    }} type="submit">
                       Tạo Section
                     </button>
                   )}
@@ -350,12 +412,30 @@ export default function AdminHomeSections() {
         <div className="row g-4">
           {/* Column 1: Danh sách Sections */}
           <div className="col-lg-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-header bg-primary text-white py-3">
-                <div className="d-flex justify-content-between align-items-center">
-                  <h6 className="mb-0">📂 Danh Sách Sections</h6>
-                  <span className="badge bg-light text-primary">{sections.length}</span>
-                </div>
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              overflow: 'hidden',
+              height: '100%',
+            }}>
+              <div style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                color: '#fff',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <h6 style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>📂 Danh Sách Sections</h6>
+                <span style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  fontSize: 12,
+                  fontWeight: 700,
+                }}>{sections.length}</span>
               </div>
               <div className="card-body p-0" style={{ maxHeight: 500, overflowY: 'auto' }}>
                 {sections.length === 0 ? (
@@ -412,7 +492,7 @@ export default function AdminHomeSections() {
                           </div>
                           <div className="btn-group btn-group-sm">
                             <button 
-                              className={`btn ${selectedSection?.id === section.id ? 'btn-light' : 'btn-outline-primary'} btn-sm`}
+                              className={`btn ${selectedSection?.id === section.id ? 'btn-light' : 'btn-outline-secondary'} btn-sm`}
                               onClick={(e) => { e.stopPropagation(); startEdit(section); }}
                               title="Chỉnh sửa"
                             >
@@ -437,9 +517,20 @@ export default function AdminHomeSections() {
 
           {/* Column 2: Sản phẩm trong Section đã chọn */}
           <div className="col-lg-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-header py-3" style={{ background: '#7c3aed', color: '#fff' }}>
-                <h6 className="mb-0">
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              overflow: 'hidden',
+              height: '100%',
+            }}>
+              <div style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)',
+                color: '#fff',
+              }}>
+                <h6 style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>
                   🛍️ {selectedSection ? `Sản phẩm trong "${selectedSection.title}"` : 'Chọn một Section'}
                 </h6>
               </div>
@@ -489,9 +580,20 @@ export default function AdminHomeSections() {
 
           {/* Column 3: Thêm sản phẩm */}
           <div className="col-lg-4">
-            <div className="card border-0 shadow-sm h-100">
-              <div className="card-header py-3" style={{ background: '#059669', color: '#fff' }}>
-                <h6 className="mb-0">➕ Thêm Sản Phẩm Vào Section</h6>
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              overflow: 'hidden',
+              height: '100%',
+            }}>
+              <div style={{
+                padding: '16px 20px',
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                color: '#fff',
+              }}>
+                <h6 style={{ margin: 0, fontWeight: 600, fontSize: 14 }}>➕ Thêm Sản Phẩm Vào Section</h6>
               </div>
               <div className="card-body p-3">
                 {/* Bộ lọc */}
@@ -577,26 +679,59 @@ export default function AdminHomeSections() {
 
         {/* Sản phẩm chưa phân loại */}
         {productsNotInAnySections.length > 0 && (
-          <div className="card border-0 shadow-sm mt-4">
-            <div className="card-header py-3" style={{ background: '#f59e0b', color: '#000' }}>
-              <div className="d-flex justify-content-between align-items-center">
-                <h6 className="mb-0">⚠️ Sản Phẩm Chưa Thuộc Section Nào</h6>
-                <span className="badge bg-dark">{productsNotInAnySections.length} sản phẩm</span>
-              </div>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            marginTop: 24,
+            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+            border: '1px solid rgba(0,0,0,0.05)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              background: 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}>
+              <h6 style={{ margin: 0, fontWeight: 600, fontSize: 14, color: '#fff' }}>⚠️ Sản Phẩm Chưa Thuộc Section Nào</h6>
+              <span style={{
+                background: '#1e293b',
+                color: '#fff',
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontSize: 12,
+                fontWeight: 700,
+              }}>{productsNotInAnySections.length} sản phẩm</span>
             </div>
-            <div className="card-body">
-              <p className="text-muted small mb-3">
+            <div style={{ padding: 20 }}>
+              <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
                 Các sản phẩm này sẽ hiển thị ở <strong>cuối trang chủ</strong>, sau tất cả các sections. 
                 Thêm vào section để hiển thị ở vị trí nổi bật hơn.
               </p>
               <div className="d-flex flex-wrap gap-2">
                 {productsNotInAnySections.slice(0, 12).map(p => (
-                  <span key={p.id} className="badge bg-light text-dark border py-2 px-3" style={{ fontSize: 12 }}>
+                  <span key={p.id} style={{
+                    background: '#f8fafc',
+                    color: '#1e293b',
+                    border: '1px solid #e2e8f0',
+                    padding: '8px 14px',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: 500,
+                  }}>
                     {p.name}
                   </span>
                 ))}
                 {productsNotInAnySections.length > 12 && (
-                  <span className="badge bg-secondary py-2 px-3">+{productsNotInAnySections.length - 12} sản phẩm khác</span>
+                  <span style={{
+                    background: '#64748b',
+                    color: '#fff',
+                    padding: '8px 14px',
+                    borderRadius: 10,
+                    fontSize: 12,
+                    fontWeight: 600,
+                  }}>+{productsNotInAnySections.length - 12} sản phẩm khác</span>
                 )}
               </div>
             </div>

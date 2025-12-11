@@ -142,8 +142,8 @@ export default function AdminSale() {
       <AdminLayout title="Quản Lý Sale">
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ width: '40px', height: '40px', border: '3px solid #e31837', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
-            <p style={{ marginTop: '16px', color: '#666' }}>Đang tải dữ liệu...</p>
+            <div style={{ width: '48px', height: '48px', border: '4px solid #0d9488', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto' }} />
+            <p style={{ marginTop: '20px', color: '#64748b', fontWeight: 500 }}>Đang tải dữ liệu...</p>
           </div>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
@@ -153,52 +153,164 @@ export default function AdminSale() {
 
   return (
     <AdminLayout title="Quản Lý Sale">
+      {/* Stats Cards */}
+      <div className="row g-4 mb-4">
+        {[
+          { label: 'Tổng SP Sale', value: saleProducts.length, icon: '🔥', color: '#ef4444', bg: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' },
+          { label: 'Mức giảm giá', value: discountLevels.length, icon: '🏷️', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' },
+          { label: 'SP chưa sale', value: products.length - saleProducts.length, icon: '📦', color: '#10b981', bg: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
+        ].map((stat, idx) => (
+          <div key={idx} className="col-md-4">
+            <div style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+              border: '1px solid rgba(0,0,0,0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+            }}>
+              <div style={{
+                width: 52,
+                height: 52,
+                borderRadius: '14px',
+                background: stat.bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 24,
+                boxShadow: `0 4px 12px ${stat.color}40`,
+              }}>
+                {stat.icon}
+              </div>
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#1e293b' }}>{stat.value}</div>
+                <div style={{ fontSize: 12, color: '#64748b' }}>{stat.label}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Discount Levels Bar */}
-      <div style={{ background: '#fff', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e31837" strokeWidth="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      <div style={{ 
+        background: '#fff', 
+        borderRadius: '16px', 
+        padding: '20px 24px', 
+        marginBottom: '24px', 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)', 
+        border: '1px solid rgba(0,0,0,0.05)',
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '12px', 
+        flexWrap: 'wrap' 
+      }}>
+        <span style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: 18 }}>🏷️</span>
           Mức giảm:
         </span>
         
         {discountLevels.map(level => {
           const count = getDiscountCount(level.discountPercent);
           const isActive = filterDiscount === level.discountPercent;
-          const borderColor = isActive ? '#e31837' : '#e5e7eb';
           return (
             <div key={level.id} style={{ display: 'inline-flex', alignItems: 'center' }}>
               <button onClick={() => setFilterDiscount(isActive ? null : level.discountPercent)}
-                style={{ padding: '8px 16px', borderRadius: '8px 0 0 8px', 
-                  borderTop: `2px solid ${borderColor}`, borderBottom: `2px solid ${borderColor}`, borderLeft: `2px solid ${borderColor}`, borderRight: 'none',
-                  background: isActive ? '#fef2f2' : '#fff', color: isActive ? '#e31837' : '#374151', fontWeight: isActive ? '600' : '500', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s' }}>
+                style={{ 
+                  padding: '10px 18px', 
+                  borderRadius: '10px 0 0 10px', 
+                  border: 'none',
+                  background: isActive ? 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' : '#f1f5f9', 
+                  color: isActive ? '#fff' : '#64748b', 
+                  fontWeight: 600, 
+                  cursor: 'pointer', 
+                  fontSize: '13px', 
+                  transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 4px 12px rgba(239, 68, 68, 0.3)' : 'none',
+                }}>
                 -{level.discountPercent}%
-                <span style={{ marginLeft: '6px', background: isActive ? '#e31837' : '#e5e7eb', color: isActive ? '#fff' : '#6b7280', padding: '2px 8px', borderRadius: '10px', fontSize: '11px' }}>{count}</span>
+                <span style={{ 
+                  marginLeft: '8px', 
+                  background: isActive ? 'rgba(255,255,255,0.2)' : '#e2e8f0', 
+                  color: isActive ? '#fff' : '#64748b', 
+                  padding: '2px 10px', 
+                  borderRadius: '12px', 
+                  fontSize: '11px',
+                  fontWeight: 700,
+                }}>{count}</span>
               </button>
               <button onClick={() => deleteDiscountLevel(level.discountPercent)} title="Xóa mức giảm"
-                style={{ padding: '8px 10px', borderRadius: '0 8px 8px 0', 
-                  borderTop: `2px solid ${borderColor}`, borderBottom: `2px solid ${borderColor}`, borderRight: `2px solid ${borderColor}`, borderLeft: `1px solid #eee`,
-                  background: '#fff', color: '#9ca3af', cursor: 'pointer', fontSize: '12px', transition: 'all 0.2s' }}
-                onMouseEnter={e => e.target.style.color = '#ef4444'} onMouseLeave={e => e.target.style.color = '#9ca3af'}>✕</button>
+                style={{ 
+                  padding: '10px 12px', 
+                  borderRadius: '0 10px 10px 0', 
+                  border: 'none',
+                  borderLeft: '1px solid rgba(0,0,0,0.1)',
+                  background: isActive ? 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' : '#f1f5f9', 
+                  color: isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8', 
+                  cursor: 'pointer', 
+                  fontSize: '12px', 
+                  transition: 'all 0.2s' 
+                }}
+                onMouseEnter={e => e.target.style.color = isActive ? '#fff' : '#ef4444'} 
+                onMouseLeave={e => e.target.style.color = isActive ? 'rgba(255,255,255,0.7)' : '#94a3b8'}>✕</button>
             </div>
           );
         })}
 
         {showAddDiscount ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input type="number" min="1" max="99" value={newDiscountPercent} onChange={(e) => setNewDiscountPercent(e.target.value)}
               placeholder="%" autoFocus onKeyDown={(e) => e.key === 'Enter' && createDiscountLevel()}
-              style={{ width: '60px', padding: '8px', borderRadius: '8px', border: '2px solid #10b981', fontSize: '13px', textAlign: 'center' }} />
-            <button onClick={createDiscountLevel} style={{ padding: '8px 12px', borderRadius: '8px', border: 'none', background: '#10b981', color: '#fff', cursor: 'pointer' }}>✓</button>
-            <button onClick={() => { setShowAddDiscount(false); setNewDiscountPercent(''); }} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', cursor: 'pointer' }}>✕</button>
+              style={{ width: '70px', padding: '10px', borderRadius: '10px', border: '2px solid #10b981', fontSize: '14px', textAlign: 'center', fontWeight: 600 }} />
+            <button onClick={createDiscountLevel} style={{ 
+              padding: '10px 16px', 
+              borderRadius: '10px', 
+              border: 'none', 
+              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', 
+              color: '#fff', 
+              cursor: 'pointer',
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+            }}>✓</button>
+            <button onClick={() => { setShowAddDiscount(false); setNewDiscountPercent(''); }} style={{ 
+              padding: '10px 16px', 
+              borderRadius: '10px', 
+              border: 'none', 
+              background: '#f1f5f9', 
+              color: '#64748b', 
+              cursor: 'pointer' 
+            }}>✕</button>
           </div>
         ) : (
           <button onClick={() => setShowAddDiscount(true)}
-            style={{ padding: '8px 16px', borderRadius: '8px', border: '2px dashed #10b981', background: '#f0fdf4', color: '#10b981', fontWeight: '500', cursor: 'pointer', fontSize: '13px' }}>
+            style={{ 
+              padding: '10px 18px', 
+              borderRadius: '10px', 
+              border: '2px dashed #10b981', 
+              background: '#f0fdf4', 
+              color: '#10b981', 
+              fontWeight: 600, 
+              cursor: 'pointer', 
+              fontSize: '13px',
+              transition: 'all 0.2s',
+            }}>
             + Thêm mức
           </button>
         )}
         
         {filterDiscount && (
-          <button onClick={() => setFilterDiscount(null)} style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', cursor: 'pointer', fontSize: '13px' }}>
+          <button onClick={() => setFilterDiscount(null)} style={{ 
+            marginLeft: 'auto', 
+            padding: '10px 18px', 
+            borderRadius: '10px', 
+            border: 'none', 
+            background: '#f1f5f9', 
+            color: '#64748b', 
+            cursor: 'pointer', 
+            fontSize: '13px',
+            fontWeight: 500,
+          }}>
             Xem tất cả ({saleProducts.length})
           </button>
         )}
@@ -207,20 +319,55 @@ export default function AdminSale() {
       {/* Main Content */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         {/* Left: Sale Products */}
-        <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span style={{ fontSize: '20px' }}>🔥</span>
-              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
-                Sản Phẩm Sale {filterDiscount && <span style={{ color: '#e31837' }}>(-{filterDiscount}%)</span>}
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '16px', 
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)', 
+          border: '1px solid rgba(0,0,0,0.05)',
+          overflow: 'hidden' 
+        }}>
+          <div style={{ 
+            padding: '20px 24px', 
+            background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)',
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '22px' }}>🔥</span>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#fff' }}>
+                Sản Phẩm Sale {filterDiscount && <span style={{ opacity: 0.9 }}>(-{filterDiscount}%)</span>}
               </h3>
-              <span style={{ background: '#fef2f2', color: '#e31837', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' }}>{filteredSaleProducts.length}</span>
+              <span style={{ 
+                background: 'rgba(255,255,255,0.2)', 
+                color: '#fff', 
+                padding: '4px 12px', 
+                borderRadius: '20px', 
+                fontSize: '12px', 
+                fontWeight: '700' 
+              }}>{filteredSaleProducts.length}</span>
             </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button onClick={() => setViewMode('grid')} style={{ padding: '6px 10px', borderRadius: '6px', border: 'none', background: viewMode === 'grid' ? '#e31837' : '#f3f4f6', color: viewMode === 'grid' ? '#fff' : '#6b7280', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', gap: '6px' }}>
+              <button onClick={() => setViewMode('grid')} style={{ 
+                padding: '8px 12px', 
+                borderRadius: '8px', 
+                border: 'none', 
+                background: viewMode === 'grid' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', 
+                color: '#fff', 
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
               </button>
-              <button onClick={() => setViewMode('table')} style={{ padding: '6px 10px', borderRadius: '6px', border: 'none', background: viewMode === 'table' ? '#e31837' : '#f3f4f6', color: viewMode === 'table' ? '#fff' : '#6b7280', cursor: 'pointer' }}>
+              <button onClick={() => setViewMode('table')} style={{ 
+                padding: '8px 12px', 
+                borderRadius: '8px', 
+                border: 'none', 
+                background: viewMode === 'table' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)', 
+                color: '#fff', 
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="17" width="18" height="4"/></svg>
               </button>
             </div>
@@ -301,21 +448,57 @@ export default function AdminSale() {
         </div>
 
         {/* Right: Available Products */}
-        <div style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #f3f4f6' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '20px' }}>📦</span>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>Thêm Sản Phẩm</h3>
-                <span style={{ background: '#f3f4f6', color: '#6b7280', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600' }}>{availableProducts.length}</span>
+        <div style={{ 
+          background: '#fff', 
+          borderRadius: '16px', 
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)', 
+          border: '1px solid rgba(0,0,0,0.05)',
+          overflow: 'hidden' 
+        }}>
+          <div style={{ 
+            padding: '20px 24px', 
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '22px' }}>📦</span>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#fff' }}>Thêm Sản Phẩm</h3>
+                <span style={{ 
+                  background: 'rgba(255,255,255,0.2)', 
+                  color: '#fff', 
+                  padding: '4px 12px', 
+                  borderRadius: '20px', 
+                  fontSize: '12px', 
+                  fontWeight: '700' 
+                }}>{availableProducts.length}</span>
               </div>
               <select value={selectedDiscount || ''} onChange={(e) => setSelectedDiscount(parseInt(e.target.value))}
-                style={{ padding: '8px 12px', borderRadius: '8px', border: '2px solid #e31837', fontSize: '13px', fontWeight: '600', color: '#e31837', background: '#fef2f2' }}>
+                style={{ 
+                  padding: '10px 16px', 
+                  borderRadius: '10px', 
+                  border: 'none', 
+                  fontSize: '13px', 
+                  fontWeight: '600', 
+                  color: '#ef4444', 
+                  background: '#fff',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }}>
                 {discountOptions.map(d => <option key={d} value={d}>-{d}%</option>)}
               </select>
             </div>
-            <input type="text" placeholder="🔍 Tìm kiếm sản phẩm..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: '100%', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: '14px', boxSizing: 'border-box' }} />
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: 16 }}>🔍</span>
+              <input type="text" placeholder="Tìm kiếm sản phẩm..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ 
+                  width: '100%', 
+                  padding: '12px 16px 12px 44px', 
+                  borderRadius: '10px', 
+                  border: 'none', 
+                  fontSize: '14px', 
+                  boxSizing: 'border-box',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                }} />
+            </div>
           </div>
           
           {/* Bulk Actions */}

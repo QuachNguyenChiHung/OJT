@@ -725,36 +725,98 @@ export default function AdminProducts() {
 
   return (
     <AdminLayout title="Quản Lý Sản Phẩm">
-      <div style={{ maxWidth: 1200 }}>
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div></div>
-          <button className="btn" style={{ background: '#008B8B', color: '#fff' }} onClick={() => navigate('/admin/products')}>
-            🔄 Làm Mới
-          </button>
+      <div style={{ maxWidth: 1400 }}>
+        {/* Stats Cards */}
+        <div className="row g-4 mb-4">
+          {[
+            { label: 'Tổng sản phẩm', value: products.length, icon: '📦', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' },
+            { label: 'Đang hiển thị', value: filteredProducts.length, icon: '👁️', color: '#10b981', bg: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
+            { label: 'Danh mục', value: categories.length, icon: '📂', color: '#0891b2', bg: 'linear-gradient(135deg, #0891b2 0%, #06b6d4 100%)' },
+            { label: 'Thương hiệu', value: brands.length, icon: '🏷️', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)' },
+          ].map((stat, idx) => (
+            <div key={idx} className="col-md-3">
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: '1px solid rgba(0,0,0,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+              }}>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '14px',
+                  background: stat.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                  boxShadow: `0 4px 12px ${stat.color}40`,
+                }}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#1e293b' }}>{stat.value}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{stat.label}</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
       {/* Search Bar & Category Filter */}
-      <div className="mb-3">
-        <div className="row g-2 align-items-center">
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '20px 24px',
+        marginBottom: '24px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(0,0,0,0.05)',
+      }}>
+        <div className="row g-3 align-items-center">
           <div className="col-md-4">
-            <div className="input-group">
-              <span className="input-group-text">🔍</span>
+            <div style={{ position: 'relative' }}>
+              <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🔍</span>
               <input
                 type="text"
                 className="form-control"
                 placeholder="Tìm kiếm sản phẩm..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  paddingLeft: 48,
+                  borderRadius: '12px',
+                  border: '2px solid #e2e8f0',
+                  padding: '12px 16px 12px 48px',
+                  fontSize: 14,
+                }}
               />
               {searchTerm && (
-                <button className="btn btn-outline-secondary" type="button" onClick={() => setSearchTerm('')}>×</button>
+                <button 
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: 12,
+                  }}
+                  onClick={() => setSearchTerm('')}
+                >×</button>
               )}
             </div>
           </div>
-          <div className="col-md-5">
+          <div className="col-md-4">
             {/* Cascading Category Filter */}
             <div className="d-flex gap-2 align-items-center">
-              <small className="text-muted">Lọc danh mục:</small>
+              <small style={{ color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Lọc danh mục:</small>
               <div style={{ flex: 1 }}>
                 <CascadingCategorySelector
                   categories={categories}
@@ -771,20 +833,48 @@ export default function AdminProducts() {
               </div>
               {filterCategoryId && (
                 <button 
-                  className="btn btn-outline-secondary btn-sm" 
+                  style={{
+                    background: '#fef2f2',
+                    color: '#ef4444',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    fontSize: 14,
+                  }}
                   onClick={() => setFilterCategoryPath([])}
                   title="Xóa bộ lọc"
                 >×</button>
               )}
             </div>
           </div>
-          <div className="col-md-3 text-end">
-            <small className="text-muted me-2">
-              {filteredProducts.length}/{products.length} SP
-            </small>
+          <div className="col-md-4 text-end d-flex justify-content-end align-items-center gap-3">
+            <span style={{
+              background: '#f1f5f9',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              fontSize: 13,
+              color: '#64748b',
+              fontWeight: 500,
+            }}>
+              📊 {filteredProducts.length}/{products.length} SP
+            </span>
             <button
-              className="btn btn-sm"
-              style={{ background: showCreateForm ? '#dc3545' : '#008B8B', color: '#fff' }}
+              style={{
+                background: showCreateForm 
+                  ? 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)' 
+                  : 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                boxShadow: showCreateForm 
+                  ? '0 4px 12px rgba(239, 68, 68, 0.3)' 
+                  : '0 4px 12px rgba(99, 102, 241, 0.3)',
+              }}
               onClick={() => setShowCreateForm(!showCreateForm)}
             >
               {showCreateForm ? '▲ Thu gọn' : '▼ Tạo sản phẩm'}
@@ -795,8 +885,34 @@ export default function AdminProducts() {
 
       {/* Product Creation Form - Collapsible */}
       {showCreateForm && (
-      <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
-        <h4>Tạo Sản Phẩm Mới</h4>
+      <div style={{
+        marginBottom: 24,
+        padding: 24,
+        border: '2px solid #0d9488',
+        borderRadius: '16px',
+        background: '#fff',
+        boxShadow: '0 4px 20px rgba(99, 102, 241, 0.1)',
+      }}>
+        <h4 style={{ 
+          marginBottom: 20, 
+          fontWeight: 600, 
+          color: '#1e293b', 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 10 
+        }}>
+          <span style={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 16,
+          }}>➕</span>
+          Tạo Sản Phẩm Mới
+        </h4>
         <form onSubmit={addProduct}>
           <div className="row g-2">
             <div className="col-md-3">
@@ -858,8 +974,8 @@ export default function AdminProducts() {
                 <small className="d-block text-muted mb-2">Ảnh 1: hiển thị mặc định | Ảnh 2: hiển thị khi di chuột vào</small>
                 <div className="row g-3">
                   <div className="col-md-6">
-                    <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
-                      <label className="form-label small">Ảnh 1 (Mặc định)</label>
+                    <div className="rounded p-2" style={{ background: '#f0fdfa', border: '1px solid #99f6e4' }}>
+                      <label className="form-label small" style={{ color: '#0f766e' }}>Ảnh 1 (Mặc định)</label>
                       <input
                         ref={thumb1InputRef}
                         type="file"
@@ -875,8 +991,8 @@ export default function AdminProducts() {
                     </div>
                   </div>
                   <div className="col-md-6">
-                    <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
-                      <label className="form-label small">Ảnh 2 (Khi hover)</label>
+                    <div className="rounded p-2" style={{ background: '#f0fdfa', border: '1px solid #99f6e4' }}>
+                      <label className="form-label small" style={{ color: '#0f766e' }}>Ảnh 2 (Khi hover)</label>
                       <input
                         ref={thumb2InputRef}
                         type="file"
@@ -907,13 +1023,26 @@ export default function AdminProducts() {
                     <label className="form-label fw-bold mb-0">🎨 Phân loại sản phẩm (Màu sắc, Size, Số lượng)</label>
                     <small className="d-block text-muted">Mỗi phân loại có: màu, size, số lượng, trạng thái và ảnh riêng (tối đa 5 ảnh)</small>
                   </div>
-                  <button type="button" className="btn btn-outline-primary btn-sm" onClick={addColorVariant}>
+                  <button 
+                    type="button" 
+                    onClick={addColorVariant}
+                    style={{ 
+                      background: '#f0fdfa', 
+                      color: '#0d9488', 
+                      border: '2px solid #0d9488',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                    }}
+                  >
                     + Thêm phân loại
                   </button>
                 </div>
                 
                 {colorVariants.length === 0 ? (
-                  <div className="text-muted small p-3 border rounded" style={{ background: '#f8f9fa' }}>
+                  <div className="small p-3 rounded" style={{ background: '#f0fdfa', border: '1px solid #99f6e4', color: '#0f766e' }}>
                     <p className="mb-2">💡 <strong>Hướng dẫn:</strong></p>
                     <ul className="mb-0 ps-3">
                       <li>Click "Thêm phân loại" để thêm biến thể sản phẩm</li>
@@ -922,7 +1051,7 @@ export default function AdminProducts() {
                     </ul>
                   </div>
                 ) : (
-                  <div className="border rounded p-2" style={{ background: '#f8f9fa' }}>
+                  <div className="rounded p-2" style={{ background: '#f0fdfa', border: '1px solid #99f6e4' }}>
                     {colorVariants.map((variant, vIdx) => (
                       <div key={vIdx} className="mb-3 p-3 border rounded bg-white" style={{ borderLeft: `4px solid ${variant.colorCode} !important` }}>
                         {/* Color info row */}
@@ -1057,7 +1186,21 @@ export default function AdminProducts() {
 
             {/* Submit Button - Moved to bottom */}
             <div className="col-md-12 mt-3">
-              <button className="btn btn-lg" style={{ background: '#008B8B', color: '#fff', width: '100%' }} type="submit">
+              <button 
+                type="submit"
+                style={{ 
+                  background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)', 
+                  color: '#fff', 
+                  width: '100%',
+                  border: 'none',
+                  padding: '14px 24px',
+                  borderRadius: '12px',
+                  fontSize: 16,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)',
+                }}
+              >
                 🚀 Tạo Sản Phẩm
               </button>
             </div>
@@ -1066,96 +1209,222 @@ export default function AdminProducts() {
       </div>
       )}
 
-      <div className="list-group">
+      {/* Products List */}
+      <div style={{
+        background: '#fff',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+        border: '1px solid rgba(0,0,0,0.05)',
+      }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+          padding: '16px 24px',
+          color: '#fff',
+          fontWeight: 600,
+          fontSize: 14,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <span>📦 Danh Sách Sản Phẩm</span>
+          <button 
+            style={{
+              background: 'rgba(255,255,255,0.2)',
+              color: '#fff',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 500,
+            }}
+            onClick={() => navigate('/admin/products')}
+          >
+            🔄 Làm Mới
+          </button>
+        </div>
+        
         {filteredProducts.length === 0 ? (
-          <div className="text-center py-4">
-            <div className="text-muted">
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+            <div style={{ color: '#64748b', marginBottom: 12 }}>
               {searchTerm ? `Không tìm thấy sản phẩm nào với từ khóa "${searchTerm}"` : 'Không có sản phẩm nào'}
             </div>
             {searchTerm && (
               <button
-                className="btn btn-link btn-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                }}
                 onClick={() => setSearchTerm('')}
               >
-                Xóa tìm kiếm để hiển thị tất cả sản phẩm
+                Xóa tìm kiếm
               </button>
             )}
           </div>
         ) : (
-          filteredProducts.map((p) => (
-            <div key={p.id} className="list-group-item">
-              <div className="d-flex justify-content-between align-items-start">
-                {/* Product Thumbnail */}
-                <div style={{ marginRight: 15, flexShrink: 0 }}>
-                  {p.thumbnail ? (
-                    <img
-                      src={p.thumbnail}
-                      alt={p.name}
+          <div>
+            {filteredProducts.map((p, idx) => (
+              <div 
+                key={p.id} 
+                style={{
+                  padding: '20px 24px',
+                  borderBottom: '1px solid #f1f5f9',
+                  background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <div className="d-flex justify-content-between align-items-start gap-4">
+                  {/* Product Thumbnail */}
+                  <div style={{ flexShrink: 0 }}>
+                    {p.thumbnail ? (
+                      <img
+                        src={p.thumbnail}
+                        alt={p.name}
+                        style={{
+                          width: 90,
+                          height: 90,
+                          objectFit: 'cover',
+                          borderRadius: 12,
+                          border: '2px solid #e2e8f0',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                        }}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/img/no-image.svg';
+                        }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: 90,
+                        height: 90,
+                        background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
+                        borderRadius: 12,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#94a3b8',
+                        fontSize: 24,
+                      }}>
+                        📷
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Product Info */}
+                  <div style={{ flex: 1 }}>
+                    <Link 
+                      to={`/admin/products/${p.id}`} 
+                      style={{ 
+                        fontSize: 17, 
+                        fontWeight: 600, 
+                        color: '#1e293b', 
+                        textDecoration: 'none',
+                        display: 'block',
+                        marginBottom: 6,
+                      }}
+                    >
+                      {p.name}
+                    </Link>
+                    <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, color: '#64748b' }}>
+                        📂 {p.categoryName || getCategoryName(p.categoryName)}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#64748b' }}>
+                        🏷️ {p.brandName || getBrandName(p.brandName)}
+                      </span>
+                    </div>
+                    {p.description && (
+                      <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 10 }}>
+                        {p.description.length > 100 ? `${p.description.substring(0, 100)}...` : p.description}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                      }}>
+                        {p.price ? `${p.price.toLocaleString()} VND` : 'Chưa có giá'}
+                      </span>
+                      <span style={{ fontSize: 13, color: '#0d9488' }}>
+                        {typeof p.averageRating === 'number'
+                          ? `⭐ ${p.averageRating.toFixed(1)}`
+                          : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)}` : '⭐ --')}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button
                       style={{
-                        width: 80,
-                        height: 80,
-                        objectFit: 'cover',
-                        borderRadius: 8,
-                        border: '1px solid #ddd'
+                        background: getProductSections(p.id).length > 0 
+                          ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                          : '#f1f5f9',
+                        color: getProductSections(p.id).length > 0 ? '#fff' : '#0d9488',
+                        border: 'none',
+                        padding: '8px 14px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 500,
+                        boxShadow: getProductSections(p.id).length > 0 ? '0 2px 8px rgba(16, 185, 129, 0.3)' : 'none',
                       }}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/img/no-image.svg';
+                      onClick={() => openSectionModal(p)}
+                      title="Quản lý hiển thị trên trang chủ"
+                    >
+                      {getProductSections(p.id).length > 0 
+                        ? `📍 ${getProductSections(p.id).length} Section` 
+                        : '+ Hiển thị trang chủ'}
+                    </button>
+                    <button 
+                      style={{
+                        background: '#fef2f2',
+                        color: '#ef4444',
+                        border: 'none',
+                        padding: '8px 14px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 500,
                       }}
-                    />
-                  ) : (
-                    <div style={{
-                      width: 80,
-                      height: 80,
-                      background: '#f0f0f0',
-                      borderRadius: 8,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#999',
-                      fontSize: 12
-                    }}>
-                      No Image
-                    </div>
-                  )}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <Link to={`/admin/products/${p.id}`} className="h5 d-block text-decoration-none">{p.name}</Link>
-                  <div className="text-muted small">
-                    Category: {p.categoryName || getCategoryName(p.categoryName)} — Brand: {p.brandName || getBrandName(p.brandName)}
+                      onClick={() => remove(p.id)}
+                    >
+                      Xóa
+                    </button>
+                    <Link 
+                      to={`/admin/products/${p.id}`} 
+                      style={{
+                        background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                      }}
+                    >
+                      Chi tiết
+                    </Link>
                   </div>
-                  {p.description && <div className="text-muted small mt-1">{p.description.length > 120 ? `${p.description.substring(0, 120)}...` : p.description}</div>}
-
-                  <div className="mt-2">
-                    <span className="badge bg-success me-2">{p.price ? `${p.price.toLocaleString()} VND` : 'No price'}</span>
-
-                    {/* averageRating shown below price */}
-                    <div className="small text-muted mt-1">
-                      {typeof p.averageRating === 'number'
-                        ? `⭐ ${p.averageRating.toFixed(1)} / 5`
-                        : (p.averageRating ? `⭐ ${Number(p.averageRating).toFixed(1)} / 5` : 'No rating')}
-                    </div>
-
-
-                  </div>
-                </div>
-                <div className="d-flex gap-2 flex-wrap align-items-center">
-                  {/* Add to Home button */}
-                  <button
-                    className="btn btn-sm btn-outline-primary"
-                    onClick={() => openSectionModal(p)}
-                    title="Quản lý hiển thị trên trang chủ"
-                  >
-                    {getProductSections(p.id).length > 0 
-                      ? `📍 ${getProductSections(p.id).length} Section` 
-                      : '+ Hiển thị trang chủ'}
-                  </button>
-                  <button className="btn btn-sm btn-outline-danger" onClick={() => remove(p.id)}>Xóa</button>
-                  <Link to={`/admin/products/${p.id}`} className="btn btn-sm btn-primary">Chi tiết</Link>
                 </div>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
       </div>
@@ -1164,15 +1433,41 @@ export default function AdminProducts() {
       {showSectionModal && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', zIndex: 2000,
+          background: 'rgba(15, 23, 42, 0.7)', 
+          backdropFilter: 'blur(4px)',
+          zIndex: 2000,
           display: 'flex', alignItems: 'center', justifyContent: 'center'
         }} onClick={() => setShowSectionModal(false)}>
           <div style={{
-            background: '#fff', borderRadius: 12, padding: 24, minWidth: 450, maxWidth: 550
+            background: '#fff', 
+            borderRadius: 20, 
+            padding: 28, 
+            minWidth: 480, 
+            maxWidth: 580,
+            boxShadow: '0 25px 50px rgba(0,0,0,0.25)',
           }} onClick={e => e.stopPropagation()}>
-            <h5 className="mb-3">🏠 Hiển thị trên Trang Chủ</h5>
-            <p className="text-muted small mb-2">
-              Sản phẩm: <strong>{selectedProductForSection?.name}</strong>
+            <h5 style={{ 
+              marginBottom: 16, 
+              fontWeight: 700, 
+              color: '#1e293b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}>
+              <span style={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+              }}>🏠</span>
+              Hiển thị trên Trang Chủ
+            </h5>
+            <p style={{ color: '#64748b', fontSize: 13, marginBottom: 16 }}>
+              Sản phẩm: <strong style={{ color: '#1e293b' }}>{selectedProductForSection?.name}</strong>
             </p>
             
             {/* Check if product is already in any section */}
@@ -1180,25 +1475,60 @@ export default function AdminProducts() {
               const productSections = homeSections.filter(s => s.products?.some(p => p.id === selectedProductForSection?.id));
               if (productSections.length > 0) {
                 return (
-                  <div className="alert alert-success py-2 mb-3">
-                    <small>✅ Đã có trong: {productSections.map(s => s.title).join(', ')}</small>
+                  <div style={{
+                    background: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+                    border: '1px solid #10b981',
+                    borderRadius: 12,
+                    padding: '12px 16px',
+                    marginBottom: 16,
+                    fontSize: 13,
+                    color: '#059669',
+                  }}>
+                    ✅ Đã có trong: {productSections.map(s => s.title).join(', ')}
                   </div>
                 );
               }
               return (
-                <div className="alert alert-info py-2 mb-3">
-                  <small>ℹ️ Sản phẩm chưa thuộc section nào. Chọn cách hiển thị:</small>
+                <div style={{
+                  background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+                  border: '1px solid #3b82f6',
+                  borderRadius: 12,
+                  padding: '12px 16px',
+                  marginBottom: 16,
+                  fontSize: 13,
+                  color: '#2563eb',
+                }}>
+                  ℹ️ Sản phẩm chưa thuộc section nào. Chọn cách hiển thị:
                 </div>
               );
             })()}
 
             {/* Option 1: Add to Section */}
-            <div className="mb-3 p-3 border rounded" style={{ background: '#f8f9fa' }}>
-              <h6 className="mb-2">📂 Thêm vào Section (hiển thị đầu trang)</h6>
+            <div style={{
+              marginBottom: 16,
+              padding: 16,
+              borderRadius: 14,
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+            }}>
+              <h6 style={{ marginBottom: 12, fontWeight: 600, color: '#1e293b', fontSize: 14 }}>
+                📂 Thêm vào Section (hiển thị đầu trang)
+              </h6>
               {homeSections.length === 0 ? (
-                <div className="text-center py-2">
-                  <p className="text-muted small mb-2">Chưa có section nào.</p>
-                  <Link to="/admin/home-sections" className="btn btn-primary btn-sm">
+                <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                  <p style={{ color: '#64748b', fontSize: 13, marginBottom: 12 }}>Chưa có section nào.</p>
+                  <Link 
+                    to="/admin/home-sections" 
+                    style={{
+                      background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                      color: '#fff',
+                      padding: '8px 16px',
+                      borderRadius: 10,
+                      textDecoration: 'none',
+                      fontSize: 13,
+                      fontWeight: 500,
+                    }}
+                  >
                     Tạo Section mới
                   </Link>
                 </div>
@@ -1209,7 +1539,19 @@ export default function AdminProducts() {
                     return (
                       <button
                         key={section.id}
-                        className={`btn btn-sm ${isInSection ? 'btn-success' : 'btn-outline-primary'}`}
+                        style={{
+                          background: isInSection 
+                            ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
+                            : '#fff',
+                          color: isInSection ? '#fff' : '#0d9488',
+                          border: isInSection ? 'none' : '2px solid #0d9488',
+                          padding: '8px 14px',
+                          borderRadius: 10,
+                          cursor: isInSection ? 'default' : 'pointer',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          opacity: isInSection ? 0.8 : 1,
+                        }}
                         onClick={() => !isInSection && addToSection(section.id)}
                         disabled={isInSection}
                       >
@@ -1222,24 +1564,60 @@ export default function AdminProducts() {
             </div>
 
             {/* Option 2: Show without section */}
-            <div className="mb-3 p-3 border rounded" style={{ background: '#fff3cd' }}>
-              <h6 className="mb-2">📦 Không thêm vào Section</h6>
-              <p className="text-muted small mb-2">
+            <div style={{
+              marginBottom: 20,
+              padding: 16,
+              borderRadius: 14,
+              background: 'linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%)',
+              border: '1px solid #14b8a6',
+            }}>
+              <h6 style={{ marginBottom: 8, fontWeight: 600, color: '#0f766e', fontSize: 14 }}>
+                📦 Không thêm vào Section
+              </h6>
+              <p style={{ color: '#0d9488', fontSize: 12, marginBottom: 10 }}>
                 Sản phẩm sẽ hiển thị ở <strong>cuối trang chủ</strong> (dưới các sections).
                 Chỉ cần sản phẩm có trạng thái Active là sẽ tự động hiển thị.
               </p>
-              <div className="d-flex gap-2">
-                <span className={`badge ${selectedProductForSection?.isActive ? 'bg-success' : 'bg-warning'}`}>
-                  {selectedProductForSection?.isActive ? '✅ Đang Active' : '⚠️ Chưa Active'}
-                </span>
-              </div>
+              <span style={{
+                background: selectedProductForSection?.isActive ? '#10b981' : '#64748b',
+                color: '#fff',
+                padding: '4px 12px',
+                borderRadius: 20,
+                fontSize: 11,
+                fontWeight: 600,
+              }}>
+                {selectedProductForSection?.isActive ? '✅ Đang Active' : '⚠️ Chưa Active'}
+              </span>
             </div>
             
             <div className="d-flex justify-content-between">
-              <Link to="/admin/home-sections" className="btn btn-outline-primary btn-sm">
+              <Link 
+                to="/admin/home-sections" 
+                style={{
+                  background: '#f1f5f9',
+                  color: '#0d9488',
+                  padding: '10px 18px',
+                  borderRadius: 10,
+                  textDecoration: 'none',
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
+              >
                 ⚙️ Quản lý Sections
               </Link>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowSectionModal(false)}>
+              <button 
+                style={{
+                  background: '#64748b',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 500,
+                }}
+                onClick={() => setShowSectionModal(false)}
+              >
                 Đóng
               </button>
             </div>

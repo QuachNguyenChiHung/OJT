@@ -99,16 +99,28 @@ export default function AdminOrders() {
 
     const getStatusBadge = (status) => {
         const statusConfig = {
-            PENDING: { class: 'bg-warning text-dark', text: 'Chờ Xử Lý' },
-            PROCESSING: { class: 'bg-info text-white', text: 'Đang Xử Lý' },
-            SHIPPING: { class: 'bg-primary text-white', text: 'Đang Giao' },
-            DELIVERED: { class: 'bg-success text-white', text: 'Đã Giao' },
-            CANCELLED: { class: 'bg-danger text-white', text: 'Đã Hủy' }
+            PENDING: { bg: 'linear-gradient(135deg, #64748b 0%, #94a3b8 100%)', text: 'Chờ Xử Lý', icon: '⏳' },
+            PROCESSING: { bg: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)', text: 'Đang Xử Lý', icon: '⚙️' },
+            SHIPPING: { bg: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)', text: 'Đang Giao', icon: '🚚' },
+            DELIVERED: { bg: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', text: 'Đã Giao', icon: '✅' },
+            CANCELLED: { bg: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', text: 'Đã Hủy', icon: '❌' }
         };
 
-        const config = statusConfig[status] || { class: 'bg-secondary text-white', text: status };
+        const config = statusConfig[status] || { bg: 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)', text: status, icon: '📋' };
         return (
-            <span className={`badge ${config.class}`}>
+            <span style={{
+                background: config.bg,
+                color: '#fff',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '12px',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}>
+                <span>{config.icon}</span>
                 {config.text}
             </span>
         );
@@ -153,25 +165,88 @@ export default function AdminOrders() {
         <AdminLayout title="Quản Lý Đơn Hàng">
             <div style={{ maxWidth: 1400 }}>
 
+            {/* Stats Cards */}
+            <div className="row g-4 mb-4">
+                {[
+                    { label: 'Tổng đơn hàng', value: orders.length, icon: '📦', color: '#0d9488' },
+                    { label: 'Chờ xử lý', value: orders.filter(o => o.status === 'PENDING').length, icon: '⏳', color: '#0891b2' },
+                    { label: 'Đang giao', value: orders.filter(o => o.status === 'SHIPPING').length, icon: '🚚', color: '#06b6d4' },
+                    { label: 'Đã giao', value: orders.filter(o => o.status === 'DELIVERED').length, icon: '✅', color: '#10b981' },
+                ].map((stat, idx) => (
+                    <div key={idx} className="col-md-3">
+                        <div style={{
+                            background: '#fff',
+                            borderRadius: '16px',
+                            padding: '20px 24px',
+                            boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                            border: '1px solid rgba(0,0,0,0.05)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '16px',
+                        }}>
+                            <div style={{
+                                width: 52,
+                                height: 52,
+                                borderRadius: '12px',
+                                background: `${stat.color}15`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: 24,
+                            }}>
+                                {stat.icon}
+                            </div>
+                            <div>
+                                <div style={{ fontSize: 28, fontWeight: 700, color: stat.color }}>{stat.value}</div>
+                                <div style={{ fontSize: 13, color: '#64748b' }}>{stat.label}</div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
+
             {/* Search and Filter Bar */}
-            <div className="mb-3">
-                <div className="row">
-                    <div className="col-md-4">
-                        <div className="input-group">
-                            <span className="input-group-text">
-                                <i className="fas fa-search"></i>
-                            </span>
+            <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                marginBottom: '24px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: '1px solid rgba(0,0,0,0.05)',
+            }}>
+                <div className="row g-3 align-items-center">
+                    <div className="col-md-5">
+                        <div style={{ position: 'relative' }}>
+                            <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🔍</span>
                             <input
                                 type="text"
                                 className="form-control"
                                 placeholder="Tìm kiếm theo Order ID hoặc User ID..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                style={{
+                                    paddingLeft: 48,
+                                    borderRadius: '12px',
+                                    border: '2px solid #e2e8f0',
+                                    padding: '12px 16px 12px 48px',
+                                    fontSize: 14,
+                                    transition: 'all 0.2s ease',
+                                }}
                             />
                             {searchTerm && (
                                 <button
-                                    className="btn btn-outline-secondary"
-                                    type="button"
+                                    style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '6px 12px',
+                                        cursor: 'pointer',
+                                        fontSize: 12,
+                                    }}
                                     onClick={() => setSearchTerm('')}
                                 >
                                     Xóa
@@ -179,47 +254,67 @@ export default function AdminOrders() {
                             )}
                         </div>
                     </div>
-                    <div className="col-md-3">
+                    <div className="col-md-4">
                         <select
                             className="form-select"
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
+                            style={{
+                                borderRadius: '12px',
+                                border: '2px solid #e2e8f0',
+                                padding: '12px 16px',
+                                fontSize: 14,
+                            }}
                         >
-                            <option value="">Tất cả trạng thái</option>
-                            <option value="PENDING">Chờ Xử Lý</option>
-                            <option value="PROCESSING">Đang Xử Lý</option>
-                            <option value="SHIPPING">Đang Giao</option>
-                            <option value="DELIVERED">Đã Giao</option>
-                            <option value="CANCELLED">Đã Hủy</option>
+                            <option value="">🏷️ Tất cả trạng thái</option>
+                            <option value="PENDING">⏳ Chờ Xử Lý</option>
+                            <option value="PROCESSING">⚙️ Đang Xử Lý</option>
+                            <option value="SHIPPING">🚚 Đang Giao</option>
+                            <option value="DELIVERED">✅ Đã Giao</option>
+                            <option value="CANCELLED">❌ Đã Hủy</option>
                         </select>
                     </div>
-                    <div className="col-md-5 text-end">
-                        <small className="text-muted">
-                            Hiển thị {filteredOrders.length} trong tổng số {orders.length} đơn hàng
-                        </small>
+                    <div className="col-md-3 text-end">
+                        <span style={{
+                            background: '#f1f5f9',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            fontSize: 13,
+                            color: '#64748b',
+                            fontWeight: 500,
+                        }}>
+                            📊 {filteredOrders.length} / {orders.length} đơn
+                        </span>
                     </div>
                 </div>
             </div>
 
             {/* Orders Table */}
-            <div className="table-responsive">
-                <table className="table table-striped table-hover">
+            <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                overflow: 'hidden',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: '1px solid rgba(0,0,0,0.05)',
+            }}>
+                <table className="table table-hover mb-0">
                     <thead>
-                        <tr>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Order ID</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>User ID</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Trạng Thái</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Ngày Tạo</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Tổng Tiền</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Số Lượng Item</th>
-                            <th style={{ backgroundColor: "#008B8B", color: "#FFFFFF" }}>Thao Tác</th>
+                        <tr style={{ background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' }}>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Order ID</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>User ID</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Trạng Thái</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Ngày Tạo</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Tổng Tiền</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Số Lượng</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Thao Tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         {filteredOrders.length === 0 ? (
                             <tr>
-                                <td colSpan="7" className="text-center py-4">
-                                    <div className="text-muted">
+                                <td colSpan="7" style={{ padding: '60px 20px', textAlign: 'center' }}>
+                                    <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+                                    <div style={{ color: '#64748b', fontSize: 15, marginBottom: 12 }}>
                                         {searchTerm || statusFilter
                                             ? `Không tìm thấy đơn hàng nào khớp với bộ lọc`
                                             : 'Không có đơn hàng nào'
@@ -227,41 +322,67 @@ export default function AdminOrders() {
                                     </div>
                                     {(searchTerm || statusFilter) && (
                                         <button
-                                            className="btn btn-link btn-sm"
+                                            style={{
+                                                background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                                                color: '#fff',
+                                                border: 'none',
+                                                padding: '10px 20px',
+                                                borderRadius: '10px',
+                                                cursor: 'pointer',
+                                                fontSize: 13,
+                                                fontWeight: 500,
+                                            }}
                                             onClick={() => {
                                                 setSearchTerm('');
                                                 setStatusFilter('');
                                             }}
                                         >
-                                            Xóa bộ lọc để hiển thị tất cả đơn hàng
+                                            Xóa bộ lọc
                                         </button>
                                     )}
                                 </td>
                             </tr>
                         ) : (
-                            filteredOrders.map(order => (
-                                <tr key={order.id}>
-                                    <td>
-                                        <small className="text-monospace">{order.id.substring(0, 8)}...</small>
+                            filteredOrders.map((order, idx) => (
+                                <tr key={order.id} style={{
+                                    background: idx % 2 === 0 ? '#fff' : '#f8fafc',
+                                    transition: 'all 0.2s ease',
+                                }}>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
+                                        <code style={{
+                                            background: '#f1f5f9',
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: 12,
+                                            color: '#0d9488',
+                                            fontWeight: 600,
+                                        }}>{order.id.substring(0, 8)}...</code>
                                     </td>
-                                    <td>
-                                        <small className="text-monospace">{order.userId.substring(0, 8)}...</small>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
+                                        <code style={{
+                                            background: '#f1f5f9',
+                                            padding: '4px 10px',
+                                            borderRadius: '6px',
+                                            fontSize: 12,
+                                            color: '#64748b',
+                                        }}>{order.userId.substring(0, 8)}...</code>
                                     </td>
-                                    <td>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
                                         {editingId === order.id ? (
                                             <select
                                                 className="form-select form-select-sm"
                                                 value={editingStatus}
                                                 onChange={(e) => setEditingStatus(e.target.value)}
                                                 autoFocus
+                                                style={{ borderRadius: '10px', fontSize: 13 }}
                                             >
                                                 {statuses.map(status => (
                                                     <option key={status} value={status}>
-                                                        {status === 'PENDING' && 'Chờ Xử Lý'}
-                                                        {status === 'PROCESSING' && 'Đang Xử Lý'}
-                                                        {status === 'SHIPPING' && 'Đang Giao'}
-                                                        {status === 'DELIVERED' && 'Đã Giao'}
-                                                        {status === 'CANCELLED' && 'Đã Hủy'}
+                                                        {status === 'PENDING' && '⏳ Chờ Xử Lý'}
+                                                        {status === 'PROCESSING' && '⚙️ Đang Xử Lý'}
+                                                        {status === 'SHIPPING' && '🚚 Đang Giao'}
+                                                        {status === 'DELIVERED' && '✅ Đã Giao'}
+                                                        {status === 'CANCELLED' && '❌ Đã Hủy'}
                                                     </option>
                                                 ))}
                                             </select>
@@ -269,24 +390,57 @@ export default function AdminOrders() {
                                             getStatusBadge(order.status)
                                         )}
                                     </td>
-                                    <td>{formatDate(order.dateCreated)}</td>
-                                    <td className="fw-bold">{formatCurrency(order.total)}</td>
-                                    <td className="text-center">{order.itemCount}</td>
-                                    <td>
-                                        <div className="d-flex gap-1">
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle', color: '#64748b', fontSize: 13 }}>
+                                        📅 {formatDate(order.dateCreated)}
+                                    </td>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
+                                        <span style={{
+                                            fontWeight: 700,
+                                            color: '#10b981',
+                                            fontSize: 14,
+                                        }}>{formatCurrency(order.total)}</span>
+                                    </td>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle', textAlign: 'center' }}>
+                                        <span style={{
+                                            background: '#ccfbf1',
+                                            color: '#0d9488',
+                                            padding: '4px 12px',
+                                            borderRadius: '20px',
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                        }}>{order.itemCount}</span>
+                                    </td>
+                                    <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
+                                        <div className="d-flex gap-2">
                                             {editingId === order.id ? (
                                                 <>
                                                     <button
-                                                        className="btn btn-sm btn-success"
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            padding: '8px 16px',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontSize: 12,
+                                                            fontWeight: 600,
+                                                        }}
                                                         onClick={() => saveEdit(order.id)}
-                                                        title="Lưu thay đổi"
                                                     >
-                                                        Lưu
+                                                        ✓ Lưu
                                                     </button>
                                                     <button
-                                                        className="btn btn-sm btn-secondary"
+                                                        style={{
+                                                            background: '#f1f5f9',
+                                                            color: '#64748b',
+                                                            border: 'none',
+                                                            padding: '8px 16px',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontSize: 12,
+                                                            fontWeight: 500,
+                                                        }}
                                                         onClick={cancelEdit}
-                                                        title="Hủy thay đổi"
                                                     >
                                                         Hủy
                                                     </button>
@@ -294,18 +448,36 @@ export default function AdminOrders() {
                                             ) : (
                                                 <>
                                                     <button
-                                                        className="btn btn-sm btn-outline-info"
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            padding: '8px 14px',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontSize: 12,
+                                                            fontWeight: 500,
+                                                            transition: 'all 0.2s ease',
+                                                        }}
                                                         onClick={() => navigate(`/admin/orders/${order.id}`)}
-                                                        title="Xem chi tiết"
                                                     >
-                                                        Chi Tiết
+                                                        👁️ Chi Tiết
                                                     </button>
                                                     <button
-                                                        className="btn btn-sm btn-outline-secondary"
+                                                        style={{
+                                                            background: '#f1f5f9',
+                                                            color: '#64748b',
+                                                            border: 'none',
+                                                            padding: '8px 14px',
+                                                            borderRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            fontSize: 12,
+                                                            fontWeight: 500,
+                                                            transition: 'all 0.2s ease',
+                                                        }}
                                                         onClick={() => startEdit(order)}
-                                                        title="Sửa trạng thái"
                                                     >
-                                                        Sửa
+                                                        ✏️ Sửa
                                                     </button>
                                                 </>
                                             )}

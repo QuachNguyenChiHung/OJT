@@ -8,28 +8,28 @@
 }
 
 .form-control {
-    border: #E49400 1px solid;
+    border: #e2e8f0 1px solid;
 }
 
 .list-group-item {
-    border: #E49400 1px solid !important;
+    border: #e2e8f0 1px solid !important;
     margin-bottom: 1rem;
 }
 
 .card {
-    border: #E49400 2px solid;
+    border: #e2e8f0 2px solid;
 }
 
 .form-select {
-    border: #E49400 1px solid;
+    border: #e2e8f0 1px solid;
 }
 
 tr {
-    border: #E49400 1px solid;
+    border: #e2e8f0 1px solid;
 }
 
 th {
-    border: #E49400 1px solid;
+    border: #e2e8f0 1px solid;
 }
 
 .foot-list {
@@ -37,8 +37,8 @@ th {
 }
 
 select {
-    color: #fff;
-    background-color: rgb(228, 148, 0)
+    color: #1e293b;
+    background-color: #fff
 }
 
 .bs-icon {
@@ -160,27 +160,27 @@ select {
 }
 
 .page-link {
-    color: rgb(228, 148, 0);
-    border: 1px solid rgb(228, 148, 0)
+    color: #0d9488;
+    border: 1px solid #0d9488
 }
 
 .page-link:hover {
-    color: #d08d12;
-    border: 1px solid #d08d12
+    color: #0f766e;
+    border: 1px solid #0f766e
 }
 
 footer {
-    background-color: rgb(228, 148, 0)
+    background-color: #0d9488
 }
 
 .sort {
-    background: rgb(228, 148, 0);
+    background: #0d9488;
     border: none;
     color: #fff
 }
 
 .form-check-input {
-    color: rgb(228, 148, 0) !important;
+    color: #0d9488 !important;
     display: none
 }
 
@@ -202,8 +202,8 @@ footer {
 }
 
 .form-check-input:checked+.form-check-label::before {
-    background-color: rgb(228, 148, 0);
-    border-color: rgb(228, 148, 0)
+    background-color: #0d9488;
+    border-color: #0d9488
 }
 
 .form-check-input:checked+.form-check-label::after {
@@ -221,11 +221,11 @@ footer {
 
 .btn-orange {
     color: #fff;
-    background: rgb(228, 148, 0)
+    background: #0d9488
 }
 
 .btn-orange:hover {
-    background: #e89600;
+    background: #0f766e;
     color: #fff
 }
 
@@ -234,7 +234,7 @@ footer {
     font-family: Inter, system-ui, Arial, sans-serif;
     padding: 24px;
     background: #fff;
-    color: rgb(228, 148, 0)
+    color: #0d9488
 }
 
 .label,
@@ -254,13 +254,13 @@ footer {
     min-width: 44px;
     height: 44px;
     border-radius: 8px;
-    border: 2px solid rgb(228, 148, 0);
+    border: 2px solid #0d9488;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     background: #fff;
-    color: rgb(228, 148, 0);
+    color: #0d9488;
     font-weight: 600;
     box-shadow: none;
     font-size: 14px
@@ -272,9 +272,9 @@ footer {
 }
 
 .size-btn.active {
-    background: #ff7a00;
+    background: #0d9488;
     color: #fff;
-    border-color: #ff7a00
+    border-color: #0d9488
 }
 
 .qty-wrap {
@@ -284,7 +284,7 @@ footer {
 .qty-box {
     display: flex;
     align-items: center;
-    border: 2px solid rgb(228, 148, 0);
+    border: 2px solid #0d9488;
     border-radius: 6px;
     width: 160px;
     height: 52px;
@@ -296,7 +296,7 @@ footer {
     height: 48px;
     border: 0;
     background: 0 0;
-    color: rgb(228, 148, 0);
+    color: #0d9488;
     font-size: 20px;
     cursor: pointer
 }
@@ -331,7 +331,7 @@ footer {
 }
 
 .border-orange {
-    border: 3px solid rgb(228, 148, 0)
+    border: 3px solid #0d9488
 }
 
 .stars {

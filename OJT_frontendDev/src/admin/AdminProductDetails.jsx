@@ -1164,7 +1164,7 @@ export default function AdminProductDetails() {
             <div className="d-flex justify-content-between align-items-center mb-3">
               <h4>Thông Tin Sản Phẩm</h4>
               {!editingProduct && (
-                <button className="btn btn-outline-primary btn-sm" onClick={startEditProduct}>
+                <button className="btn btn-sm" style={{ background: '#f0fdfa', color: '#0d9488', border: '1px solid #0d9488' }} onClick={startEditProduct}>
                   ✏️ Chỉnh sửa
                 </button>
               )}
@@ -1696,7 +1696,8 @@ export default function AdminProductDetails() {
                     Sửa Thông Tin
                   </button>
                   <button
-                    className="btn btn-sm btn-outline-primary"
+                    className="btn btn-sm"
+                    style={{ background: '#f0fdfa', color: '#0d9488', border: '1px solid #0d9488' }}
                     onClick={() => openImageManager(d)}
                     disabled={showImageManager && selectedVariantForImages?.pd_id === d.pd_id}
                   >

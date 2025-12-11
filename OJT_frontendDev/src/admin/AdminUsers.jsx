@@ -150,24 +150,107 @@ export default function AdminUsers() {
   return (
     <AdminLayout title="Quản Lý Người Dùng">
       <div style={{ maxWidth: 1200 }}>
-        {/* Header with stats and actions */}
-        <div className="d-flex justify-content-between align-items-center mb-3">
-          <div className="d-flex gap-3">
-            <span className="badge bg-danger fs-6">👑 Admin: {adminCount}</span>
-            <span className="badge bg-primary fs-6">👤 User: {userCount}</span>
-            <span className="badge bg-secondary fs-6">📊 Tổng: {users.length}</span>
+        {/* Stats Cards */}
+        <div className="row g-4 mb-4">
+          {[
+            { label: 'Tổng người dùng', value: users.length, icon: '👥', color: '#0d9488', bg: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' },
+            { label: 'Admin', value: adminCount, icon: '👑', color: '#ef4444', bg: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' },
+            { label: 'User', value: userCount, icon: '👤', color: '#3b82f6', bg: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)' },
+            { label: 'Hoạt động', value: users.filter(u => u.active).length, icon: '✅', color: '#10b981', bg: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' },
+          ].map((stat, idx) => (
+            <div key={idx} className="col-md-3">
+              <div style={{
+                background: '#fff',
+                borderRadius: '16px',
+                padding: '20px 24px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                border: '1px solid rgba(0,0,0,0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '16px',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                <div style={{
+                  position: 'absolute',
+                  right: -20,
+                  top: -20,
+                  width: 100,
+                  height: 100,
+                  borderRadius: '50%',
+                  background: `${stat.color}10`,
+                }}></div>
+                <div style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: '14px',
+                  background: stat.bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 24,
+                  boxShadow: `0 4px 12px ${stat.color}40`,
+                }}>
+                  {stat.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#1e293b' }}>{stat.value}</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{stat.label}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '16px 24px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          border: '1px solid rgba(0,0,0,0.05)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#64748b', fontSize: 13 }}>
+            <span style={{ fontSize: 16 }}>💡</span>
+            Danh sách users từ RDS database. Click "Sync" để đồng bộ với Cognito.
           </div>
-          <div className="d-flex gap-2">
+          <div className="d-flex gap-3">
             <button 
-              className="btn btn-outline-info"
+              style={{
+                background: syncing ? '#f1f5f9' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                color: syncing ? '#64748b' : '#fff',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '10px',
+                cursor: syncing ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                boxShadow: syncing ? 'none' : '0 4px 12px rgba(6, 182, 212, 0.3)',
+              }}
               onClick={syncUsers}
               disabled={syncing}
             >
               {syncing ? '⏳ Đang đồng bộ...' : '🔄 Sync RDS ↔ Cognito'}
             </button>
             <button 
-              className="btn" 
-              style={{ background: '#008B8B', color: '#fff' }} 
+              style={{
+                background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                color: '#fff',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '10px',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                boxShadow: '0 4px 12px rgba(13, 148, 136, 0.3)',
+              }}
               onClick={loadUsers}
             >
               🔄 Làm Mới
@@ -177,123 +260,226 @@ export default function AdminUsers() {
 
         {/* Sync Result Alert */}
         {syncResult && (
-          <div className={`alert ${syncResult.success ? 'alert-success' : 'alert-danger'} alert-dismissible`}>
-            <strong>{syncResult.success ? '✅' : '❌'}</strong> {syncResult.message}
-            {syncResult.details && (
-              <div className="mt-2 small">
-                {syncResult.details.synced && <div>Đã đồng bộ: {syncResult.details.synced} users</div>}
-                {syncResult.details.skipped && <div>Bỏ qua (Admin): {syncResult.details.skipped} users</div>}
-                {syncResult.details.errors && <div>Lỗi: {syncResult.details.errors}</div>}
+          <div style={{
+            background: syncResult.success ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+            border: `1px solid ${syncResult.success ? '#10b981' : '#ef4444'}`,
+            borderRadius: '12px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+          }}>
+            <div>
+              <div style={{ fontWeight: 600, color: syncResult.success ? '#059669' : '#dc2626', marginBottom: 4 }}>
+                {syncResult.success ? '✅ Thành công!' : '❌ Thất bại'}
               </div>
-            )}
-            <button type="button" className="btn-close" onClick={() => setSyncResult(null)}></button>
+              <div style={{ color: '#64748b', fontSize: 13 }}>{syncResult.message}</div>
+              {syncResult.details && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+                  {syncResult.details.synced && <span style={{ marginRight: 16 }}>📥 Đã đồng bộ: {syncResult.details.synced}</span>}
+                  {syncResult.details.skipped && <span style={{ marginRight: 16 }}>⏭️ Bỏ qua: {syncResult.details.skipped}</span>}
+                  {syncResult.details.errors && <span>⚠️ Lỗi: {syncResult.details.errors}</span>}
+                </div>
+              )}
+            </div>
+            <button 
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: '#94a3b8' }}
+              onClick={() => setSyncResult(null)}
+            >
+              ×
+            </button>
           </div>
         )}
 
-        {/* Info Box */}
-        <div className="alert alert-info mb-3">
-          <strong>💡 Lưu ý:</strong> Danh sách này hiển thị users từ RDS database. 
-          Click "Sync RDS ↔ Cognito" để đồng bộ dữ liệu giữa RDS và Cognito (trừ Admin vì Admin chỉ tồn tại trong RDS).
-        </div>
-
         {/* Search Bar */}
-        <div className="mb-3">
-          <div className="row">
-            <div className="col-md-6">
-              <div className="input-group">
-                <span className="input-group-text">🔍</span>
+        <div style={{
+          background: '#fff',
+          borderRadius: '16px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          border: '1px solid rgba(0,0,0,0.05)',
+        }}>
+          <div className="row align-items-center">
+            <div className="col-md-8">
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 18 }}>🔍</span>
                 <input
                   type="text"
                   className="form-control"
                   placeholder="Tìm kiếm theo tên, email, số điện thoại..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{
+                    paddingLeft: 48,
+                    borderRadius: '12px',
+                    border: '2px solid #e2e8f0',
+                    padding: '12px 16px 12px 48px',
+                    fontSize: 14,
+                  }}
                 />
                 {searchTerm && (
-                  <button className="btn btn-outline-secondary" onClick={() => setSearchTerm('')}>
+                  <button
+                    style={{
+                      position: 'absolute',
+                      right: 8,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: '#f1f5f9',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                    }}
+                    onClick={() => setSearchTerm('')}
+                  >
                     Xóa
                   </button>
                 )}
               </div>
             </div>
-            <div className="col-md-6 text-end">
-              <small className="text-muted">
-                Hiển thị {filteredUsers.length} / {users.length} người dùng
-              </small>
+            <div className="col-md-4 text-end">
+              <span style={{
+                background: '#f1f5f9',
+                padding: '10px 16px',
+                borderRadius: '10px',
+                fontSize: 13,
+                color: '#64748b',
+                fontWeight: 500,
+              }}>
+                📊 {filteredUsers.length} / {users.length} người dùng
+              </span>
             </div>
           </div>
         </div>
 
         {/* Edit User Modal */}
         {editingUser && (
-          <div className="mb-4 p-3" style={{ border: '2px solid #008B8B', borderRadius: '8px', background: '#fff' }}>
-            <h5>✏️ Chỉnh Sửa Người Dùng</h5>
+          <div style={{
+            background: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            marginBottom: '24px',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+            border: '2px solid #0d9488',
+          }}>
+            <h5 style={{ marginBottom: 20, fontWeight: 600, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{
+                width: 36,
+                height: 36,
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: 16,
+              }}>✏️</span>
+              Chỉnh Sửa Người Dùng
+            </h5>
             <form onSubmit={updateUser}>
               <div className="row g-3">
                 <div className="col-md-6">
-                  <label className="form-label">Email (không thể sửa)</label>
-                  <input className="form-control" value={editingUser.email} disabled />
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Email (không thể sửa)</label>
+                  <input className="form-control" value={editingUser.email} disabled style={{ borderRadius: 10, background: '#f8fafc', border: '2px solid #e2e8f0' }} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Họ Tên *</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Họ Tên *</label>
                   <input
                     className="form-control"
                     value={editingUser.fullName}
                     onChange={(e) => setEditingUser({ ...editingUser, fullName: e.target.value })}
                     required
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">Số Điện Thoại</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Số Điện Thoại</label>
                   <input
                     className="form-control"
                     value={editingUser.phoneNumber || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, phoneNumber: e.target.value })}
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   />
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">Vai Trò</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Vai Trò</label>
                   <select
                     className="form-select"
                     value={editingUser.role}
                     onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   >
-                    <option value="USER">Người Dùng</option>
-                    <option value="ADMIN">Quản Trị Viên</option>
+                    <option value="USER">👤 Người Dùng</option>
+                    <option value="ADMIN">👑 Quản Trị Viên</option>
                   </select>
                 </div>
                 <div className="col-md-4">
-                  <label className="form-label">Trạng Thái</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Trạng Thái</label>
                   <select
                     className="form-select"
                     value={String(editingUser.active)}
                     onChange={(e) => setEditingUser({ ...editingUser, active: e.target.value === 'true' })}
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   >
-                    <option value="true">Hoạt Động</option>
-                    <option value="false">Không Hoạt Động</option>
+                    <option value="true">✅ Hoạt Động</option>
+                    <option value="false">⏸️ Không Hoạt Động</option>
                   </select>
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Ngày Sinh</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Ngày Sinh</label>
                   <input
                     className="form-control"
                     type="date"
                     value={editingUser.dateOfBirth || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, dateOfBirth: e.target.value })}
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Địa Chỉ</label>
+                  <label style={{ fontSize: 13, fontWeight: 500, color: '#64748b', marginBottom: 6, display: 'block' }}>Địa Chỉ</label>
                   <input
                     className="form-control"
                     value={editingUser.address || ''}
                     onChange={(e) => setEditingUser({ ...editingUser, address: e.target.value })}
+                    style={{ borderRadius: 10, border: '2px solid #e2e8f0' }}
                   />
                 </div>
-                <div className="col-md-12">
-                  <div className="d-flex gap-2">
-                    <button className="btn btn-success" type="submit">💾 Lưu</button>
-                    <button className="btn btn-secondary" type="button" onClick={cancelEdit}>Hủy</button>
+                <div className="col-md-12" style={{ marginTop: 16 }}>
+                  <div className="d-flex gap-3">
+                    <button 
+                      type="submit"
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                      }}
+                    >
+                      💾 Lưu Thay Đổi
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={cancelEdit}
+                      style={{
+                        background: '#f1f5f9',
+                        color: '#64748b',
+                        border: 'none',
+                        padding: '12px 24px',
+                        borderRadius: '10px',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        fontWeight: 500,
+                      }}
+                    >
+                      Hủy
+                    </button>
                   </div>
                 </div>
               </div>
@@ -302,50 +488,131 @@ export default function AdminUsers() {
         )}
 
         {/* Users List */}
-        <div className="list-group">
+        <div style={{
+          background: '#fff',
+          borderRadius: '16px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+          border: '1px solid rgba(0,0,0,0.05)',
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+            padding: '16px 24px',
+            color: '#fff',
+            fontWeight: 600,
+            fontSize: 14,
+          }}>
+            👥 Danh Sách Người Dùng
+          </div>
+          
           {filteredUsers.length === 0 ? (
-            <div className="text-center py-4 text-muted">
-              {searchTerm ? `Không tìm thấy người dùng với "${searchTerm}"` : 'Không có người dùng nào'}
+            <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+              <div style={{ color: '#64748b' }}>
+                {searchTerm ? `Không tìm thấy người dùng với "${searchTerm}"` : 'Không có người dùng nào'}
+              </div>
             </div>
           ) : (
-            filteredUsers.map((user) => (
-              <div key={user.id} className="list-group-item">
+            filteredUsers.map((user, idx) => (
+              <div key={user.id} style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                background: idx % 2 === 0 ? '#fff' : '#fafbfc',
+                transition: 'all 0.2s ease',
+              }}>
                 <div className="d-flex justify-content-between align-items-start">
-                  <div style={{ flex: 1 }}>
-                    <div className="d-flex align-items-center mb-2">
-                      <h5 className="mb-0 me-3">{user.fullName || '(Chưa có tên)'}</h5>
-                      <span className={`badge bg-${getRoleColor(user.role)} me-2`}>
-                        {user.role === 'ADMIN' ? '👑 ADMIN' : '👤 USER'}
-                      </span>
-                      <span className={`badge bg-${getStatusColor(user.active)}`}>
-                        {user.active ? '✅ Hoạt động' : '⏸️ Tạm dừng'}
-                      </span>
-                      {user.role === 'ADMIN' && (
-                        <span className="badge bg-dark ms-2" title="Admin chỉ tồn tại trong RDS">
-                          📦 RDS Only
+                  <div style={{ flex: 1, display: 'flex', gap: 16 }}>
+                    {/* Avatar */}
+                    <div style={{
+                      width: 52,
+                      height: 52,
+                      borderRadius: '14px',
+                      background: user.role === 'ADMIN' 
+                        ? 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' 
+                        : 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      color: '#fff',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                      boxShadow: user.role === 'ADMIN' 
+                        ? '0 4px 12px rgba(239, 68, 68, 0.3)' 
+                        : '0 4px 12px rgba(13, 148, 136, 0.3)',
+                    }}>
+                      {user.fullName ? user.fullName.charAt(0).toUpperCase() : '?'}
+                    </div>
+                    
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600, fontSize: 16, color: '#1e293b' }}>
+                          {user.fullName || '(Chưa có tên)'}
                         </span>
+                        <span style={{
+                          background: user.role === 'ADMIN' 
+                            ? 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' 
+                            : 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+                          color: '#fff',
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}>
+                          {user.role === 'ADMIN' ? '👑 ADMIN' : '👤 USER'}
+                        </span>
+                        <span style={{
+                          background: user.active ? '#dcfce7' : '#fef3c7',
+                          color: user.active ? '#16a34a' : '#d97706',
+                          padding: '4px 12px',
+                          borderRadius: '20px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}>
+                          {user.active ? '✅ Hoạt động' : '⏸️ Tạm dừng'}
+                        </span>
+                        {user.role === 'ADMIN' && (
+                          <span style={{
+                            background: '#1e293b',
+                            color: '#fff',
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}>
+                            📦 RDS Only
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 13, color: '#64748b' }}>
+                        <span>📧 {user.email}</span>
+                        {user.phoneNumber && <span>📱 {user.phoneNumber}</span>}
+                        {user.dateOfBirth && (
+                          <span>🎂 {new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}</span>
+                        )}
+                      </div>
+                      {user.address && (
+                        <div style={{ marginTop: 6, fontSize: 13, color: '#94a3b8' }}>📍 {user.address}</div>
                       )}
                     </div>
-                    <div className="text-muted small">
-                      <span className="me-3">📧 {user.email}</span>
-                      {user.phoneNumber && <span className="me-3">📱 {user.phoneNumber}</span>}
-                      {user.dateOfBirth && (
-                        <span className="me-3">🎂 {new Date(user.dateOfBirth).toLocaleDateString('vi-VN')}</span>
-                      )}
-                    </div>
-                    {user.address && (
-                      <div className="text-muted small mt-1">📍 {user.address}</div>
-                    )}
                   </div>
-                  <div className="d-flex gap-2">
-                    <button
-                      className="btn btn-sm btn-outline-primary"
-                      onClick={() => startEditUser(user)}
-                      disabled={editingUser?.id === user.id}
-                    >
-                      ✏️ Sửa
-                    </button>
-                  </div>
+                  <button
+                    style={{
+                      background: editingUser?.id === user.id ? '#f1f5f9' : 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)',
+                      color: editingUser?.id === user.id ? '#94a3b8' : '#fff',
+                      border: 'none',
+                      padding: '10px 18px',
+                      borderRadius: '10px',
+                      cursor: editingUser?.id === user.id ? 'not-allowed' : 'pointer',
+                      fontSize: 13,
+                      fontWeight: 500,
+                      boxShadow: editingUser?.id === user.id ? 'none' : '0 4px 12px rgba(13, 148, 136, 0.3)',
+                    }}
+                    onClick={() => startEditUser(user)}
+                    disabled={editingUser?.id === user.id}
+                  >
+                    ✏️ Sửa
+                  </button>
                 </div>
               </div>
             ))
