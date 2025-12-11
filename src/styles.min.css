@@ -18,6 +18,10 @@ a{
     background-color: #06BAE9;
 }
 
+.meme:hover {
+    background-color: #008bad;
+}
+
 .list-group-item {
     border: #06BAE9 1px solid !important;
     margin-bottom: 1rem;
