@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from './Toast';
 
 const clothesImg = '/img/clothes.png';
 
@@ -12,6 +13,7 @@ const formatPrice = (price) => {
 
 const ProductDetails = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     const [product_details, setProductDetails] = useState({
         id: '',
         name: '',
@@ -304,16 +306,16 @@ const ProductDetails = () => {
 
     const addToCart = async () => {
         if (!isLoggedIn) {
-            alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+            toast.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
             navigate('/login');
             return;
         }
         if (!selectedVariant || !selectedVariant.pdId) {
-            alert('Vui lòng chọn kích thước và màu sắc');
+            toast.warning('Vui lòng chọn kích thước và màu sắc');
             return;
         }
         if (quantity <= 0 || quantity > selectedVariant.amount) {
-            alert(`Số lượng không hợp lệ. Còn ${selectedVariant.amount} sản phẩm.`);
+            toast.warning(`Số lượng không hợp lệ. Còn ${selectedVariant.amount} sản phẩm.`);
             return;
         }
 
@@ -325,11 +327,11 @@ const ProductDetails = () => {
                 selectedSize: selectedSize // Send selected size to cart
             });
             if (response.data.success || response.status === 200 || response.status === 201) {
-                alert('Đã thêm sản phẩm vào giỏ hàng!');
+                toast.success('Đã thêm sản phẩm vào giỏ hàng!');
                 setQuantity(1);
             }
         } catch (error) {
-            alert(error.response?.data?.error || error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
+            toast.error(error.response?.data?.error || error.response?.data?.message || 'Không thể thêm vào giỏ hàng');
         } finally {
             setAddingToCart(false);
         }
@@ -337,12 +339,12 @@ const ProductDetails = () => {
 
     const buyNow = async () => {
         if (!isLoggedIn) {
-            alert('Vui lòng đăng nhập để mua hàng');
+            toast.warning('Vui lòng đăng nhập để mua hàng');
             navigate('/login');
             return;
         }
         if (!selectedVariant || !selectedVariant.pdId) {
-            alert('Vui lòng chọn kích thước và màu sắc');
+            toast.warning('Vui lòng chọn kích thước và màu sắc');
             return;
         }
         
@@ -356,7 +358,7 @@ const ProductDetails = () => {
             });
             navigate('/cart');
         } catch (error) {
-            alert(error.response?.data?.error || error.response?.data?.message || 'Không thể thực hiện');
+            toast.error(error.response?.data?.error || error.response?.data?.message || 'Không thể thực hiện');
         } finally {
             setAddingToCart(false);
         }
@@ -364,21 +366,21 @@ const ProductDetails = () => {
 
     const handleStarClick = async (starValue) => {
         if (!isLoggedIn) {
-            alert('Vui lòng đăng nhập để đánh giá sản phẩm');
+            toast.warning('Vui lòng đăng nhập để đánh giá sản phẩm');
             return;
         }
         if (!canRate) {
-            alert('Bạn cần mua và xác nhận nhận hàng trước khi đánh giá sản phẩm này.');
+            toast.warning('Bạn cần mua và xác nhận nhận hàng trước khi đánh giá sản phẩm này.');
             return;
         }
         if (hasUserRated) {
-            alert('Bạn đã đánh giá sản phẩm này rồi.');
+            toast.info('Bạn đã đánh giá sản phẩm này rồi.');
             return;
         }
 
         const userId = currentUser?.id || currentUser?.userId || currentUser?.u_id;
         if (!userId) {
-            alert('Không thể xác định thông tin người dùng.');
+            toast.error('Không thể xác định thông tin người dùng.');
             return;
         }
 
@@ -398,9 +400,9 @@ const ProductDetails = () => {
             // Refresh ratings
             const statsRes = await api.get(`/ratings/product/${id}/stats`);
             setRatings(statsRes.data);
-            alert(`Cảm ơn bạn đã đánh giá ${starValue} sao!`);
+            toast.success(`Cảm ơn bạn đã đánh giá ${starValue} sao!`);
         } catch (error) {
-            alert(error.response?.data?.message || 'Không thể gửi đánh giá');
+            toast.error(error.response?.data?.message || 'Không thể gửi đánh giá');
         } finally {
             setSubmittingRating(false);
         }

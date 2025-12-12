@@ -29,6 +29,7 @@ import AdminOrderDetails from './admin/AdminOrderDetails'
 import AdminHomeSections from './admin/AdminHomeSections'
 import AdminSale from './admin/AdminSale'
 import ChatBot from './Components/ChatBot';
+import { ToastProvider } from './Components/Toast';
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
 import UpdateProfile from './Components/UpdateProfile';
@@ -118,11 +119,11 @@ function Layout() {
 
 
 function App() {
-  
-
   return (
     <BrowserRouter>
-      <Layout />
+      <ToastProvider>
+        <Layout />
+      </ToastProvider>
     </BrowserRouter>
   )
 }

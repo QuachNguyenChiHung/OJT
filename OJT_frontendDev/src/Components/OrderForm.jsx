@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { useToast } from './Toast';
 
 export default function OrderForm() {
+    const toast = useToast();
     const [form, setForm] = useState({
         phone: '',
         u_name: '',
@@ -30,9 +32,9 @@ export default function OrderForm() {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!validate()) return;
-        // For now just log and show an alert. Replace with API call as needed.
+        // For now just log and show toast. Replace with API call as needed.
         console.log('Submitted form', form);
-        alert(`Gửi thành công:\nTên: ${form.u_name}\nSĐT: ${form.phone}\nĐịa chỉ: ${form.address}\nNgày sinh: ${form.date_of_birth}`);
+        toast.success(`Gửi thành công! Tên: ${form.u_name}`);
         setForm({ phone: '', u_name: '', address: '', date_of_birth: '' });
         setErrors({});
     };

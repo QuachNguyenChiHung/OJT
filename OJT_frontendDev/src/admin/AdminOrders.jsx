@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 export default function AdminOrders() {
+    const toast = useToast();
     const [orders, setOrders] = useState([]);
     const [filteredOrders, setFilteredOrders] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -152,16 +154,16 @@ export default function AdminOrders() {
     };
 
     const saveEdit = async (orderId) => {
-        if (!editingStatus) return alert('Trạng thái không được để trống');
+        if (!editingStatus) return toast.warning('Trạng thái không được để trống');
         try {
             // Use PATCH /orders/{id}/status endpoint
             await api.patch(`/orders/${orderId}/status`, { status: editingStatus });
             setOrders(o => o.map(item => item.id === orderId ? { ...item, status: editingStatus } : item));
             cancelEdit();
-            alert(`✅ Cập nhật trạng thái thành "${getStatusText(editingStatus)}" thành công!\n\n📧 Thông báo đã được gửi đến khách hàng.`);
+            toast.success(`Cập nhật trạng thái thành "${getStatusText(editingStatus)}" thành công!`);
         } catch (err) {
             console.error('Update order failed', err);
-            alert('Không thể cập nhật trạng thái đơn hàng');
+            toast.warning('Không thể cập nhật trạng thái đơn hàng');
         }
     };
 

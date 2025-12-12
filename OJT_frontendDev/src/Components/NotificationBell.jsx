@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from './Toast';
 
 // Check if JWT token is expired
 
@@ -11,6 +12,7 @@ const hasToken = () => {
 };
 
 export default function NotificationBell() {
+    const toast = useToast();
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showDropdown, setShowDropdown] = useState(false);
@@ -116,7 +118,7 @@ export default function NotificationBell() {
             setShowDeleteConfirm(false);
         } catch (error) {
             console.error('Delete all notifications error:', error);
-            alert('Không thể xóa thông báo. Vui lòng thử lại.');
+            toast.error('Không thể xóa thông báo. Vui lòng thử lại.');
         } finally {
             setDeleting(false);
         }

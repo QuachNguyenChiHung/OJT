@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 const MAX_IMAGES = 5;
 
@@ -241,6 +242,7 @@ const CascadingCategorySelector = ({ categories, value, onChange }) => {
 };
 
 export default function AdminProducts() {
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [productForm, setProductForm] = useState({
@@ -496,7 +498,7 @@ export default function AdminProducts() {
   const addProduct = async (e) => {
     e.preventDefault();
     if (!productForm.name.trim()) {
-      alert('Tên sản phẩm là bắt buộc');
+      toast.warning('Tên sản phẩm là bắt buộc');
       return;
     }
     const payload = {
@@ -543,10 +545,10 @@ export default function AdminProducts() {
       setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '' });
       clearThumbnails();
       setColorVariants([]);
-      alert('Tạo sản phẩm thành công!');
+      toast.success('Tạo sản phẩm thành công!');
     } catch (err) {
       console.error('Add product failed', err);
-      alert('Không thể thêm sản phẩm: ' + (err?.response?.data?.message || err.message));
+      toast.error('Không thể thêm sản phẩm: ' + (err?.response?.data?.message || err.message));
     }
   };
 
@@ -716,10 +718,10 @@ export default function AdminProducts() {
       setHomeSections(Array.isArray(sectionsRes.data) ? sectionsRes.data : []);
       setShowSectionModal(false);
       setSelectedProductForSection(null);
-      alert('Đã thêm sản phẩm vào section!');
+      toast.success('Đã thêm sản phẩm vào section!');
     } catch (err) {
       console.error('Add to section failed:', err);
-      alert('Không thể thêm vào section: ' + (err?.response?.data?.message || err.message));
+      toast.error('Không thể thêm vào section: ' + (err?.response?.data?.message || err.message));
     }
   };
 
@@ -738,7 +740,7 @@ export default function AdminProducts() {
     } catch (err) {
       console.error('Delete product failed', err);
       setProducts((p) => p.filter(x => x.id !== id));
-      alert(err?.response?.data?.message || 'Failed to delete product on server');
+      toast.error(err?.response?.data?.message || 'Failed to delete product on server');
     }
   };
 

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 export default function AdminUsers() {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -99,7 +101,7 @@ export default function AdminUsers() {
   const updateUser = async (e) => {
     e.preventDefault();
     if (!editingUser.fullName.trim()) {
-      alert('Tên là bắt buộc');
+      toast.warning('Tên là bắt buộc');
       return;
     }
 
@@ -120,10 +122,10 @@ export default function AdminUsers() {
         active: payload.isActive
       }) : u));
       setEditingUser(null);
-      alert('Cập nhật thành công!');
+      toast.success('Cập nhật thành công!');
     } catch (err) {
       console.error('Update user failed', err);
-      alert('Không thể cập nhật người dùng');
+      toast.error('Không thể cập nhật người dùng');
     }
   };
 

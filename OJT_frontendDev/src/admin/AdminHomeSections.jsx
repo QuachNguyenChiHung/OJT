@@ -2,8 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 export default function AdminHomeSections() {
+  const toast = useToast();
   const [sections, setSections] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -82,7 +84,7 @@ export default function AdminHomeSections() {
 
   const createSection = async (e) => {
     e.preventDefault();
-    if (!sectionForm.title.trim()) return alert('Tiêu đề là bắt buộc');
+    if (!sectionForm.title.trim()) return toast.warning('Tiêu đề là bắt buộc');
     try {
       const res = await api.post('/home-sections', {
         title: sectionForm.title.trim(),
@@ -93,7 +95,7 @@ export default function AdminHomeSections() {
       setSections(prev => [...prev, { ...res.data, products: [] }]);
       setSectionForm({ title: '', description: '', displayOrder: 0, isActive: true });
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 
@@ -115,7 +117,7 @@ export default function AdminHomeSections() {
       setEditingSection(null);
       setSectionForm({ title: '', description: '', displayOrder: 0, isActive: true });
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 
@@ -126,7 +128,7 @@ export default function AdminHomeSections() {
       setSections(prev => prev.filter(s => s.id !== id));
       if (selectedSection?.id === id) setSelectedSection(null);
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 
@@ -139,7 +141,7 @@ export default function AdminHomeSections() {
       const updated = res.data.find(s => s.id === selectedSection.id);
       if (updated) setSelectedSection(updated);
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 
@@ -152,7 +154,7 @@ export default function AdminHomeSections() {
       const updated = res.data.find(s => s.id === selectedSection.id);
       if (updated) setSelectedSection(updated);
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 
@@ -192,7 +194,7 @@ export default function AdminHomeSections() {
       ]);
       fetchData();
     } catch (err) {
-      alert('Lỗi: ' + (err?.response?.data?.error || err.message));
+      toast.warning('Lỗi: ' + (err?.response?.data?.error || err.message));
     }
   };
 

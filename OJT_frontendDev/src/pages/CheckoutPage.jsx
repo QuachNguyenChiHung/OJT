@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from '../Components/Toast';
 
 export default function CheckoutPage() {
+    const toast = useToast();
     const [cartData, setCartData] = useState(null);
     const [saleProducts, setSaleProducts] = useState([]);
     const [userInfo, setUserInfo] = useState({
@@ -54,7 +56,7 @@ export default function CheckoutPage() {
             if (error.response?.status === 401) {
                 navigate('/login');
             } else {
-                alert('Không thể tải thông tin. Vui lòng thử lại.');
+                toast.error('Không thể tải thông tin. Vui lòng thử lại.');
                 navigate('/cart');
             }
         } finally {
@@ -113,7 +115,7 @@ export default function CheckoutPage() {
 
             await api.delete('/cart');
 
-            alert('Đặt hàng thành công!');
+            toast.success('Đặt hàng thành công!');
             navigate('/orders', {
                 state: {
                     message: 'Đơn hàng đã được tạo thành công!',
@@ -126,7 +128,7 @@ export default function CheckoutPage() {
             if (error.response?.status === 401) {
                 navigate('/login');
             } else {
-                alert(error.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+                toast.error(error.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
             }
         } finally {
             setProcessing(false);
