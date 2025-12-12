@@ -12,6 +12,9 @@
     "deploy:invalidate": "node scripts/invalidate-cloudfront.js"
   },
   "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.948.0",
+    "@aws-sdk/client-bedrock-runtime": "^3.948.0",
+    "@aws-sdk/credential-providers": "^3.948.0",
     "axios": "^1.13.1",
     "bootstrap": "^5.3.8",
     "dotenv": "^17.2.3",

@@ -5,7 +5,7 @@ import './styles.min.css'
 import Filter from './Components/Filter'
 import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import api from './api/axios'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import ProductTable from './Components/ProductTable'
 import Navbar from './Components/Navbar'
 import Footer from './Components/Footer'
@@ -27,7 +27,7 @@ import UserDetails from './admin/UserDetails'
 import AdminOrders from './admin/AdminOrders'
 import AdminHomeSections from './admin/AdminHomeSections'
 import AdminSale from './admin/AdminSale'
-// import ChatBot from './Components/ChatBot'; // Disabled for now
+import ChatBot from './Components/ChatBot'; // Disabled for now
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
 import UpdateProfile from './Components/UpdateProfile';
@@ -40,19 +40,27 @@ import WishlistPage from './pages/WishlistPage';
 function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
-  
+  const [loggedin, setLoggedin] = useState(false);
+
   // Pages that require complete profile (phone + name)
   const profileRequiredPages = ['/checkout', '/orders', '/profile', '/update-profile'];
-  
+
   useEffect(() => {
     const checkProfile = async () => {
+
       const token = localStorage.getItem('token');
-      if (!token) return; // Not logged in, skip check
-      
+      if (!token) {
+        setLoggedin(false);
+        return; // Not logged in, skip check
+      }
+
+      setLoggedin(true);
       // Only check profile for pages that require it
+
+
       const needsProfileCheck = profileRequiredPages.some(p => location.pathname.startsWith(p));
       if (!needsProfileCheck) return;
-      
+
       try {
         const res = await api.get('/auth/me')
         const missingPhone = !res.data?.phoneNumber;
@@ -61,24 +69,25 @@ function Layout() {
           navigate('/enter-info');
           return;
         }
+
       } catch (err) {
         console.debug('Profile check error:', err.message);
       }
     }
     checkProfile();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname, navigate]);
 
   // Pages that should NOT show footer
   const hideFooterPages = ['/login', '/register', '/forgot-password', '/home', '/product', '/cart', '/checkout', '/orders', '/profile', '/update-profile', '/brands', '/admin', '/enter-info'];
   const shouldHideFooter = hideFooterPages.some(p => location.pathname.startsWith(p)) || location.pathname !== '/';
-  
+
   // Only show footer on MainPage (/)
   const showFooter = location.pathname === '/';
 
   return (
     <>
-      {/* ChatBot disabled */}
+      {loggedin && <ChatBot />}
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/home" element={<HomePage />} />
@@ -114,7 +123,7 @@ function Layout() {
 
 
 function App() {
-  
+
 
   return (
     <BrowserRouter>

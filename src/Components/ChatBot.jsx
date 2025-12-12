@@ -1,30 +1,37 @@
-import { useState } from 'react';
-import axios from 'axios';
+import { useState, useRef } from 'react';
+import { chatWithBedrock } from '../api/bedrock';
+
 export default function ChatBot() {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
         { text: 'Xin chào! Tôi có thể giúp gì cho bạn?', sender: 'bot' }
     ]);
     const [inputValue, setInputValue] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const sessionIdRef = useRef(`session-${Date.now()}`);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (inputValue.trim() === '') return;
+        if (inputValue.trim() === '' || isLoading) return;
 
         // Add user message
-        setMessages([...messages, { text: inputValue, sender: 'user' }]);
+        const userMessage = inputValue;
+        setMessages(prev => [...prev, { text: userMessage, sender: 'user' }]);
+        setInputValue('');
+        setIsLoading(true);
 
         try {
-            setInputValue('');
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/bedrock/ask?q=${inputValue}`, {});
-            const botMessage = res.data || 'Xin lỗi, tôi không hiểu câu hỏi của bạn.';
-            setMessages(prevMessages => [...prevMessages, { text: botMessage, sender: 'bot' }]);
+            const botResponse = await chatWithBedrock(userMessage, sessionIdRef.current);
+            setMessages(prev => [...prev, { text: botResponse, sender: 'bot' }]);
         } catch (error) {
-            setMessages(prevMessages => [...prevMessages, { text: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.', sender: 'bot' }]);
-            console.log(error);
+            console.error('Bedrock error:', error);
+            setMessages(prev => [...prev, {
+                text: 'Đã có lỗi xảy ra. Vui lòng thử lại sau.',
+                sender: 'bot'
+            }]);
+        } finally {
+            setIsLoading(false);
         }
-
-        setInputValue('');
     };
 
     return (
@@ -47,7 +54,7 @@ export default function ChatBot() {
                 }}>
                     {/* Chat Header */}
                     <div style={{
-                        backgroundColor: 'rgb(228, 148, 0)',
+                        backgroundColor: '#3B5998',
                         color: 'white',
                         padding: '15px',
                         display: 'flex',
@@ -90,7 +97,7 @@ export default function ChatBot() {
                                     maxWidth: '70%',
                                     padding: '10px 15px',
                                     borderRadius: '10px',
-                                    backgroundColor: msg.sender === 'user' ? 'rgb(228, 148, 0)' : 'white',
+                                    backgroundColor: msg.sender === 'user' ? '#3B5998' : 'white',
                                     color: msg.sender === 'user' ? 'white' : 'black',
                                     boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
                                 }}>
@@ -98,6 +105,18 @@ export default function ChatBot() {
                                 </div>
                             </div>
                         ))}
+                        {isLoading && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '10px' }}>
+                                <div style={{
+                                    padding: '10px 15px',
+                                    borderRadius: '10px',
+                                    backgroundColor: 'white',
+                                    boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                                }}>
+                                    Đang suy nghĩ...
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Input Area */}
@@ -127,7 +146,7 @@ export default function ChatBot() {
                         <button
                             type="submit"
                             style={{
-                                backgroundColor: 'rgb(228, 148, 0)',
+                                backgroundColor: '#3B5998',
                                 color: 'white',
                                 border: 'none',
                                 borderRadius: '50%',
