@@ -25,8 +25,13 @@ exports.handler = async (event) => {
       return errorResponse('Order not found', 404);
     }
 
-    // Check authorization
-    if (user.u_id !== order.u_id && user.role !== 'ADMIN') {
+    // Check authorization - support both Cognito groups and role
+    const isAdmin = user.role === 'ADMIN' || 
+                    (user['cognito:groups'] && user['cognito:groups'].includes('admin')) ||
+                    (user.groups && user.groups.includes('admin'));
+    
+    if (user.u_id !== order.u_id && !isAdmin) {
+      console.log('[getOrderDetails] Access denied:', { userId: user.u_id, orderUserId: order.u_id, isAdmin });
       return errorResponse('Forbidden', 403);
     }
 
@@ -54,11 +59,15 @@ exports.handler = async (event) => {
     const items = rows.map(row => {
       const quantity = parseInt(row.quantity || 0);
       const price = parseFloat(row.price || 0);
-      // Parse img_list JSON if exists
+      // Handle img_list - can be string (JSON) or already parsed array
       let imageUrl = '';
       try {
-        const imgList = row.img_list ? JSON.parse(row.img_list) : [];
-        imageUrl = imgList[0] || '';
+        let imgList = row.img_list;
+        // If it's a string, parse it; if already array, use directly
+        if (typeof imgList === 'string') {
+          imgList = JSON.parse(imgList);
+        }
+        imageUrl = Array.isArray(imgList) && imgList.length > 0 ? imgList[0] : '';
       } catch (e) {
         imageUrl = '';
       }

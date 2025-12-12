@@ -25,6 +25,7 @@ import AdminBrands from './admin/AdminBrands'
 import AdminUsers from './admin/AdminUsers'
 import UserDetails from './admin/UserDetails'
 import AdminOrders from './admin/AdminOrders'
+import AdminOrderDetails from './admin/AdminOrderDetails'
 import AdminHomeSections from './admin/AdminHomeSections'
 import AdminSale from './admin/AdminSale'
 import ChatBot from './Components/ChatBot';
@@ -100,6 +101,7 @@ function Layout() {
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/brands" element={<AdminBrands />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/orders/:id" element={<AdminOrderDetails />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/users/:id" element={<UserDetails />} />
         <Route path="/admin/home-sections" element={<AdminHomeSections />} />
