@@ -1,44 +1,69 @@
-    import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+
+// Check if JWT token is expired
+
+
+// Simple check if token exists (don't validate - let server decide)
+const hasToken = () => {
+    return !!localStorage.getItem('token');
+};
 
 export default function NotificationBell() {
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [showDropdown, setShowDropdown] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(hasToken());
     const navigate = useNavigate();
 
+    // Check login status
+    useEffect(() => {
+        const checkAuth = () => {
+            setIsLoggedIn(hasToken());
+        };
+        window.addEventListener('storage', checkAuth);
+        const interval = setInterval(checkAuth, 3000);
+        return () => {
+            window.removeEventListener('storage', checkAuth);
+            clearInterval(interval);
+        };
+    }, []);
+
     const fetchUnreadCount = useCallback(async () => {
+        if (!hasToken()) return;
         try {
             const res = await api.get('/notifications/unread-count');
             setUnreadCount(res.data?.unreadCount || 0);
-        } catch (error) {
-            console.error('Fetch unread count error:', error);
+        } catch {
+            // Silently ignore errors - axios interceptor handles 401
         }
     }, []);
 
     const fetchNotifications = useCallback(async () => {
+        if (!hasToken()) return;
         try {
             setLoading(true);
             const res = await api.get('/notifications?limit=10');
             setNotifications(res.data?.notifications || []);
-        } catch (error) {
-            console.error('Fetch notifications error:', error);
+        } catch {
+            // Silently ignore errors - axios interceptor handles 401
         } finally {
             setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
+        if (isLoggedIn) {
             fetchUnreadCount();
             // Poll for new notifications every 30 seconds
             const interval = setInterval(fetchUnreadCount, 30000);
             return () => clearInterval(interval);
         }
-    }, [fetchUnreadCount]);
+    }, [isLoggedIn, fetchUnreadCount]);
 
     const handleBellClick = () => {
         if (!showDropdown) {
@@ -70,16 +95,17 @@ export default function NotificationBell() {
     };
 
     const handleDeleteAll = async () => {
-        if (!confirm('Bạn có chắc muốn xóa toàn bộ thông báo? Dữ liệu sẽ bị xóa vĩnh viễn khỏi hệ thống.')) {
-            return;
-        }
+        setDeleting(true);
         try {
-            await api.delete('/notifications/delete-all');
+            await api.put('/notifications/read-all?action=delete');
             setNotifications([]);
             setUnreadCount(0);
+            setShowDeleteConfirm(false);
         } catch (error) {
             console.error('Delete all notifications error:', error);
             alert('Không thể xóa thông báo. Vui lòng thử lại.');
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -116,6 +142,11 @@ export default function NotificationBell() {
                 return '🔔';
         }
     };
+
+    // Don't render if not logged in
+    if (!isLoggedIn) {
+        return null;
+    }
 
     return (
         <div style={{ position: 'relative' }}>
@@ -312,7 +343,7 @@ export default function NotificationBell() {
                                     Xem đơn hàng →
                                 </button>
                                 <button
-                                    onClick={handleDeleteAll}
+                                    onClick={() => setShowDeleteConfirm(true)}
                                     style={{
                                         background: 'none',
                                         border: 'none',
@@ -326,6 +357,109 @@ export default function NotificationBell() {
                                 </button>
                             </div>
                         )}
+                    </div>
+                </>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <>
+                    <div 
+                        onClick={() => setShowDeleteConfirm(false)}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'rgba(0,0,0,0.5)',
+                            zIndex: 2000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <div 
+                            onClick={e => e.stopPropagation()}
+                            style={{
+                                background: '#fff',
+                                borderRadius: '16px',
+                                padding: '24px',
+                                width: '360px',
+                                boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+                            }}
+                        >
+                            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                <div style={{ 
+                                    fontSize: '48px', 
+                                    marginBottom: '12px'
+                                }}>⚠️</div>
+                                <h3 style={{ 
+                                    margin: '0 0 8px', 
+                                    fontSize: '18px', 
+                                    fontWeight: '600',
+                                    color: '#222'
+                                }}>
+                                    Xóa toàn bộ thông báo?
+                                </h3>
+                                <p style={{ 
+                                    margin: 0, 
+                                    fontSize: '14px', 
+                                    color: '#666',
+                                    lineHeight: '1.5'
+                                }}>
+                                    Dữ liệu sẽ bị xóa vĩnh viễn khỏi hệ thống và không thể khôi phục.
+                                </p>
+                            </div>
+                            <div style={{ 
+                                display: 'flex', 
+                                gap: '12px',
+                                justifyContent: 'center'
+                            }}>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={deleting}
+                                    style={{
+                                        padding: '10px 24px',
+                                        borderRadius: '8px',
+                                        border: '1px solid #e5e5e5',
+                                        background: '#fff',
+                                        color: '#666',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={handleDeleteAll}
+                                    disabled={deleting}
+                                    style={{
+                                        padding: '10px 24px',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        background: deleting ? '#fca5a5' : '#e31837',
+                                        color: '#fff',
+                                        fontSize: '14px',
+                                        fontWeight: '500',
+                                        cursor: deleting ? 'not-allowed' : 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px'
+                                    }}
+                                >
+                                    {deleting ? (
+                                        <>
+                                            <span className="spinner-border spinner-border-sm"></span>
+                                            Đang xóa...
+                                        </>
+                                    ) : (
+                                        '🗑️ Xác nhận xóa'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </>
             )}

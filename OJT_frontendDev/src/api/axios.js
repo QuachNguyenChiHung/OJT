@@ -25,10 +25,20 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear tokens on unauthorized
-      localStorage.removeItem('token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      const currentPath = window.location.pathname;
+      const protectedPaths = ['/admin', '/orders', '/cart', '/checkout', '/profile'];
+      const isProtectedRoute = protectedPaths.some((path) =>
+        currentPath.startsWith(path)
+      );
+
+      // Only clear tokens and redirect on protected routes
+      if (isProtectedRoute) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/login';
+      }
+      // For public routes (/home, etc.) - just reject, don't clear token
     }
     return Promise.reject(error);
   }
