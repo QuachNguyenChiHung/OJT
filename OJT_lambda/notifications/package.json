@@ -1,9 +1,0 @@
-{
-  "name": "notifications",
-  "version": "1.0.0",
-  "description": "Notifications Lambda functions",
-  "main": "index.js",
-  "dependencies": {
-    "uuid": "^9.0.0"
-  }
-}
