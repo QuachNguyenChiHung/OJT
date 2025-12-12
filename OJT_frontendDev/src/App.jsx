@@ -27,7 +27,7 @@ import UserDetails from './admin/UserDetails'
 import AdminOrders from './admin/AdminOrders'
 import AdminHomeSections from './admin/AdminHomeSections'
 import AdminSale from './admin/AdminSale'
-// import ChatBot from './Components/ChatBot'; // Disabled for now
+import ChatBot from './Components/ChatBot';
 import EnterInfo from './Components/EnterInfo';
 import UserProfile from './Components/UserProfile';
 import UpdateProfile from './Components/UpdateProfile';
@@ -78,7 +78,7 @@ function Layout() {
 
   return (
     <>
-      {/* ChatBot disabled */}
+      <ChatBot />
       <Routes>
         <Route path="/" element={<MainPage />} />
         <Route path="/home" element={<HomePage />} />
