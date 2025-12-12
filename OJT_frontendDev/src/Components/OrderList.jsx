@@ -128,6 +128,7 @@ export default function OrderList() {
             case 'PROCESSING': return 'info';
             case 'SHIPPING': return 'primary';
             case 'DELIVERED': return 'success';
+            case 'COMPLETED': return 'success';
             case 'CANCELLED': return 'danger';
             default: return 'secondary';
         }
@@ -139,8 +140,24 @@ export default function OrderList() {
             case 'PROCESSING': return 'Đang Xử Lý';
             case 'SHIPPING': return 'Đang Giao Hàng';
             case 'DELIVERED': return 'Đã Giao Hàng';
+            case 'COMPLETED': return 'Hoàn Thành';
             case 'CANCELLED': return 'Đã Hủy';
             default: return status;
+        }
+    };
+
+    // User confirms received order - use /status?action=confirm workaround
+    const confirmReceived = async (orderId) => {
+        if (!window.confirm('Xác nhận bạn đã nhận được hàng?')) return;
+        try {
+            await api.patch(`/orders/${orderId}/status?action=confirm`);
+            setUserOrders(prev => prev.map(o => 
+                o.id === orderId ? { ...o, status: 'COMPLETED' } : o
+            ));
+            alert('✅ Cảm ơn bạn đã xác nhận! Đơn hàng đã hoàn thành.');
+        } catch (err) {
+            console.error('Confirm order error:', err);
+            alert('Không thể xác nhận đơn hàng. Vui lòng thử lại.');
         }
     };
 
@@ -277,6 +294,17 @@ export default function OrderList() {
                                                                                 {item.productDetails?.size && `Size: ${item.productDetails.size}`}
                                                                                 {!item.productDetails?.colorName && !item.productDetails?.size && 'Không có thông tin'}
                                                                             </small>
+                                                                            {order.status === 'COMPLETED' && item.product?.pId && (
+                                                                                <div className="mt-1">
+                                                                                    <button
+                                                                                        className="btn btn-outline-warning btn-sm"
+                                                                                        style={{ fontSize: '11px', padding: '2px 8px' }}
+                                                                                        onClick={() => navigate(`/review/${item.product.pId}?orderId=${order.id}`)}
+                                                                                    >
+                                                                                        ⭐ Đánh giá
+                                                                                    </button>
+                                                                                </div>
+                                                                            )}
                                                                         </td>
                                                                         <td>{item.quantity}</td>
                                                                         <td className="text-end">
@@ -289,7 +317,17 @@ export default function OrderList() {
                                                                 ))}
                                                             </tbody>
                                                         </table>
-                                                        <div className="d-flex justify-content-end mt-2 pt-2 border-top">
+                                                        <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                                            <div>
+                                                                {order.status === 'DELIVERED' && (
+                                                                    <button
+                                                                        className="btn btn-success btn-sm"
+                                                                        onClick={() => confirmReceived(order.id)}
+                                                                    >
+                                                                        ✅ Xác nhận đã nhận hàng
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                             <strong className="text-primary">
                                                                 Tổng cộng: {formatCurrency(order.total)}
                                                             </strong>

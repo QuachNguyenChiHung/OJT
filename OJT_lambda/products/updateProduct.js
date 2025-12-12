@@ -1,51 +1,48 @@
-// Lambda: Update Product (Admin)
-const { executeStatement } = require('../shared/database');
-const { verifyToken } = require('../shared/auth');
-const { successResponse, errorResponse, parseBody } = require('../shared/response');
+// Lambda: Update Product (Admin) - MySQL
+const { getOne, update } = require('./shared/database');
+const { verifyToken, isAdmin } = require('./shared/auth');
+const { successResponse, errorResponse, parseBody } = require('./shared/response');
 
 exports.handler = async (event) => {
   try {
     const user = await verifyToken(event);
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !isAdmin(user)) {
       return errorResponse('Forbidden - Admin access required', 403);
     }
 
     const productId = event.pathParameters?.id;
-    const { name, description, imageUrl, categoryId, brandId } = parseBody(event);
+    const { name, description, price, categoryId, brandId, isActive } = parseBody(event);
 
     if (!productId) {
       return errorResponse('Product ID is required', 400);
     }
 
     // Check if product exists
-    const checkSql = `SELECT p_id FROM Products WHERE p_id = @productId`;
-    const checkResult = await executeStatement(checkSql, [
-      { name: 'productId', value: { stringValue: productId } }
-    ]);
+    const checkSql = `SELECT p_id FROM Product WHERE p_id = ?`;
+    const existing = await getOne(checkSql, [productId]);
 
-    if (!checkResult.records || checkResult.records.length === 0) {
+    if (!existing) {
       return errorResponse('Product not found', 404);
     }
 
-    const updateSql = `
-      UPDATE Products
-      SET p_name = COALESCE(@name, p_name),
-          description = COALESCE(@description, description),
-          image_url = COALESCE(@imageUrl, image_url),
-          c_id = COALESCE(@categoryId, c_id),
-          brand_id = COALESCE(@brandId, brand_id),
-          updated_at = GETDATE()
-      WHERE p_id = @productId
-    `;
+    // Build dynamic update query
+    const updates = [];
+    const params = [];
 
-    await executeStatement(updateSql, [
-      { name: 'name', value: { stringValue: name || null } },
-      { name: 'description', value: { stringValue: description || null } },
-      { name: 'imageUrl', value: { stringValue: imageUrl || null } },
-      { name: 'categoryId', value: { stringValue: categoryId || null } },
-      { name: 'brandId', value: { stringValue: brandId || null } },
-      { name: 'productId', value: { stringValue: productId } }
-    ]);
+    if (name !== undefined) { updates.push('p_name = ?'); params.push(name); }
+    if (description !== undefined) { updates.push('p_desc = ?'); params.push(description); }
+    if (price !== undefined) { updates.push('price = ?'); params.push(price); }
+    if (categoryId !== undefined) { updates.push('c_id = ?'); params.push(categoryId); }
+    if (brandId !== undefined) { updates.push('brand_id = ?'); params.push(brandId); }
+    if (isActive !== undefined) { updates.push('is_active = ?'); params.push(isActive); }
+
+    if (updates.length === 0) {
+      return errorResponse('No fields to update', 400);
+    }
+
+    params.push(productId);
+    const updateSql = `UPDATE Product SET ${updates.join(', ')} WHERE p_id = ?`;
+    await update(updateSql, params);
 
     return successResponse({
       productId,

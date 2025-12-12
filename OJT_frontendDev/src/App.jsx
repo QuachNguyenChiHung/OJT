@@ -37,6 +37,7 @@ import CheckoutPage from './pages/CheckoutPage';
 import ForgotPassword from './Components/ForgotPassword';
 import HomePage from './pages/HomePage';
 import WishlistPage from './pages/WishlistPage';
+import ReviewPage from './pages/ReviewPage';
 
 function Layout() {
   const location = useLocation()
@@ -91,6 +92,7 @@ function Layout() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orders" element={<OrderPage />} />
+        <Route path="/review/:productId" element={<ReviewPage />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/update-profile" element={<UpdateProfile />} />
         <Route path="/brands" element={<BrandPage />} />

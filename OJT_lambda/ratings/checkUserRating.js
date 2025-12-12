@@ -1,23 +1,40 @@
 // Lambda: Check if user has rated a product
 const { getOne } = require('./shared/database');
+const { verifyToken } = require('./shared/auth');
 const { successResponse, errorResponse } = require('./shared/response');
 
 exports.handler = async (event) => {
     try {
         const queryParams = event.queryStringParameters || {};
-        const userId = queryParams.userId;
         const productId = queryParams.productId;
 
-        if (!userId || !productId) {
-            return errorResponse('userId and productId are required', 400);
+        if (!productId) {
+            return errorResponse('productId is required', 400);
         }
 
-        const sql = `SELECT r_id FROM Rating WHERE u_id = ? AND p_id = ?`;
+        // Get userId from token or query param
+        let userId = queryParams.userId;
+        if (!userId) {
+            const user = await verifyToken(event);
+            if (user) {
+                userId = user.u_id;
+            }
+        }
+
+        if (!userId) {
+            return successResponse({ hasRated: false, ratingId: null, rating: null });
+        }
+
+        const sql = `SELECT r_id, rating_value, review FROM Rating WHERE u_id = ? AND p_id = ?`;
         const rating = await getOne(sql, [userId, productId]);
 
         return successResponse({
             hasRated: !!rating,
-            ratingId: rating?.r_id || null
+            ratingId: rating?.r_id || null,
+            rating: rating ? {
+                ratingValue: rating.rating_value,
+                comment: rating.review || ''
+            } : null
         });
     } catch (error) {
         console.error('Check user rating error:', error);

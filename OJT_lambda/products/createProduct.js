@@ -1,37 +1,30 @@
-// Lambda: Create Product (Admin)
-const { executeStatement } = require('../shared/database');
-const { verifyToken } = require('../shared/auth');
-const { successResponse, errorResponse, parseBody } = require('../shared/response');
+// Lambda: Create Product (Admin) - MySQL
+const { insert } = require('./shared/database');
+const { verifyToken, isAdmin } = require('./shared/auth');
+const { successResponse, errorResponse, parseBody } = require('./shared/response');
 const { v4: uuidv4 } = require('uuid');
 
 exports.handler = async (event) => {
   try {
     const user = await verifyToken(event);
-    if (!user || user.role !== 'ADMIN') {
+    if (!user || !isAdmin(user)) {
       return errorResponse('Forbidden - Admin access required', 403);
     }
 
-    const { name, description, imageUrl, categoryId, brandId } = parseBody(event);
+    const { name, description, price, categoryId, brandId } = parseBody(event);
 
-    if (!name || !categoryId) {
-      return errorResponse('Product name and category are required', 400);
+    if (!name || !categoryId || !price) {
+      return errorResponse('Product name, price and category are required', 400);
     }
 
     const productId = uuidv4();
 
     const sql = `
-      INSERT INTO Products (p_id, p_name, description, image_url, c_id, brand_id, created_at, updated_at)
-      VALUES (@productId, @name, @description, @imageUrl, @categoryId, @brandId, GETDATE(), GETDATE())
+      INSERT INTO Product (p_id, p_name, p_desc, price, c_id, brand_id, is_active)
+      VALUES (?, ?, ?, ?, ?, ?, TRUE)
     `;
 
-    await executeStatement(sql, [
-      { name: 'productId', value: { stringValue: productId } },
-      { name: 'name', value: { stringValue: name } },
-      { name: 'description', value: { stringValue: description || '' } },
-      { name: 'imageUrl', value: { stringValue: imageUrl || '' } },
-      { name: 'categoryId', value: { stringValue: categoryId } },
-      { name: 'brandId', value: { stringValue: brandId || null } }
-    ]);
+    await insert(sql, [productId, name, description || '', price, categoryId, brandId || null]);
 
     return successResponse({
       productId,

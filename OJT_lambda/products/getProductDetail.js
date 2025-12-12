@@ -1,6 +1,6 @@
-// Lambda: Get Product Detail (with images and ratings)
-const { executeStatement } = require('../shared/database');
-const { successResponse, errorResponse } = require('../shared/response');
+// Lambda: Get Product Detail - MySQL
+const { getOne, getMany } = require('./shared/database');
+const { successResponse, errorResponse } = require('./shared/response');
 
 exports.handler = async (event) => {
   try {
@@ -10,79 +10,93 @@ exports.handler = async (event) => {
       return errorResponse('Product ID is required', 400);
     }
 
-    // Get product info
+    // Get product info with category and brand
     const productSql = `
-      SELECT p.p_id, p.p_name, p.description, p.image_url,
-             c.c_id, c.c_name, b.brand_id, b.brand_name
-      FROM Products p
-      LEFT JOIN Categories c ON p.c_id = c.c_id
-      LEFT JOIN Brands b ON p.brand_id = b.brand_id
-      WHERE p.p_id = @productId
+      SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
+             c.c_id, c.c_name, b.brand_id, b.brand_name,
+             (SELECT pd.img_list FROM ProductDetails pd WHERE pd.p_id = p.p_id LIMIT 1) as img_list
+      FROM Product p
+      LEFT JOIN Category c ON p.c_id = c.c_id
+      LEFT JOIN Brand b ON p.brand_id = b.brand_id
+      WHERE p.p_id = ?
     `;
 
-    const productResult = await executeStatement(productSql, [
-      { name: 'productId', value: { stringValue: productId } }
-    ]);
+    const product = await getOne(productSql, [productId]);
 
-    if (!productResult.records || productResult.records.length === 0) {
+    if (!product) {
       return errorResponse('Product not found', 404);
     }
 
-    const productRecord = productResult.records[0];
-
-    // Get product details (sizes, colors, prices)
-    const detailsSql = `
-      SELECT pd_id, size, price, amount
-      FROM ProductDetails
-      WHERE p_id = @productId
-    `;
-
-    const detailsResult = await executeStatement(detailsSql, [
-      { name: 'productId', value: { stringValue: productId } }
-    ]);
-
-    const variants = (detailsResult.records || []).map(record => ({
-      pdId: record[0].stringValue,
-      size: record[1].stringValue,
-      price: parseFloat(record[2].stringValue || record[2].doubleValue || 0),
-      stock: parseInt(record[3].longValue || record[3].stringValue || 0)
-    }));
-
-    // Get rating stats
-    const ratingsSql = `
-      SELECT AVG(CAST(rating_value AS FLOAT)) as avg_rating, COUNT(*) as total_ratings
-      FROM Ratings WHERE p_id = @productId
-    `;
-
-    const ratingsResult = await executeStatement(ratingsSql, [
-      { name: 'productId', value: { stringValue: productId } }
-    ]);
-
-    let avgRating = 0;
-    let totalRatings = 0;
-
-    if (ratingsResult.records && ratingsResult.records.length > 0) {
-      avgRating = parseFloat(ratingsResult.records[0][0].doubleValue || ratingsResult.records[0][0].stringValue || 0);
-      totalRatings = parseInt(ratingsResult.records[0][1].longValue || 0);
+    // Parse img_list to get imageUrl
+    let imageUrl = '';
+    try {
+      let imgList = product.img_list;
+      if (typeof imgList === 'string') {
+        imgList = JSON.parse(imgList);
+      }
+      imageUrl = Array.isArray(imgList) && imgList.length > 0 ? imgList[0] : '';
+    } catch {
+      imageUrl = '';
     }
 
+    // Get product details (variants)
+    const detailsSql = `
+      SELECT pd_id, size, color_name, color_code, amount, in_stock, img_list
+      FROM ProductDetails
+      WHERE p_id = ?
+    `;
+
+    const details = await getMany(detailsSql, [productId]);
+
+    const variants = (details || []).map(row => {
+      let variantImages = [];
+      try {
+        let imgs = row.img_list;
+        if (typeof imgs === 'string') {
+          imgs = JSON.parse(imgs);
+        }
+        variantImages = Array.isArray(imgs) ? imgs : [];
+      } catch {
+        variantImages = [];
+      }
+
+      return {
+        pdId: row.pd_id,
+        size: row.size,
+        colorName: row.color_name,
+        colorCode: row.color_code,
+        stock: parseInt(row.amount || 0),
+        inStock: !!row.in_stock,
+        images: variantImages
+      };
+    });
+
+    // Get rating stats
+    const ratingSql = `
+      SELECT AVG(rating_value) as avg_rating, COUNT(*) as total_ratings
+      FROM Rating WHERE p_id = ?
+    `;
+    const ratingRow = await getOne(ratingSql, [productId]);
+
     return successResponse({
-      productId: productRecord[0].stringValue,
-      name: productRecord[1].stringValue,
-      description: productRecord[2].stringValue || '',
-      imageUrl: productRecord[3].stringValue || '',
+      productId: product.p_id,
+      name: product.p_name,
+      description: product.p_desc || '',
+      price: parseFloat(product.price || 0),
+      isActive: !!product.is_active,
+      imageUrl,
       category: {
-        categoryId: productRecord[4]?.stringValue,
-        name: productRecord[5]?.stringValue
+        categoryId: product.c_id,
+        name: product.c_name
       },
       brand: {
-        brandId: productRecord[6]?.stringValue,
-        name: productRecord[7]?.stringValue
+        brandId: product.brand_id,
+        name: product.brand_name
       },
       variants,
       ratings: {
-        average: avgRating.toFixed(1),
-        total: totalRatings
+        average: parseFloat(ratingRow?.avg_rating || 0).toFixed(1),
+        total: parseInt(ratingRow?.total_ratings || 0)
       }
     });
 

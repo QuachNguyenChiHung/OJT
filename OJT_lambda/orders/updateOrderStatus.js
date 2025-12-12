@@ -10,7 +10,8 @@ const statusMessages = {
   PROCESSING: { title: 'Đơn hàng đã được xác nhận', message: 'Đơn hàng của bạn đã được xác nhận và đang được chuẩn bị.' },
   SHIPPING: { title: 'Đơn hàng đang giao', message: 'Đơn hàng của bạn đang được vận chuyển đến địa chỉ của bạn.' },
   SHIPPED: { title: 'Đơn hàng đang giao', message: 'Đơn hàng của bạn đang được vận chuyển đến địa chỉ của bạn.' },
-  DELIVERED: { title: 'Đơn hàng đã giao thành công', message: 'Đơn hàng của bạn đã được giao thành công. Cảm ơn bạn đã mua hàng!' },
+  DELIVERED: { title: 'Đơn hàng đã giao thành công', message: 'Đơn hàng của bạn đã được giao. Vui lòng xác nhận đã nhận hàng!' },
+  COMPLETED: { title: 'Đơn hàng hoàn thành', message: 'Đơn hàng đã hoàn thành. Cảm ơn bạn đã mua hàng!' },
   CANCELLED: { title: 'Đơn hàng đã bị hủy', message: 'Đơn hàng của bạn đã bị hủy. Vui lòng liên hệ hỗ trợ nếu cần.' }
 };
 
@@ -35,7 +36,15 @@ exports.handler = async (event) => {
   try {
     // Verify authentication - Admin only
     const user = await verifyToken(event);
-    if (!user || user.role !== 'ADMIN') {
+    if (!user) {
+      return errorResponse('Unauthorized', 401);
+    }
+    
+    // Check admin access - support both role and Cognito groups
+    const isAdmin = user.role === 'ADMIN' || 
+                    (user['cognito:groups'] && user['cognito:groups'].includes('admin')) ||
+                    (user.groups && user.groups.includes('admin'));
+    if (!isAdmin) {
       return errorResponse('Unauthorized - Admin access required', 403);
     }
 
@@ -51,7 +60,7 @@ exports.handler = async (event) => {
     }
 
     // Validate status
-    const validStatuses = ['PENDING', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'DELIVERED', 'CANCELLED'];
+    const validStatuses = ['PENDING', 'PROCESSING', 'SHIPPING', 'SHIPPED', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
     if (!validStatuses.includes(status)) {
       return errorResponse(`Invalid status. Must be one of: ${validStatuses.join(', ')}`, 400);
     }

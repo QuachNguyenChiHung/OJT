@@ -12,7 +12,7 @@ export default function AdminOrders() {
     const [editingStatus, setEditingStatus] = useState('');
     const navigate = useNavigate();
 
-    const statuses = ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'CANCELLED'];
+    const statuses = ['PENDING', 'PROCESSING', 'SHIPPING', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
 
     const fetchOrders = async () => {
         try {
@@ -67,9 +67,11 @@ export default function AdminOrders() {
         let filtered = orders;
 
         if (searchTerm.trim()) {
+            const term = searchTerm.toLowerCase();
             filtered = filtered.filter(order =>
-                order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                order.userId.toLowerCase().includes(searchTerm.toLowerCase())
+                order.id.toLowerCase().includes(term) ||
+                (order.customerName && order.customerName.toLowerCase().includes(term)) ||
+                (order.customerEmail && order.customerEmail.toLowerCase().includes(term))
             );
         }
 
@@ -103,6 +105,7 @@ export default function AdminOrders() {
             PROCESSING: { bg: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)', text: 'Đang Xử Lý', icon: '⚙️' },
             SHIPPING: { bg: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)', text: 'Đang Giao', icon: '🚚' },
             DELIVERED: { bg: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', text: 'Đã Giao', icon: '✅' },
+            COMPLETED: { bg: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', text: 'Hoàn Thành', icon: '🎉' },
             CANCELLED: { bg: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', text: 'Đã Hủy', icon: '❌' }
         };
 
@@ -142,6 +145,7 @@ export default function AdminOrders() {
             PROCESSING: 'Đang Xử Lý',
             SHIPPING: 'Đang Giao',
             DELIVERED: 'Đã Giao',
+            COMPLETED: 'Hoàn Thành',
             CANCELLED: 'Đã Hủy'
         };
         return statusTexts[status] || status;
@@ -221,7 +225,7 @@ export default function AdminOrders() {
                             <input
                                 type="text"
                                 className="form-control"
-                                placeholder="Tìm kiếm theo Order ID hoặc User ID..."
+                                placeholder="Tìm kiếm theo Order ID, tên hoặc email khách hàng..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 style={{
@@ -271,6 +275,7 @@ export default function AdminOrders() {
                             <option value="PROCESSING">⚙️ Đang Xử Lý</option>
                             <option value="SHIPPING">🚚 Đang Giao</option>
                             <option value="DELIVERED">✅ Đã Giao</option>
+                            <option value="COMPLETED">🎉 Hoàn Thành</option>
                             <option value="CANCELLED">❌ Đã Hủy</option>
                         </select>
                     </div>
@@ -301,7 +306,7 @@ export default function AdminOrders() {
                     <thead>
                         <tr style={{ background: 'linear-gradient(135deg, #0d9488 0%, #06b6d4 100%)' }}>
                             <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Order ID</th>
-                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>User ID</th>
+                            <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Khách Hàng</th>
                             <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Trạng Thái</th>
                             <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Ngày Tạo</th>
                             <th style={{ color: "#fff", padding: '16px 20px', fontWeight: 600, fontSize: 13, border: 'none' }}>Tổng Tiền</th>
@@ -359,13 +364,14 @@ export default function AdminOrders() {
                                         }}>{order.id.substring(0, 8)}...</code>
                                     </td>
                                     <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
-                                        <code style={{
-                                            background: '#f1f5f9',
-                                            padding: '4px 10px',
-                                            borderRadius: '6px',
-                                            fontSize: 12,
-                                            color: '#64748b',
-                                        }}>{order.userId.substring(0, 8)}...</code>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                            <span style={{ fontWeight: 500, color: '#1e293b', fontSize: 13 }}>
+                                                {order.customerName || 'N/A'}
+                                            </span>
+                                            <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                                                {order.customerEmail || ''}
+                                            </span>
+                                        </div>
                                     </td>
                                     <td style={{ padding: '16px 20px', verticalAlign: 'middle' }}>
                                         {editingId === order.id ? (
@@ -382,6 +388,7 @@ export default function AdminOrders() {
                                                         {status === 'PROCESSING' && '⚙️ Đang Xử Lý'}
                                                         {status === 'SHIPPING' && '🚚 Đang Giao'}
                                                         {status === 'DELIVERED' && '✅ Đã Giao'}
+                                                        {status === 'COMPLETED' && '🎉 Hoàn Thành'}
                                                         {status === 'CANCELLED' && '❌ Đã Hủy'}
                                                     </option>
                                                 ))}

@@ -93,7 +93,9 @@ const ProductDetails = () => {
                     api.get(`/ratings/product/${id}`).catch(() => ({ data: [] }))
                 ]);
                 setRatings(statsRes.data);
-                setRatingsList(Array.isArray(listRes.data) ? listRes.data : []);
+                // Handle both { ratings: [...] } and direct array format
+                const ratingsData = listRes.data?.ratings || listRes.data || [];
+                setRatingsList(Array.isArray(ratingsData) ? ratingsData : []);
             } catch {
                 // Ratings not available
             }
@@ -405,7 +407,7 @@ const ProductDetails = () => {
     };
 
     const stars = [1, 2, 3, 4, 5];
-    const avgRating = ratings.averageRating || 0;
+    const avgRating = parseFloat(ratings.averageRating) || 0;
 
     return (
         <div style={{ background: '#fff', minHeight: '100vh' }}>

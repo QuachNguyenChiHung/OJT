@@ -8,6 +8,7 @@ const getOrdersByUserStatus = require('./getOrdersByUserStatus');
 const updateOrderStatus = require('./updateOrderStatus');
 const cancelOrder = require('./cancelOrder');
 const getOrdersByDateRange = require('./getOrdersByDateRange');
+const confirmOrder = require('./confirmOrder');
 // Notifications handlers (inline)
 const { getMany, update, getOne } = require('./shared/database');
 const { verifyToken } = require('./shared/auth');
@@ -80,8 +81,12 @@ exports.handler = async (event) => {
   if (path.includes('/details') && method === 'GET' && pathParams.id) {
     return getOrderDetails.handler(event);
   }
-  // PATCH /orders/{id}/status
+  // PATCH /orders/{id}/status (with optional action=confirm for user confirmation)
   if (path.includes('/status') && method === 'PATCH' && pathParams.id) {
+    const queryParams = event.queryStringParameters || {};
+    if (queryParams.action === 'confirm') {
+      return confirmOrder.handler(event);
+    }
     return updateOrderStatus.handler(event);
   }
   // GET /orders/user/{userId}/status/{status}
