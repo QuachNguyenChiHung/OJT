@@ -1,78 +1,50 @@
-// Lambda: Update Product (Admin) - MySQL
-const { getOne, update } = require('./shared/database');
-const { verifyToken } = require('./shared/auth');
-const { successResponse, errorResponse, parseBody } = require('./shared/response');
+// Lambda: Update Product (Admin)
+const { executeStatement } = require('../shared/database');
+const { verifyToken } = require('../shared/auth');
+const { successResponse, errorResponse, parseBody } = require('../shared/response');
 
 exports.handler = async (event) => {
   try {
     const user = await verifyToken(event);
-    if (!user) {
-      return errorResponse('Unauthorized', 401);
-    }
-    
-    // Check role from database
-    const dbUser = await getOne('SELECT role FROM Users WHERE user_id = ?', [user.u_id]);
-    const isAdmin = dbUser?.role === 'ADMIN' || user.role === 'ADMIN' || (user.groups && user.groups.includes('admin'));
-    
-    if (!isAdmin) {
+    if (!user || user.role !== 'ADMIN') {
       return errorResponse('Forbidden - Admin access required', 403);
     }
 
-    // Extract productId from path
-    let productId = event.pathParameters?.id;
-    if (!productId) {
-      const path = event.path || event.rawPath || '';
-      const match = path.match(/\/products\/([^\/\?]+)/);
-      if (match) productId = match[1];
-    }
-    
-    const body = parseBody(event);
-    // Support multiple field names
-    const name = body.name || body.PName || body.pName;
-    const description = body.description || body.pDesc;
-    const price = body.price;
-    const categoryId = body.categoryId || event.queryStringParameters?.categoryId;
-    const brandId = body.brandId || event.queryStringParameters?.brandId;
-    const isActive = body.isActive;
-    const thumbnail1 = body.thumbnail1;
-    const thumbnail2 = body.thumbnail2;
+    const productId = event.pathParameters?.id;
+    const { name, description, imageUrl, categoryId, brandId } = parseBody(event);
 
     if (!productId) {
       return errorResponse('Product ID is required', 400);
     }
 
-    // Check if product exists - Schema v2
-    const checkSql = `SELECT p_id FROM Product WHERE p_id = ?`;
-    const product = await getOne(checkSql, [productId]);
+    // Check if product exists
+    const checkSql = `SELECT p_id FROM Products WHERE p_id = @productId`;
+    const checkResult = await executeStatement(checkSql, [
+      { name: 'productId', value: { stringValue: productId } }
+    ]);
 
-    if (!product) {
+    if (!checkResult.records || checkResult.records.length === 0) {
       return errorResponse('Product not found', 404);
     }
 
-    // Schema v2: Product table with p_desc, brand_id, thumbnail_1, thumbnail_2
     const updateSql = `
-      UPDATE Product
-      SET p_name = COALESCE(?, p_name),
-          p_desc = COALESCE(?, p_desc),
-          price = COALESCE(?, price),
-          c_id = COALESCE(?, c_id),
-          brand_id = COALESCE(?, brand_id),
-          is_active = COALESCE(?, is_active),
-          thumbnail_1 = COALESCE(?, thumbnail_1),
-          thumbnail_2 = COALESCE(?, thumbnail_2)
-      WHERE p_id = ?
+      UPDATE Products
+      SET p_name = COALESCE(@name, p_name),
+          description = COALESCE(@description, description),
+          image_url = COALESCE(@imageUrl, image_url),
+          c_id = COALESCE(@categoryId, c_id),
+          brand_id = COALESCE(@brandId, brand_id),
+          updated_at = GETDATE()
+      WHERE p_id = @productId
     `;
 
-    await update(updateSql, [
-      name || null,
-      description || null,
-      price !== undefined ? price : null,
-      categoryId || null,
-      brandId || null,
-      isActive !== undefined ? (isActive ? 1 : 0) : null,
-      thumbnail1 || null,
-      thumbnail2 || null,
-      productId
+    await executeStatement(updateSql, [
+      { name: 'name', value: { stringValue: name || null } },
+      { name: 'description', value: { stringValue: description || null } },
+      { name: 'imageUrl', value: { stringValue: imageUrl || null } },
+      { name: 'categoryId', value: { stringValue: categoryId || null } },
+      { name: 'brandId', value: { stringValue: brandId || null } },
+      { name: 'productId', value: { stringValue: productId } }
     ]);
 
     return successResponse({

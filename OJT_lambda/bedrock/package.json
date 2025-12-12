@@ -1,0 +1,9 @@
+{
+  "name": "bedrock-chat",
+  "version": "1.0.0",
+  "description": "Bedrock Agent chat endpoint",
+  "main": "index.js",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-agent-runtime": "^3.0.0"
+  }
+}

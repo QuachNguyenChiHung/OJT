@@ -48,7 +48,9 @@ function Show-Help {
     Write-Host ""
     Write-Host "Available modules:"
     Write-Host "  auth, products, product-details, cart, orders,"
-    Write-Host "  categories, brands, banners, ratings, users, images"
+    Write-Host "  categories, brands, banners, ratings, users, images,"
+    Write-Host "  home-sections, sale-products, wishlist, notifications,"
+    Write-Host "  bedrock, bedrock-agent"
     Write-Host ""
 }
 
@@ -186,7 +188,7 @@ function Build-Only {
         "
     } else {
         # Build all modules
-        foreach ($mod in @('auth', 'products', 'product-details', 'cart', 'orders', 'categories', 'brands', 'banners', 'ratings', 'users', 'images')) {
+        foreach ($mod in @('auth', 'products', 'product-details', 'cart', 'orders', 'categories', 'brands', 'banners', 'ratings', 'users', 'images', 'home-sections', 'sale-products', 'wishlist', 'notifications', 'bedrock', 'bedrock-agent')) {
             Build-Only -targetModule $mod
         }
     }

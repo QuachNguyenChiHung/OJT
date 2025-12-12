@@ -1,124 +1,84 @@
-// Lambda: Get Product Detail - MySQL (Schema v2)
-const { getOne, getMany } = require('./shared/database');
-const { successResponse, errorResponse, getPathParam } = require('./shared/response');
+// Lambda: Get Product Detail (with images and ratings)
+const { executeStatement } = require('../shared/database');
+const { successResponse, errorResponse } = require('../shared/response');
 
 exports.handler = async (event) => {
   try {
-    const productId = getPathParam(event, 'id') || event.pathParameters?.productId;
+    const productId = event.pathParameters?.id;
 
     if (!productId) {
       return errorResponse('Product ID is required', 400);
     }
 
-    // Schema v2: Product, Category, Brand tables
+    // Get product info
     const productSql = `
-      SELECT p.p_id, p.p_name, p.p_desc, p.price, p.is_active,
-             p.thumbnail_1, p.thumbnail_2,
+      SELECT p.p_id, p.p_name, p.description, p.image_url,
              c.c_id, c.c_name, b.brand_id, b.brand_name
-      FROM Product p
-      LEFT JOIN Category c ON p.c_id = c.c_id
-      LEFT JOIN Brand b ON p.brand_id = b.brand_id
-      WHERE p.p_id = ?
+      FROM Products p
+      LEFT JOIN Categories c ON p.c_id = c.c_id
+      LEFT JOIN Brands b ON p.brand_id = b.brand_id
+      WHERE p.p_id = @productId
     `;
 
-    const product = await getOne(productSql, [productId]);
+    const productResult = await executeStatement(productSql, [
+      { name: 'productId', value: { stringValue: productId } }
+    ]);
 
-    if (!product) {
+    if (!productResult.records || productResult.records.length === 0) {
       return errorResponse('Product not found', 404);
     }
 
-    // Schema v2: ProductDetails table with sizes JSON column
+    const productRecord = productResult.records[0];
+
+    // Get product details (sizes, colors, prices)
     const detailsSql = `
-      SELECT pd_id, sizes, size, amount, color_name, color_code, img_list, in_stock, description
+      SELECT pd_id, size, price, amount
       FROM ProductDetails
-      WHERE p_id = ?
+      WHERE p_id = @productId
     `;
 
-    const detailsRows = await getMany(detailsSql, [productId]);
+    const detailsResult = await executeStatement(detailsSql, [
+      { name: 'productId', value: { stringValue: productId } }
+    ]);
 
-    const variants = detailsRows.map(row => {
-      // Parse img_list JSON string to array
-      let imgList = [];
-      if (row.img_list) {
-        try {
-          imgList = typeof row.img_list === 'string' ? JSON.parse(row.img_list) : row.img_list;
-        } catch (e) {
-          imgList = [];
-        }
-      }
-      
-      // Parse sizes JSON array
-      let sizes = [];
-      if (row.sizes) {
-        try {
-          sizes = typeof row.sizes === 'string' ? JSON.parse(row.sizes) : row.sizes;
-        } catch (e) {
-          sizes = [];
-        }
-      }
-      // Fallback: if no sizes array but has single size/amount
-      if (sizes.length === 0 && row.size) {
-        sizes = [{ size: row.size, amount: parseInt(row.amount || 0) }];
-      }
-      
-      // Calculate total stock from sizes array
-      const totalStock = sizes.reduce((sum, s) => sum + (parseInt(s.amount) || 0), 0);
-      
-      return {
-        pdId: row.pd_id,
-        sizes: sizes,
-        size: row.size, // Keep for backward compatibility
-        stock: totalStock,
-        amount: totalStock,
-        colorName: row.color_name,
-        colorCode: row.color_code,
-        description: row.description || '',
-        imgList: imgList,
-        inStock: !!row.in_stock && totalStock > 0
-      };
-    });
+    const variants = (detailsResult.records || []).map(record => ({
+      pdId: record[0].stringValue,
+      size: record[1].stringValue,
+      price: parseFloat(record[2].stringValue || record[2].doubleValue || 0),
+      stock: parseInt(record[3].longValue || record[3].stringValue || 0)
+    }));
 
-    // Schema v2: Rating table
+    // Get rating stats
     const ratingsSql = `
-      SELECT AVG(rating_value) as avg_rating, COUNT(*) as total_ratings
-      FROM Rating WHERE p_id = ?
+      SELECT AVG(CAST(rating_value AS FLOAT)) as avg_rating, COUNT(*) as total_ratings
+      FROM Ratings WHERE p_id = @productId
     `;
+
+    const ratingsResult = await executeStatement(ratingsSql, [
+      { name: 'productId', value: { stringValue: productId } }
+    ]);
 
     let avgRating = 0;
     let totalRatings = 0;
-    try {
-      const ratingsRow = await getOne(ratingsSql, [productId]);
-      if (ratingsRow) {
-        avgRating = parseFloat(ratingsRow.avg_rating || 0);
-        totalRatings = parseInt(ratingsRow.total_ratings || 0);
-      }
-    } catch (e) {
-      // Rating table may not exist, ignore
+
+    if (ratingsResult.records && ratingsResult.records.length > 0) {
+      avgRating = parseFloat(ratingsResult.records[0][0].doubleValue || ratingsResult.records[0][0].stringValue || 0);
+      totalRatings = parseInt(ratingsResult.records[0][1].longValue || 0);
     }
 
     return successResponse({
-      id: product.p_id,
-      productId: product.p_id,
-      name: product.p_name,
-      productName: product.p_name,
-      description: product.p_desc || '',
-      desc: product.p_desc || '',
-      price: parseFloat(product.price || 0),
-      isActive: !!product.is_active,
-      thumbnail1: product.thumbnail_1 || null,
-      thumbnail2: product.thumbnail_2 || null,
-      categoryId: product.c_id,
-      categoryName: product.c_name,
-      category: product.c_id ? {
-        cId: product.c_id,
-        cName: product.c_name
-      } : null,
-      brandId: product.brand_id,
-      brandName: product.brand_name,
-      brand: product.brand_id ? {
-        brandId: product.brand_id,
-        brandName: product.brand_name
-      } : null,
+      productId: productRecord[0].stringValue,
+      name: productRecord[1].stringValue,
+      description: productRecord[2].stringValue || '',
+      imageUrl: productRecord[3].stringValue || '',
+      category: {
+        categoryId: productRecord[4]?.stringValue,
+        name: productRecord[5]?.stringValue
+      },
+      brand: {
+        brandId: productRecord[6]?.stringValue,
+        name: productRecord[7]?.stringValue
+      },
       variants,
       ratings: {
         average: avgRating.toFixed(1),

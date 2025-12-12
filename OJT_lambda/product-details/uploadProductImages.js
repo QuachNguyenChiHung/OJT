@@ -67,7 +67,7 @@ exports.handler = async (event) => {
     let imagesToUpload = [];
     
     if (parsed.isJson && parsed.images) {
-      // JSON format: { images: [{ data: base64, contentType }] }
+      // JSON format: { images: [{ data: base64, contentType, position }] }
       imagesToUpload = parsed.images.filter(img => img && img.data);
     } else if (parsed.files) {
       // Multipart format
@@ -75,7 +75,12 @@ exports.handler = async (event) => {
     }
 
     if (imagesToUpload.length === 0) {
-      return errorResponse('At least 1 image is required', 400);
+      return successResponse({
+        success: true,
+        message: 'No new images to upload, existing images kept',
+        productDetailsId: pdId,
+        imageUrls: existingUrls,
+      });
     }
     
     if (imagesToUpload.length > MAX_IMAGES) {
@@ -100,25 +105,32 @@ exports.handler = async (event) => {
       }
     }
 
-    // Upload new images to S3
-    const newUrls = [...existingUrls]; // Start with existing
+    // Initialize newUrls with existing, ensuring 5 slots
+    const newUrls = Array(MAX_IMAGES).fill(null).map((_, idx) => existingUrls[idx] || null);
     
     for (let i = 0; i < imagesToUpload.length; i++) {
       const image = imagesToUpload[i];
-      let buffer, contentType;
+      let buffer, contentType, position;
       
       if (parsed.isJson) {
-        // JSON format
+        // JSON format with position support
         buffer = Buffer.from(image.data, 'base64');
         contentType = image.contentType || 'image/jpeg';
+        position = typeof image.position === 'number' ? image.position : i;
       } else {
-        // Multipart format
+        // Multipart format - use sequential position
         buffer = image.buffer;
         contentType = image.mimeType || 'image/jpeg';
+        position = i;
+      }
+      
+      // Ensure position is within bounds
+      if (position < 0 || position >= MAX_IMAGES) {
+        position = i;
       }
       
       if (buffer && buffer.length > 0) {
-        const key = `products/${pdId}/${Date.now()}-${i}.jpg`;
+        const key = `products/${pdId}/${Date.now()}-${position}.jpg`;
 
         await s3Client.send(new PutObjectCommand({
           Bucket: BUCKET_NAME,
@@ -129,30 +141,27 @@ exports.handler = async (event) => {
 
         const imageUrl = `https://${BUCKET_NAME}.s3.ap-southeast-1.amazonaws.com/${key}`;
         
-        // Add to list (replace if position exists, otherwise append)
-        if (i < newUrls.length) {
-          // Delete old image if replacing
-          if (newUrls[i]) {
-            try {
-              const oldKey = newUrls[i].split('.amazonaws.com/')[1];
-              if (oldKey) {
-                await s3Client.send(new DeleteObjectCommand({
-                  Bucket: BUCKET_NAME,
-                  Key: oldKey,
-                }));
-              }
-            } catch (e) {
-              console.error('Failed to delete old image:', e);
+        // Delete old image if replacing at this position
+        if (newUrls[position]) {
+          try {
+            const oldKey = newUrls[position].split('.amazonaws.com/')[1];
+            if (oldKey) {
+              await s3Client.send(new DeleteObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: oldKey,
+              }));
             }
+          } catch (e) {
+            console.error('Failed to delete old image:', e);
           }
-          newUrls[i] = imageUrl;
-        } else {
-          newUrls.push(imageUrl);
         }
+        
+        // Set image at the specified position
+        newUrls[position] = imageUrl;
       }
     }
     
-    // Limit to MAX_IMAGES
+    // Limit to MAX_IMAGES and filter out nulls
     const finalUrls = newUrls.slice(0, MAX_IMAGES).filter(url => url);
 
     // Update database - Schema v2

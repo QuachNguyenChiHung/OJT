@@ -69,6 +69,20 @@ export default function NotificationBell() {
         }
     };
 
+    const handleDeleteAll = async () => {
+        if (!confirm('Bạn có chắc muốn xóa toàn bộ thông báo? Dữ liệu sẽ bị xóa vĩnh viễn khỏi hệ thống.')) {
+            return;
+        }
+        try {
+            await api.delete('/notifications/delete-all');
+            setNotifications([]);
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Delete all notifications error:', error);
+            alert('Không thể xóa thông báo. Vui lòng thử lại.');
+        }
+    };
+
     const handleNotificationClick = (notification) => {
         if (!notification.isRead) {
             handleMarkAsRead(notification.id);
@@ -280,7 +294,9 @@ export default function NotificationBell() {
                             <div style={{
                                 padding: '12px 20px',
                                 borderTop: '1px solid #e5e5e5',
-                                textAlign: 'center'
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}>
                                 <button
                                     onClick={() => { navigate('/orders'); setShowDropdown(false); }}
@@ -293,7 +309,20 @@ export default function NotificationBell() {
                                         fontWeight: '500'
                                     }}
                                 >
-                                    Xem tất cả đơn hàng →
+                                    Xem đơn hàng →
+                                </button>
+                                <button
+                                    onClick={handleDeleteAll}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        color: '#e31837',
+                                        fontSize: '13px',
+                                        cursor: 'pointer',
+                                        fontWeight: '500'
+                                    }}
+                                >
+                                    🗑️ Xóa tất cả
                                 </button>
                             </div>
                         )}

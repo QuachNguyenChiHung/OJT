@@ -1,7 +1,7 @@
 // Lambda: Upload Image to S3
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
-const { verifyToken } = require('./shared/auth');
-const { successResponse, errorResponse } = require('./shared/response');
+const { verifyToken } = require('../shared/auth');
+const { successResponse, errorResponse } = require('../shared/response');
 const { v4: uuidv4 } = require('uuid');
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });

@@ -54,6 +54,27 @@ const getQueryParam = (event, paramName) => {
   return params[paramName] || null;
 };
 
+// Extract user info from JWT token
+const getUserFromToken = (event) => {
+  try {
+    const authHeader = event.headers?.Authorization || event.headers?.authorization;
+    if (!authHeader) return null;
+    
+    const token = authHeader.replace('Bearer ', '');
+    // Decode JWT payload (base64)
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    
+    return {
+      userId: payload.sub || payload.userId || payload.user_id,
+      email: payload.email,
+      role: payload.role || payload['custom:role'],
+    };
+  } catch (error) {
+    console.error('Failed to parse token:', error);
+    return null;
+  }
+};
+
 module.exports = {
   successResponse,
   errorResponse,
@@ -62,4 +83,5 @@ module.exports = {
   getPathParams,
   getPathParam,
   getQueryParam,
+  getUserFromToken,
 };

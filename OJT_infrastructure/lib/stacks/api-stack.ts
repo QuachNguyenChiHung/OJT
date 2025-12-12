@@ -192,6 +192,9 @@ exports.handler = async (event) => {
     // 15. Wishlist Module (user wishlist management)
     const wishlistModule = createLambdaModule('WishlistModule', 'Wishlist: add, get, remove', 128, 10);
 
+    // 16. Bedrock Chat Module (AI assistant)
+    const bedrockModule = createLambdaModule('BedrockModule', 'Bedrock: AI chat assistant', 256, 30);
+
     // ========================================
     // API GATEWAY
     // ========================================
@@ -234,6 +237,7 @@ exports.handler = async (event) => {
     const homeSectionsIntegration = new apigateway.LambdaIntegration(homeSectionsModule);
     const saleProductsIntegration = new apigateway.LambdaIntegration(saleProductsModule);
     const wishlistIntegration = new apigateway.LambdaIntegration(wishlistModule);
+    const bedrockIntegration = new apigateway.LambdaIntegration(bedrockModule);
 
     // ========================================
     // API ROUTES
@@ -398,11 +402,17 @@ exports.handler = async (event) => {
     const wishlistItem = wishlist.addResource('{userId}').addResource('{productId}');
     wishlistItem.addMethod('DELETE', wishlistIntegration); // Remove from wishlist
 
-    // --- NOTIFICATIONS ROUTES (4 endpoints) - handled by Orders Module ---
+    // --- BEDROCK ROUTES (2 endpoints) ---
+    const bedrock = this.api.root.addResource('bedrock');
+    bedrock.addResource('ask').addMethod('GET', bedrockIntegration);  // GET /bedrock/ask?q=...
+    bedrock.addResource('chat').addMethod('POST', bedrockIntegration); // POST /bedrock/chat
+
+    // --- NOTIFICATIONS ROUTES (5 endpoints) - handled by Orders Module ---
     const notifications = this.api.root.addResource('notifications');
     notifications.addMethod('GET', ordersIntegration); // Get user notifications
     notifications.addResource('unread-count').addMethod('GET', ordersIntegration); // Get unread count
     notifications.addResource('read-all').addMethod('PUT', ordersIntegration); // Mark all as read
+    notifications.addResource('delete-all').addMethod('DELETE', ordersIntegration); // Delete all notifications
     const notificationId = notifications.addResource('{id}');
     notificationId.addResource('read').addMethod('PUT', ordersIntegration); // Mark as read
 
@@ -438,8 +448,9 @@ exports.handler = async (event) => {
         homeSections: homeSectionsModule.functionName,
         saleProducts: saleProductsModule.functionName,
         wishlist: wishlistModule.functionName,
+        bedrock: bedrockModule.functionName,
       }),
-      description: '15 Lambda module names',
+      description: '16 Lambda module names',
     });
   }
 }

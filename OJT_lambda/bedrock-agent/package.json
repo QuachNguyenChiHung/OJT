@@ -1,0 +1,7 @@
+{
+  "name": "bedrock-agent-action",
+  "version": "1.0.0",
+  "description": "Bedrock Agent Action Group for product search",
+  "main": "index.js",
+  "dependencies": {}
+}
