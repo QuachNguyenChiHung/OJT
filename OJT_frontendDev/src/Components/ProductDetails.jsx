@@ -136,6 +136,8 @@ const ProductDetails = () => {
                 ]);
                 
                 const data = productRes.data;
+                console.log('[ProductDetails] API response:', data);
+                console.log('[ProductDetails] Variants from API:', data.variants);
                 
                 // Check if product is on sale
                 const saleProducts = Array.isArray(saleRes.data) ? saleRes.data : [];
@@ -149,17 +151,22 @@ const ProductDetails = () => {
                     });
                 }
                 
-                // Map variants
+                // Map variants - use sizes array from API directly
                 const productDetails = (data.variants || []).map(v => {
+                    // Use sizes array from API if available
                     let sizes = [];
-                    if (v.sizes) {
-                        try {
-                            sizes = typeof v.sizes === 'string' ? JSON.parse(v.sizes) : v.sizes;
-                        } catch { sizes = []; }
+                    if (v.sizes && Array.isArray(v.sizes) && v.sizes.length > 0) {
+                        sizes = v.sizes.map(s => ({
+                            size: s.size,
+                            amount: parseInt(s.amount) || 0,
+                            pdId: v.pdId // All sizes share same pdId
+                        }));
+                    } else if (v.size) {
+                        // Fallback to single size
+                        sizes = [{ size: v.size, amount: v.stock || v.amount || 0, pdId: v.pdId }];
                     }
-                    if (sizes.length === 0 && v.size) {
-                        sizes = [{ size: v.size, amount: v.stock || v.amount || 0 }];
-                    }
+                    
+                    const totalAmount = sizes.reduce((sum, s) => sum + (s.amount || 0), 0);
                     
                     return {
                         pdId: v.pdId,
@@ -167,12 +174,12 @@ const ProductDetails = () => {
                         colorCode: v.colorCode,
                         description: v.description || '',
                         sizes: sizes,
-                        size: v.size,
-                        amount: sizes.reduce((sum, s) => sum + (s.amount || 0), 0),
-                        inStock: v.inStock,
+                        amount: totalAmount,
+                        inStock: totalAmount > 0 || v.inStock,
                         images: v.imgList || v.images || []
                     };
                 });
+                console.log('[ProductDetails] Processed productDetails:', productDetails);
                 
                 setProductDetails({
                     id: data.id || data.productId,
@@ -196,6 +203,7 @@ const ProductDetails = () => {
                     setSelectedColor(firstVariant.colorName);
                     setSelectedVariant({
                         ...firstVariant,
+                        pdId: firstSizeWithStock?.pdId || firstVariant.pdId, // Use pdId from size data
                         size: initialSize,
                         amount: firstSizeWithStock?.amount || 0
                     });
@@ -249,6 +257,7 @@ const ProductDetails = () => {
             const sizeData = colorVariant.sizes?.find(s => s.size === size);
             setSelectedVariant({
                 ...colorVariant,
+                pdId: sizeData?.pdId || colorVariant.pdId, // Use pdId from size data if available
                 size: size,
                 amount: sizeData?.amount || 0
             });

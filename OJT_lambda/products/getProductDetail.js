@@ -39,9 +39,9 @@ exports.handler = async (event) => {
       imageUrl = '';
     }
 
-    // Get product details (variants)
+    // Get product details (variants) - include sizes JSON column
     const detailsSql = `
-      SELECT pd_id, size, color_name, color_code, amount, in_stock, img_list
+      SELECT pd_id, size, sizes, color_name, color_code, amount, in_stock, img_list, description
       FROM ProductDetails
       WHERE p_id = ?
     `;
@@ -60,12 +60,32 @@ exports.handler = async (event) => {
         variantImages = [];
       }
 
+      // Parse sizes JSON array
+      let sizesArray = [];
+      try {
+        if (row.sizes) {
+          sizesArray = typeof row.sizes === 'string' ? JSON.parse(row.sizes) : row.sizes;
+        }
+      } catch {
+        sizesArray = [];
+      }
+      
+      // Fallback to single size/amount if sizes array is empty
+      if (sizesArray.length === 0 && row.size) {
+        sizesArray = [{ size: row.size, amount: parseInt(row.amount || 0) }];
+      }
+
+      // Calculate total stock from sizes array
+      const totalStock = sizesArray.reduce((sum, s) => sum + (parseInt(s.amount) || 0), 0);
+
       return {
         pdId: row.pd_id,
         size: row.size,
+        sizes: sizesArray,
         colorName: row.color_name,
         colorCode: row.color_code,
-        stock: parseInt(row.amount || 0),
+        description: row.description || '',
+        stock: totalStock || parseInt(row.amount || 0),
         inStock: !!row.in_stock,
         images: variantImages
       };
