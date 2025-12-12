@@ -34,12 +34,25 @@ export default function NotificationBell() {
     }, []);
 
     const fetchUnreadCount = useCallback(async () => {
-        if (!hasToken()) return;
+        if (!hasToken()) {
+            console.log('[NotificationBell] No token, skipping fetch');
+            return;
+        }
         try {
+            // Debug: log token info
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    console.log('[NotificationBell] Full token payload:', payload);
+                } catch (e) {
+                    console.log('[NotificationBell] Invalid token format');
+                }
+            }
             const res = await api.get('/notifications/unread-count');
             setUnreadCount(res.data?.unreadCount || 0);
-        } catch {
-            // Silently ignore errors - axios interceptor handles 401
+        } catch (error) {
+            console.log('[NotificationBell] Fetch error:', error.response?.status, error.message);
         }
     }, []);
 
