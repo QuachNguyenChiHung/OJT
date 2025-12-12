@@ -273,6 +273,10 @@ export default function AdminProducts() {
   
   // Category filter state (cascading like create form)
   const [filterCategoryPath, setFilterCategoryPath] = useState([]);
+  // Filter for home page display status: 'all' | 'not_in_section' | 'in_section'
+  // 'not_in_section' = hiển thị ở mục "All" trên home (chưa vào section nào)
+  // 'in_section' = đã được thêm vào section (hiển thị trong section trên home)
+  const [filterHomeStatus, setFilterHomeStatus] = useState('all');
   
   useEffect(() => {
     const fetchCurrentUser = async () => {
@@ -406,7 +410,26 @@ export default function AdminProducts() {
     return ids;
   }, []);
 
-  // Filter products based on search term and category
+  // Check if product is in any home section
+  const isProductInSection = useCallback((productId) => {
+    return homeSections.some(s => 
+      s.products?.some(p => 
+        String(p.id) === String(productId) || 
+        String(p.productId) === String(productId) ||
+        String(p.p_id) === String(productId)
+      )
+    );
+  }, [homeSections]);
+
+  // Check if product is displayed on home page (either in section OR active in All)
+  const isProductOnHomePage = useCallback((product) => {
+    const inSection = isProductInSection(product.id);
+    const isActive = product.isActive === true;
+    // Hiện trên home nếu: đã vào section HOẶC đang active (sẽ hiện ở mục All)
+    return inSection || isActive;
+  }, [isProductInSection]);
+
+  // Filter products based on search term, category, and home status
   const filteredProducts = useMemo(() => {
     let result = products;
     
@@ -427,8 +450,17 @@ export default function AdminProducts() {
       );
     }
     
+    // Filter by home page display status
+    if (filterHomeStatus === 'not_on_home') {
+      // Sản phẩm CHƯA hiện trên /home (chưa vào section VÀ không active)
+      result = result.filter(p => !isProductOnHomePage(p));
+    } else if (filterHomeStatus === 'on_home') {
+      // Sản phẩm ĐÃ hiện trên /home (đã vào section HOẶC đang active)
+      result = result.filter(p => isProductOnHomePage(p));
+    }
+    
     return result;
-  }, [products, searchTerm, filterCategoryId, categories, getDescendantIds]);
+  }, [products, searchTerm, filterCategoryId, categories, getDescendantIds, filterHomeStatus, isProductOnHomePage]);
 
   const handleProductChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -848,7 +880,29 @@ export default function AdminProducts() {
               )}
             </div>
           </div>
-          <div className="col-md-4 text-end d-flex justify-content-end align-items-center gap-3">
+          <div className="col-md-2">
+            <select
+              value={filterHomeStatus}
+              onChange={(e) => setFilterHomeStatus(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                border: filterHomeStatus !== 'all' ? '2px solid #f59e0b' : '2px solid #e2e8f0',
+                background: filterHomeStatus !== 'all' ? '#fef3c7' : '#fff',
+                fontSize: 13,
+                fontWeight: 500,
+                color: filterHomeStatus !== 'all' ? '#b45309' : '#64748b',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="all">🏠 Tất cả sản phẩm</option>
+              <option value="not_on_home">❌ Chưa hiện trên Home</option>
+              <option value="on_home">✅ Đã hiện trên Home</option>
+            </select>
+          </div>
+          <div className="col-md-2 text-end d-flex justify-content-end align-items-center gap-3">
             <span style={{
               background: '#f1f5f9',
               padding: '10px 16px',

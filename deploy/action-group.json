@@ -1,0 +1,14 @@
+{
+  "agentId": "N3KJWNSLZ2",
+  "agentVersion": "DRAFT",
+  "actionGroupName": "ProductSearchActions",
+  "actionGroupExecutor": {
+    "lambda": "arn:aws:lambda:ap-southeast-1:706302944148:function:OJT-Ecommerce-BedrockAgentModule"
+  },
+  "apiSchema": {
+    "s3": {
+      "s3BucketName": "ojt-ecommerce-images-706302944148",
+      "s3ObjectKey": "bedrock/openapi-schema.json"
+    }
+  }
+}

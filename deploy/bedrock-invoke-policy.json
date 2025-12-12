@@ -1,0 +1,15 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "bedrock:InvokeAgent"
+      ],
+      "Resource": [
+        "arn:aws:bedrock:ap-southeast-1:706302944148:agent/VW1WAONP2F",
+        "arn:aws:bedrock:ap-southeast-1:706302944148:agent-alias/VW1WAONP2F/*"
+      ]
+    }
+  ]
+}

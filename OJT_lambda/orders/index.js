@@ -47,6 +47,10 @@ exports.handler = async (event) => {
   if (path === '/notifications/read-all' && method === 'PUT') {
     return handleMarkAllAsRead(event);
   }
+  // DELETE /notifications/delete-all
+  if (path === '/notifications/delete-all' && method === 'DELETE') {
+    return handleDeleteAllNotifications(event);
+  }
   // PUT /notifications/{id}/read
   if (path.match(/\/notifications\/[^\/]+\/read$/) && method === 'PUT') {
     return handleMarkAsRead(event);
@@ -174,5 +178,21 @@ async function handleMarkAllAsRead(event) {
   } catch (error) {
     console.error('Mark all as read error:', error);
     return errorResponse(error.message || 'Failed to mark all notifications as read', 500);
+  }
+}
+
+async function handleDeleteAllNotifications(event) {
+  try {
+    const user = await verifyToken(event);
+    if (!user) return errorResponse('Unauthorized', 401);
+
+    const result = await update(`DELETE FROM notifications WHERE u_id = ?`, [user.u_id]);
+    return successResponse({ 
+      message: 'All notifications deleted successfully',
+      deletedCount: result.affectedRows || 0
+    });
+  } catch (error) {
+    console.error('Delete all notifications error:', error);
+    return errorResponse(error.message || 'Failed to delete all notifications', 500);
   }
 }

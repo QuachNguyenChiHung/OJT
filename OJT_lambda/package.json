@@ -24,9 +24,11 @@
     "build:categories": "node scripts/build-lambda.js categories",
     "build:brands": "node scripts/build-lambda.js brands",
     "build:images": "node scripts/build-lambda.js images",
-    "deploy": "node ../deploy/deploy-all.js",
-    "deploy:layer": "node ../deploy/deploy-layer.js",
-    "deploy:modules": "node ../deploy/deploy-modules.js",
+    "deploy": "node scripts/deploy-lambda.js",
+    "deploy:auth": "node scripts/deploy-lambda.js auth",
+    "deploy:products": "node scripts/deploy-lambda.js products",
+    "deploy:cart": "node scripts/deploy-lambda.js cart",
+    "deploy:orders": "node scripts/deploy-lambda.js orders",
     "clean": "node scripts/clean.js"
   },
   "keywords": [

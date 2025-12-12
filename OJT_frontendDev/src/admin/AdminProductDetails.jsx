@@ -290,6 +290,14 @@ export default function AdminProductDetails() {
     brandId: ''
   });
 
+  // Thumbnail states for editing
+  const [thumbnail1, setThumbnail1] = useState(null);
+  const [thumbnail1Preview, setThumbnail1Preview] = useState(null);
+  const [thumbnail2, setThumbnail2] = useState(null);
+  const [thumbnail2Preview, setThumbnail2Preview] = useState(null);
+  const thumb1InputRef = useRef(null);
+  const thumb2InputRef = useRef(null);
+
   // Separate image management state
   const [showImageManager, setShowImageManager] = useState(false);
   const [selectedVariantForImages, setSelectedVariantForImages] = useState(null);
@@ -564,10 +572,14 @@ export default function AdminProductDetails() {
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
     console.log(files);
-    // Count existing images (both from server and newly added)
-    const totalImages = variantImages.length;
-    if (totalImages >= 5) {
-      alert('Cần đúng 5 hình ảnh. Vui lòng xóa hình ảnh trước.');
+    
+    // Count filled slots (existing + new uploads)
+    const filledSlots = variantImages.filter(img => 
+      (img.isExisting && img.url) || (!img.isExisting && img.file)
+    ).length;
+    
+    if (filledSlots >= 5) {
+      alert('Đã có đủ 5 hình ảnh. Vui lòng xóa hình ảnh trước khi thêm mới.');
       return;
     }
 
@@ -592,12 +604,28 @@ export default function AdminProductDetails() {
       resizeImage(file, 800, 800, 0.85).then(({ file: resizedFile, preview, width, height }) => {
         console.log(`Image resized: ${file.name} -> ${width}x${height}, size: ${(resizedFile.size / 1024).toFixed(1)}KB`);
         
-        const newImages = [...variantImages, {
-          file: resizedFile, // Store the resized file for later upload
-          preview: preview, // Store preview URL
-          name: file.name,
-          isExisting: false // Flag to identify new uploads
-        }];
+        // Find the first empty slot
+        const newImages = [...variantImages];
+        const emptySlotIndex = newImages.findIndex(img => 
+          !((img.isExisting && img.url) || (!img.isExisting && img.file))
+        );
+        
+        if (emptySlotIndex !== -1) {
+          // Fill the empty slot
+          newImages[emptySlotIndex] = {
+            file: resizedFile,
+            preview: preview,
+            name: file.name,
+            isExisting: false,
+            position: emptySlotIndex,
+            id: `new_${emptySlotIndex}_${Date.now()}`
+          };
+        } else {
+          // No empty slot found - shouldn't happen if we check correctly above
+          alert('Không tìm thấy vị trí trống. Vui lòng xóa hình ảnh trước.');
+          return;
+        }
+        
         setVariantImages(newImages);
         
         // Reset file input
@@ -686,17 +714,25 @@ export default function AdminProductDetails() {
     console.log(variantImages);
     const imageToRemove = variantImages[index];
 
-    // If it's an existing image from server, you might want to handle deletion differently
-    if (imageToRemove.isExisting) {
-      if (!confirm('Bạn có chắc muốn xóa hình ảnh này? Thao tác này sẽ xóa vĩnh viễn hình ảnh khỏi server.')) {
+    // If it's an existing image from server, confirm before removing
+    if (imageToRemove.isExisting && imageToRemove.url) {
+      if (!confirm('Bạn có chắc muốn xóa hình ảnh này? Thao tác này sẽ xóa vĩnh viễn hình ảnh khỏi server khi lưu.')) {
         return;
       }
-      // Here you could call an API to delete the image from server
-      // For now, we'll just remove it from the UI
     }
 
-    const updatedImages = variantImages.filter((_, i) => i !== index);
-    console.log("yo:" + updatedImages);
+    // Replace with an empty slot instead of removing from array
+    const updatedImages = [...variantImages];
+    updatedImages[index] = {
+      preview: null,
+      url: null,
+      isExisting: false,
+      file: null,
+      name: null,
+      id: `empty_${index}_${Date.now()}`,
+      position: index
+    };
+    console.log("Updated images:", updatedImages);
     setVariantImages(updatedImages);
   };
 
@@ -882,7 +918,7 @@ export default function AdminProductDetails() {
     }, 100);
   };
 
-  // Update variant images separately - backend expects exactly 5 files
+  // Update variant images separately - allow any number of images
   const updateVariantImages = async () => {
     if (!selectedVariantForImages) {
       alert('Không tìm thấy phân loại sản phẩm.');
@@ -894,49 +930,56 @@ export default function AdminProductDetails() {
       return;
     }
 
-    // Check that we have exactly 5 slots and ALL slots must have images
-    if (variantImages.length !== 5) {
-      alert('Lỗi: Phải có đúng chính xác 5 hình ảnh.');
-      return;
-    }
-
-    // Check if ALL 5 positions have images (existing or new)
-    const allSlotsFilled = variantImages.every(img =>
+    // Count how many images we have (existing + new)
+    const filledImages = variantImages.filter(img =>
       (img.isExisting && img.url) || (!img.isExisting && img.file)
     );
 
-    if (!allSlotsFilled) {
-      alert('Bắt buộc phải có đúng 5 hình ảnh. Vui lòng thêm hình ảnh cho tất cả vị trí trống.');
+    if (filledImages.length === 0) {
+      alert('Vui lòng thêm ít nhất 1 hình ảnh.');
       return;
     }
 
     try {
-      // Prepare exactly 5 files for backend (null for empty positions)
-      const formData = new FormData();
-
-      // Backend expects exactly 5 files in the array
+      // Collect all new images to upload
+      const newImages = [];
       for (let i = 0; i < 5; i++) {
         const imageData = variantImages[i];
-
         if (imageData && !imageData.isExisting && imageData.file) {
-          // New file to upload
-          formData.append('files', imageData.file);
-        } else {
-          // Existing image or empty position - send empty file
-          formData.append('files', new File([], '', { type: 'application/octet-stream' }));
+          // Convert file to base64
+          const base64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const base64Data = reader.result.split(',')[1];
+              resolve(base64Data);
+            };
+            reader.readAsDataURL(imageData.file);
+          });
+          
+          newImages.push({
+            data: base64,
+            contentType: imageData.file.type || 'image/jpeg',
+            position: i
+          });
         }
       }
 
-      console.log('Sending image update for variant:', selectedVariantForImages.pd_id);
-      console.log('Image slots:', variantImages);
+      if (newImages.length === 0) {
+        alert('Không có ảnh mới để upload.');
+        closeImageManager();
+        return;
+      }
 
-      // Upload images using backend API
+      console.log('Sending image update for variant:', selectedVariantForImages.pd_id);
+      console.log('New images to upload:', newImages.length);
+
+      // Upload images using JSON format
       const res = await api.post(
         `/product-details/${selectedVariantForImages.pd_id}/images`,
-        formData,
+        { images: newImages },
         {
           headers: {
-            'Content-Type': 'multipart/form-data'
+            'Content-Type': 'application/json'
           }
         }
       );
@@ -1068,8 +1111,73 @@ export default function AdminProductDetails() {
     return brand ? brand.brand_name : 'N/A';
   };
 
+  // Thumbnail handling functions
+  const handleThumbnailSelect = (e, thumbNum) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const preview = URL.createObjectURL(file);
+    if (thumbNum === 1) {
+      setThumbnail1(file);
+      setThumbnail1Preview(preview);
+    } else {
+      setThumbnail2(file);
+      setThumbnail2Preview(preview);
+    }
+  };
+
+  const clearThumbnails = () => {
+    setThumbnail1(null);
+    setThumbnail1Preview(null);
+    setThumbnail2(null);
+    setThumbnail2Preview(null);
+    if (thumb1InputRef.current) thumb1InputRef.current.value = '';
+    if (thumb2InputRef.current) thumb2InputRef.current.value = '';
+  };
+
+  const fileToBase64 = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadThumbnailsToProduct = async (productId) => {
+    if (!thumbnail1 && !thumbnail2) return;
+    
+    try {
+      const thumbnailData = {};
+      
+      if (thumbnail1) {
+        const base64_1 = await fileToBase64(thumbnail1);
+        thumbnailData.thumbnail1 = { data: base64_1, contentType: thumbnail1.type || 'image/jpeg' };
+      }
+      
+      if (thumbnail2) {
+        const base64_2 = await fileToBase64(thumbnail2);
+        thumbnailData.thumbnail2 = { data: base64_2, contentType: thumbnail2.type || 'image/jpeg' };
+      }
+      
+      await api.post(`/products/${productId}/thumbnails`, thumbnailData);
+      console.log('Thumbnails uploaded successfully');
+      return true;
+    } catch (err) {
+      console.error('Upload thumbnails failed:', err);
+      return false;
+    }
+  };
+
   // Product edit functions
   const startEditProduct = () => {
+    // Reset thumbnail states - use existing thumbnails as preview
+    setThumbnail1(null);
+    setThumbnail1Preview(null);
+    setThumbnail2(null);
+    setThumbnail2Preview(null);
     setProductForm({
       name: product.p_name || '',
       description: product.desc || '',
@@ -1083,6 +1191,7 @@ export default function AdminProductDetails() {
   const cancelEditProduct = () => {
     setEditingProduct(false);
     setProductForm({ name: '', description: '', price: '', categoryId: '', brandId: '' });
+    clearThumbnails();
   };
 
   const updateProduct = async (e) => {
@@ -1104,6 +1213,18 @@ export default function AdminProductDetails() {
       
       await api.put(`/products/${product.p_id}${query}`, payload);
       
+      // Upload thumbnails if any were selected
+      let newThumbnail1 = product.thumbnail1;
+      let newThumbnail2 = product.thumbnail2;
+      if (thumbnail1 || thumbnail2) {
+        const uploadSuccess = await uploadThumbnailsToProduct(product.p_id);
+        if (uploadSuccess) {
+          // Update thumbnail previews in local state
+          if (thumbnail1Preview) newThumbnail1 = thumbnail1Preview;
+          if (thumbnail2Preview) newThumbnail2 = thumbnail2Preview;
+        }
+      }
+      
       // Update local state
       const selectedCat = categories.find(c => (c.c_id || c.id) === productForm.categoryId);
       const selectedBrand = brands.find(b => b.brand_id === productForm.brandId);
@@ -1115,10 +1236,13 @@ export default function AdminProductDetails() {
         c_id: productForm.categoryId,
         brand_id: productForm.brandId,
         categoryName: selectedCat?.c_name || selectedCat?.name || prev.categoryName,
-        brandName: selectedBrand?.brand_name || prev.brandName
+        brandName: selectedBrand?.brand_name || prev.brandName,
+        thumbnail1: newThumbnail1,
+        thumbnail2: newThumbnail2
       }));
       
       setEditingProduct(false);
+      clearThumbnails();
       alert('Cập nhật sản phẩm thành công!');
     } catch (err) {
       console.error('Update product failed', err);
@@ -1226,6 +1350,113 @@ export default function AdminProductDetails() {
                       onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
                     />
                   </div>
+                  
+                  {/* Thumbnail Upload Section */}
+                  <div className="col-md-12">
+                    <label className="form-label">Ảnh Thumbnail (Hiển thị trang chủ)</label>
+                    <div className="row g-3">
+                      <div className="col-md-6">
+                        <div className="border rounded p-3" style={{ background: '#fff' }}>
+                          <small className="d-block text-muted mb-2">Ảnh 1 (Mặc định)</small>
+                          <div className="d-flex align-items-center gap-3">
+                            <div style={{ width: 80, height: 80, flexShrink: 0 }}>
+                              {thumbnail1Preview ? (
+                                <img 
+                                  src={thumbnail1Preview} 
+                                  alt="Thumbnail 1 Preview" 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                                />
+                              ) : product.thumbnail1 ? (
+                                <img 
+                                  src={product.thumbnail1} 
+                                  alt="Current Thumbnail 1" 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                                />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', background: '#f0f0f0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #ccc' }}>
+                                  <span className="text-muted" style={{ fontSize: '10px' }}>Chưa có</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-grow-1">
+                              <input
+                                ref={thumb1InputRef}
+                                type="file"
+                                accept="image/*"
+                                className="form-control form-control-sm"
+                                onChange={(e) => handleThumbnailSelect(e, 1)}
+                              />
+                              {thumbnail1Preview && (
+                                <button 
+                                  type="button" 
+                                  className="btn btn-sm btn-outline-danger mt-1"
+                                  onClick={() => {
+                                    setThumbnail1(null);
+                                    setThumbnail1Preview(null);
+                                    if (thumb1InputRef.current) thumb1InputRef.current.value = '';
+                                  }}
+                                >
+                                  Xóa ảnh mới
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="border rounded p-3" style={{ background: '#fff' }}>
+                          <small className="d-block text-muted mb-2">Ảnh 2 (Khi hover)</small>
+                          <div className="d-flex align-items-center gap-3">
+                            <div style={{ width: 80, height: 80, flexShrink: 0 }}>
+                              {thumbnail2Preview ? (
+                                <img 
+                                  src={thumbnail2Preview} 
+                                  alt="Thumbnail 2 Preview" 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                                />
+                              ) : product.thumbnail2 ? (
+                                <img 
+                                  src={product.thumbnail2} 
+                                  alt="Current Thumbnail 2" 
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }}
+                                />
+                              ) : (
+                                <div style={{ width: '100%', height: '100%', background: '#f0f0f0', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed #ccc' }}>
+                                  <span className="text-muted" style={{ fontSize: '10px' }}>Chưa có</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-grow-1">
+                              <input
+                                ref={thumb2InputRef}
+                                type="file"
+                                accept="image/*"
+                                className="form-control form-control-sm"
+                                onChange={(e) => handleThumbnailSelect(e, 2)}
+                              />
+                              {thumbnail2Preview && (
+                                <button 
+                                  type="button" 
+                                  className="btn btn-sm btn-outline-danger mt-1"
+                                  onClick={() => {
+                                    setThumbnail2(null);
+                                    setThumbnail2Preview(null);
+                                    if (thumb2InputRef.current) thumb2InputRef.current.value = '';
+                                  }}
+                                >
+                                  Xóa ảnh mới
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <small className="text-muted d-block mt-1">
+                      Ảnh thumbnail sẽ hiển thị trên trang chủ. Ảnh 2 sẽ hiện khi di chuột vào sản phẩm.
+                    </small>
+                  </div>
+
                   <div className="col-md-12">
                     <div className="d-flex gap-2">
                       <button className="btn btn-success" type="submit">💾 Lưu</button>
@@ -1423,14 +1654,14 @@ export default function AdminProductDetails() {
 
           {/* Image Management Section */}
           {showImageManager && selectedVariantForImages && (
-            <div className="mb-4 p-3" style={{ border: '2px solid #dc3545', borderRadius: '5px' }}>
+            <div className="mb-4 p-3" style={{ border: '2px solid #17a2b8', borderRadius: '5px' }}>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <div>
                   <h4>Quản Lý Hình Ảnh - {selectedVariantForImages.color} (Size: {selectedVariantForImages.size})</h4>
-                  <div className="alert alert-warning py-2 mb-0">
+                  <div className="alert alert-info py-2 mb-0">
                     <small>
-                      <strong>⚠️ Quan trọng:</strong> Mỗi phân loại phải có đúng 5 hình ảnh vuông.
-                      Tất cả hình ảnh sẽ được cắt tự động.
+                      <strong>ℹ️ Lưu ý:</strong> Mỗi phân loại có thể có tối đa 5 hình ảnh.
+                      Hình ảnh sẽ được tự động resize. Cần ít nhất 1 hình để lưu.
                     </small>
                   </div>
                 </div>
@@ -1446,7 +1677,7 @@ export default function AdminProductDetails() {
               {/* Image Upload Section */}
               <div className="mb-4">
                 <label className="form-label">
-                  <strong>Tải Hình Ảnh Sản Phẩm (Đúng 5 Hình Bắt Buộc)</strong>
+                  <strong>Tải Hình Ảnh Sản Phẩm (Tối đa 5 hình)</strong>
                 </label>
                 <div className="mb-3">
                   <input
@@ -1455,90 +1686,132 @@ export default function AdminProductDetails() {
                     className="form-control"
                     accept="image/jpeg,image/jpg,image/png,image/gif"
                     onChange={handleImageUpload}
-                    disabled={variantImages.length >= 5}
+                    disabled={variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length >= 5}
                   />
                   <div className="mb-3">
-                    <small className={`${variantImages.length >= 5 ? 'text-warning' : 'text-info'}`}>
-                      <strong>{variantImages.length} hình ảnh hiện tại.</strong>
-                      {variantImages.length >= 5 ? ' Đã đạt giới hạn tối đa 5 hình!' : ` Có thể chọn thêm ${5 - variantImages.length} hình nữa.`}
-                    </small>
-                    <br />
-                    <small className="text-muted">
-                      Chỉ cho phép tải lên các định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB.
-                    </small>
-                    {variantImages.some(img => img.isExisting) && (
-                      <>
-                        <br />
-                        <small className="text-success">
-                          <strong>Hình ảnh hiện có:</strong> {variantImages.filter(img => img.isExisting).length} |
-                          <strong> Hình ảnh mới:</strong> {variantImages.filter(img => !img.isExisting).length}
-                        </small>
-                      </>
-                    )}
+                    {(() => {
+                      const filledCount = variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length;
+                      const existingCount = variantImages.filter(img => img.isExisting && img.url).length;
+                      const newCount = variantImages.filter(img => !img.isExisting && img.file).length;
+                      return (
+                        <>
+                          <small className={`${filledCount >= 5 ? 'text-success' : filledCount > 0 ? 'text-info' : 'text-warning'}`}>
+                            <strong>{filledCount} hình ảnh hiện tại.</strong>
+                            {filledCount >= 5 ? ' ✓ Đã đủ 5 hình ảnh!' : filledCount > 0 ? ` Có thể thêm ${5 - filledCount} hình nữa.` : ' Cần ít nhất 1 hình ảnh.'}
+                          </small>
+                          <br />
+                          <small className="text-muted">
+                            Chỉ cho phép tải lên các định dạng: JPG, PNG, GIF. Kích thước tối đa: 5MB.
+                          </small>
+                          {(existingCount > 0 || newCount > 0) && (
+                            <>
+                              <br />
+                              <small className="text-success">
+                                <strong>Hình ảnh hiện có:</strong> {existingCount} |
+                                <strong> Hình ảnh mới:</strong> {newCount}
+                              </small>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
 
-                {/* Image Preview */}
+                {/* Image Preview - Always show 5 slots */}
                 {variantImages.length > 0 && (
                   <div className="row g-2 mb-3">
-                    {variantImages.map((imageData, index) => (
-                      <div key={index} className="col-md-2">
-                        <div className="position-relative">
-                          <img
-                            src={imageData.preview || imageData} // Handle both file objects and direct URLs
-                            alt={`Image ${index + 1}`}
-                            className="img-fluid rounded"
-                            style={{
-                              width: '100%',
-                              height: '120px',
-                              objectFit: 'cover',
-                              border: imageData.isExisting ? '2px solid #28a745' : '2px solid #dc3545'
-                            }}
-                          />
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm position-absolute top-0 end-0"
-                            style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0' }}
-                            onClick={() => removeImage(index)}
-                          >
-                            ×
-                          </button>
-                          {imageData.isExisting && (
-                            <small className="badge bg-success position-absolute bottom-0 start-0 m-1">
-                              Đã có
-                            </small>
-                          )}
-                          {!imageData.isExisting && imageData.name && (
-                            <small className="text-muted d-block text-center mt-1">
-                              {imageData.name.length > 15 ? imageData.name.substring(0, 15) + '...' : imageData.name}
-                            </small>
-                          )}
+                    {variantImages.map((imageData, index) => {
+                      const hasImage = (imageData.isExisting && imageData.url) || (!imageData.isExisting && imageData.file);
+                      return (
+                        <div key={imageData.id || index} className="col-md-2">
+                          <div className="position-relative">
+                            {hasImage ? (
+                              <>
+                                <img
+                                  src={imageData.preview || imageData.url}
+                                  alt={`Image ${index + 1}`}
+                                  className="img-fluid rounded"
+                                  style={{
+                                    width: '100%',
+                                    height: '120px',
+                                    objectFit: 'cover',
+                                    border: imageData.isExisting ? '2px solid #28a745' : '2px solid #007bff'
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  className="btn btn-danger btn-sm position-absolute top-0 end-0"
+                                  style={{ borderRadius: '50%', width: '25px', height: '25px', padding: '0' }}
+                                  onClick={() => removeImage(index)}
+                                >
+                                  ×
+                                </button>
+                                {imageData.isExisting && (
+                                  <small className="badge bg-success position-absolute bottom-0 start-0 m-1">
+                                    Đã có
+                                  </small>
+                                )}
+                                {!imageData.isExisting && imageData.file && (
+                                  <small className="badge bg-primary position-absolute bottom-0 start-0 m-1">
+                                    Mới
+                                  </small>
+                                )}
+                              </>
+                            ) : (
+                              <div
+                                className="d-flex align-items-center justify-content-center rounded"
+                                style={{
+                                  width: '100%',
+                                  height: '120px',
+                                  border: '2px dashed #ccc',
+                                  backgroundColor: '#f8f9fa'
+                                }}
+                              >
+                                <span className="text-muted small">Ảnh {index + 1}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
 
-                <div className="d-flex gap-2">
-                  <button
-                    className="btn btn-success"
-                    onClick={updateVariantImages}
-                    disabled={variantImages.length !== 5 || !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file))}
-                    title={variantImages.length !== 5 ? 'Cần đúng 5 hình ảnh' : !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file)) ? 'Tất cả 5 vị trí phải có hình ảnh' : ''}
-                  >
-                    Lưu Hình Ảnh ({variantImages.filter(img => !img.isExisting && img.file).length} mới, {variantImages.filter(img => img.isExisting && img.url).length} hiện có)
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={closeImageManager}
-                  >
-                    Đóng
-                  </button>
-                  {(variantImages.length !== 5 || !variantImages.every(img => (img.isExisting && img.url) || (!img.isExisting && img.file))) && (
-                    <small className="text-warning align-self-center ms-2">
-                      Cần đủ 5 hình ảnh để lưu ({variantImages.filter(img => (img.isExisting && img.url) || (!img.isExisting && img.file)).length}/5)
-                    </small>
-                  )}
+                <div className="d-flex gap-2 flex-wrap align-items-center">
+                  {(() => {
+                    const newCount = variantImages.filter(img => !img.isExisting && img.file).length;
+                    const existingCount = variantImages.filter(img => img.isExisting && img.url).length;
+                    const totalCount = newCount + existingCount;
+                    return (
+                      <>
+                        <button
+                          className="btn btn-success"
+                          onClick={updateVariantImages}
+                          disabled={totalCount === 0}
+                          title={totalCount === 0 ? 'Cần ít nhất 1 hình ảnh' : ''}
+                        >
+                          Lưu Hình Ảnh ({newCount} mới, {existingCount} hiện có)
+                        </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={closeImageManager}
+                        >
+                          Đóng
+                        </button>
+                        {totalCount === 0 && (
+                          <small className="text-warning ms-2">
+                            Cần ít nhất 1 hình ảnh để lưu
+                          </small>
+                        )}
+                        {totalCount > 0 && totalCount < 5 && (
+                          <small className="text-info ms-2">
+                            Có thể thêm {5 - totalCount} hình nữa (tùy chọn)
+                          </small>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

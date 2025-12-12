@@ -1,0 +1,142 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "OJT E-commerce Product API",
+    "version": "2.0.0",
+    "description": "API tìm kiếm và quản lý sản phẩm cho cửa hàng thời trang OJT E-commerce"
+  },
+  "paths": {
+    "/search-products": {
+      "post": {
+        "summary": "Tìm kiếm sản phẩm",
+        "description": "Tìm kiếm sản phẩm theo từ khóa, danh mục, thương hiệu, khoảng giá. Trả về thông tin giá, giảm giá, đánh giá, tình trạng kho.",
+        "operationId": "searchProducts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keyword": { "type": "string", "description": "Từ khóa tìm kiếm (tên, mô tả sản phẩm)" },
+                  "categoryName": { "type": "string", "description": "Tên danh mục (Áo thun, Quần jeans, Váy đầm...)" },
+                  "brandName": { "type": "string", "description": "Tên thương hiệu (Nike, Adidas, Uniqlo...)" },
+                  "minPrice": { "type": "number", "description": "Giá tối thiểu (VND)" },
+                  "maxPrice": { "type": "number", "description": "Giá tối đa (VND)" },
+                  "limit": { "type": "integer", "default": 5, "description": "Số lượng kết quả tối đa" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Danh sách sản phẩm với giá, giảm giá, đánh giá, tình trạng kho" } }
+      }
+    },
+    "/sale-products": {
+      "post": {
+        "summary": "Sản phẩm đang giảm giá (có lọc)",
+        "description": "Lấy danh sách sản phẩm đang có khuyến mãi. Có thể lọc theo từ khóa, danh mục, thương hiệu, mức giảm giá tối thiểu, giá sale tối đa. Ví dụ: áo thun đang sale, sản phẩm Nike giảm giá, sản phẩm giảm trên 20%",
+        "operationId": "getSaleProducts",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "keyword": { "type": "string", "description": "Từ khóa tìm kiếm (áo thun, quần jeans, váy...)" },
+                  "categoryName": { "type": "string", "description": "Tên danh mục (Áo thun, Quần jeans, Bikini, Váy...)" },
+                  "brandName": { "type": "string", "description": "Tên thương hiệu (Nike, Adidas, FFF, LAVIEM...)" },
+                  "minDiscount": { "type": "integer", "description": "Mức giảm giá tối thiểu (%, ví dụ: 20 = giảm ít nhất 20%)" },
+                  "maxPrice": { "type": "number", "description": "Giá sale tối đa (VND)" },
+                  "limit": { "type": "integer", "default": 5, "description": "Số lượng kết quả tối đa" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Danh sách sản phẩm sale với giá gốc, giá sale, % giảm, danh mục, thương hiệu" } }
+      }
+    },
+    "/low-stock-products": {
+      "get": {
+        "summary": "Sản phẩm sắp hết hàng",
+        "description": "Lấy danh sách sản phẩm có số lượng tồn kho thấp, cần mua nhanh",
+        "operationId": "getLowStockProducts",
+        "parameters": [
+          { "name": "threshold", "in": "query", "schema": { "type": "integer", "default": 5 }, "description": "Ngưỡng số lượng (mặc định <= 5)" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 5 }, "description": "Số lượng kết quả" }
+        ],
+        "responses": { "200": { "description": "Danh sách sản phẩm sắp hết với số lượng còn lại" } }
+      }
+    },
+    "/best-selling": {
+      "get": {
+        "summary": "Sản phẩm bán chạy nhất",
+        "description": "Lấy danh sách sản phẩm có số lượng đã bán cao nhất",
+        "operationId": "getBestSellingProducts",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 }, "description": "Số lượng kết quả" }
+        ],
+        "responses": { "200": { "description": "Danh sách sản phẩm bán chạy với số lượng đã bán" } }
+      }
+    },
+    "/featured-products": {
+      "get": {
+        "summary": "Sản phẩm nổi bật",
+        "description": "Lấy danh sách sản phẩm được đánh dấu nổi bật bởi admin",
+        "operationId": "getFeaturedProducts",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10 }, "description": "Số lượng kết quả" }
+        ],
+        "responses": { "200": { "description": "Danh sách sản phẩm nổi bật" } }
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "Danh mục sản phẩm (cây phân cấp)",
+        "description": "Lấy tất cả danh mục theo cấu trúc cây với danh mục cha-con và số lượng sản phẩm",
+        "operationId": "getCategories",
+        "responses": { "200": { "description": "Cây danh mục với children và productCount" } }
+      }
+    },
+    "/brands": {
+      "get": {
+        "summary": "Danh sách thương hiệu",
+        "description": "Lấy tất cả thương hiệu có trong cửa hàng với số lượng sản phẩm",
+        "operationId": "getBrands",
+        "responses": { "200": { "description": "Danh sách thương hiệu với productCount" } }
+      }
+    },
+    "/product/{productId}": {
+      "get": {
+        "summary": "Chi tiết sản phẩm",
+        "description": "Lấy thông tin chi tiết sản phẩm bao gồm variants (màu, size), tồn kho, đánh giá",
+        "operationId": "getProductById",
+        "parameters": [
+          { "name": "productId", "in": "path", "required": true, "schema": { "type": "string" }, "description": "ID sản phẩm" }
+        ],
+        "responses": { "200": { "description": "Chi tiết sản phẩm với variants, stock, rating" } }
+      }
+    },
+    "/products-by-category": {
+      "get": {
+        "summary": "Sản phẩm theo danh mục",
+        "description": "Lấy sản phẩm thuộc một danh mục (bao gồm cả danh mục con)",
+        "operationId": "getProductsByCategory",
+        "parameters": [
+          { "name": "categoryId", "in": "query", "schema": { "type": "string" }, "description": "ID danh mục" },
+          { "name": "categoryName", "in": "query", "schema": { "type": "string" }, "description": "Tên danh mục" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 }, "description": "Số lượng kết quả" }
+        ],
+        "responses": { "200": { "description": "Danh sách sản phẩm trong danh mục" } }
+      }
+    },
+    "/discount-levels": {
+      "get": {
+        "summary": "Các mức giảm giá",
+        "description": "Lấy danh sách các mức giảm giá đang áp dụng (10%, 20%, 30%...) và số sản phẩm",
+        "operationId": "getDiscountLevels",
+        "responses": { "200": { "description": "Danh sách mức giảm giá với số sản phẩm" } }
+      }
+    }
+  }
+}

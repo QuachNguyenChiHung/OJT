@@ -1,7 +1,7 @@
-// Lambda: Create/Update Rating - MySQL
-const { getOne, insert, update } = require('./shared/database');
-const { verifyToken } = require('./shared/auth');
-const { successResponse, errorResponse, parseBody } = require('./shared/response');
+// Lambda: Create/Update Rating
+const { executeStatement } = require('../shared/database');
+const { verifyToken } = require('../shared/auth');
+const { successResponse, errorResponse, parseBody } = require('../shared/response');
 const { v4: uuidv4 } = require('uuid');
 
 exports.handler = async (event) => {
@@ -18,30 +18,47 @@ exports.handler = async (event) => {
     }
 
     // Check if user already rated
-    const checkSql = `SELECT r_id FROM Rating WHERE u_id = ? AND p_id = ?`;
-    const existingRating = await getOne(checkSql, [user.u_id, productId]);
+    const checkSql = `
+      SELECT r_id FROM Ratings 
+      WHERE u_id = @userId AND p_id = @productId
+    `;
 
-    if (existingRating) {
+    const checkResult = await executeStatement(checkSql, [
+      { name: 'userId', value: { stringValue: user.u_id } },
+      { name: 'productId', value: { stringValue: productId } }
+    ]);
+
+    if (checkResult.records && checkResult.records.length > 0) {
       // Update existing
-      const ratingId = existingRating.r_id;
+      const ratingId = checkResult.records[0][0].stringValue;
       const updateSql = `
-        UPDATE Rating
-        SET rating_value = ?, review = ?
-        WHERE r_id = ?
+        UPDATE Ratings
+        SET rating_value = @ratingValue, comment = @comment, updated_at = GETDATE()
+        WHERE r_id = @ratingId
       `;
 
-      await update(updateSql, [ratingValue, comment || '', ratingId]);
+      await executeStatement(updateSql, [
+        { name: 'ratingValue', value: { longValue: ratingValue } },
+        { name: 'comment', value: { stringValue: comment || '' } },
+        { name: 'ratingId', value: { stringValue: ratingId } }
+      ]);
 
       return successResponse({ message: 'Rating updated', ratingId });
     } else {
       // Create new
       const ratingId = uuidv4();
       const insertSql = `
-        INSERT INTO Rating (r_id, u_id, p_id, rating_value, review, created_at)
-        VALUES (?, ?, ?, ?, ?, NOW())
+        INSERT INTO Ratings (r_id, u_id, p_id, rating_value, comment, created_at, updated_at)
+        VALUES (@ratingId, @userId, @productId, @ratingValue, @comment, GETDATE(), GETDATE())
       `;
 
-      await insert(insertSql, [ratingId, user.u_id, productId, ratingValue, comment || '']);
+      await executeStatement(insertSql, [
+        { name: 'ratingId', value: { stringValue: ratingId } },
+        { name: 'userId', value: { stringValue: user.u_id } },
+        { name: 'productId', value: { stringValue: productId } },
+        { name: 'ratingValue', value: { longValue: ratingValue } },
+        { name: 'comment', value: { stringValue: comment || '' } }
+      ]);
 
       return successResponse({ message: 'Rating created', ratingId }, 201);
     }

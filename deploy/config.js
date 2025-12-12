@@ -106,6 +106,16 @@ module.exports = {
       lambdaName: 'OJT-Ecommerce-NotificationsModule',
       description: 'Notifications: get, mark read, unread count',
     },
+    bedrock: {
+      folder: 'bedrock',
+      lambdaName: 'OJT-Ecommerce-BedrockModule',
+      description: 'Bedrock: AI chat assistant',
+    },
+    'bedrock-agent': {
+      folder: 'bedrock-agent',
+      lambdaName: 'OJT-Ecommerce-BedrockAgentModule',
+      description: 'Bedrock Agent: Action Group for product search',
+    },
   },
 
   // Paths
@@ -122,5 +132,7 @@ module.exports = {
     'uuid': '^9.0.0',
     'mysql2': '^3.6.5',
     'busboy': '^1.6.0',
+    '@aws-sdk/client-bedrock-runtime': '^3.0.0',
+    '@aws-sdk/client-bedrock-agent-runtime': '^3.0.0',
   },
 };

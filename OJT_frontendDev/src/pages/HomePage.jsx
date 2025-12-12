@@ -928,63 +928,7 @@ const PromoBanner = () => {
     );
 };
 
-// Newsletter Section
-const NewsletterSection = () => {
-    return (
-        <section style={{ 
-            background: '#f8f8f8', 
-            padding: '50px 0',
-            borderTop: '1px solid #eee'
-        }}>
-            <div className="container text-center">
-                <p style={{ 
-                    color: '#888', 
-                    fontSize: '11px', 
-                    letterSpacing: '2px',
-                    marginBottom: '10px'
-                }}>
-                    STAY UPDATED
-                </p>
-                <h3 style={{ 
-                    fontSize: '1.2rem', 
-                    fontWeight: '400', 
-                    color: '#222',
-                    marginBottom: '25px',
-                    letterSpacing: '0.5px'
-                }}>
-                    Subscribe for exclusive offers
-                </h3>
-                <div style={{ maxWidth: '400px', margin: '0 auto' }}>
-                    <div className="d-flex">
-                        <input 
-                            type="email" 
-                            placeholder="Enter your email"
-                            style={{
-                                flex: 1,
-                                padding: '12px 15px',
-                                border: '1px solid #ddd',
-                                borderRight: 'none',
-                                fontSize: '13px',
-                                outline: 'none'
-                            }}
-                        />
-                        <button style={{
-                            background: '#222',
-                            color: '#fff',
-                            border: '1px solid #222',
-                            padding: '12px 25px',
-                            fontSize: '12px',
-                            letterSpacing: '0.5px',
-                            cursor: 'pointer'
-                        }}>
-                            SUBSCRIBE
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
+
 
 // Main HomePage Component
 const HomePage = () => {
@@ -1775,8 +1719,7 @@ const HomePage = () => {
                 </section>
             )}
 
-            {/* Newsletter */}
-            <NewsletterSection />
+
         </main>
     );
 };

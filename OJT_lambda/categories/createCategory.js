@@ -1,7 +1,7 @@
-// Lambda: Create Category (Admin) - MySQL with Hierarchy
-const { insert, getOne } = require('./shared/database');
-const { verifyToken } = require('./shared/auth');
-const { successResponse, errorResponse } = require('./shared/response');
+// Lambda: Create Category (Admin)
+const { executeStatement } = require('../shared/database');
+const { verifyToken } = require('../shared/auth');
+const { successResponse, errorResponse, parseBody } = require('../shared/response');
 const { v4: uuidv4 } = require('uuid');
 
 exports.handler = async (event) => {
@@ -11,43 +11,25 @@ exports.handler = async (event) => {
       return errorResponse('Forbidden - Admin access required', 403);
     }
 
-    const body = typeof event.body === 'string' ? JSON.parse(event.body) : (event.body || {});
-    const { name, parentId, displayOrder } = body;
+    const { name } = parseBody(event);
     if (!name) {
       return errorResponse('Category name is required', 400);
     }
 
-    // Calculate level based on parent
-    let level = 0;
-    if (parentId) {
-      const parent = await getOne('SELECT level FROM Category WHERE c_id = ?', [parentId]);
-      if (!parent) {
-        return errorResponse('Parent category not found', 404);
-      }
-      level = (parent.level || 0) + 1;
-    }
-
     const categoryId = uuidv4();
-    const sql = `INSERT INTO Category (c_id, c_name, parent_id, level, display_order) VALUES (?, ?, ?, ?, ?)`;
+    const sql = `
+      INSERT INTO Categories (c_id, c_name)
+      VALUES (@categoryId, @name)
+    `;
 
-    await insert(sql, [categoryId, name, parentId || null, level, displayOrder || 0]);
+    await executeStatement(sql, [
+      { name: 'categoryId', value: { stringValue: categoryId } },
+      { name: 'name', value: { stringValue: name } }
+    ]);
 
-    return successResponse({ 
-      id: categoryId, 
-      name, 
-      parentId: parentId || null,
-      level,
-      displayOrder: displayOrder || 0,
-      message: 'Category created' 
-    }, 201);
+    return successResponse({ categoryId, name, message: 'Category created' }, 201);
   } catch (error) {
     console.error('Create category error:', error);
-    
-    // Handle duplicate entry error
-    if (error.code === 'ER_DUP_ENTRY') {
-      return errorResponse('Danh mục với tên này đã tồn tại trong cùng danh mục cha', 409);
-    }
-    
     return errorResponse(error.message, 500);
   }
 };
