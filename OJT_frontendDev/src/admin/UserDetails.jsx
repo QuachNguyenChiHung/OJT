@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from '../Components/Toast';
 
 export default function UserDetails() {
+  const toast = useToast();
   const { id } = useParams();
   const [user, setUser] = useState(null);
   const [userOrders, setUserOrders] = useState([]);
@@ -65,7 +67,7 @@ export default function UserDetails() {
   const handleUpdateUser = async (e) => {
     e.preventDefault();
     if (!editingUser.email.trim() || !editingUser.fullName.trim()) {
-      alert('Email và họ tên là bắt buộc');
+      toast.warning('Email và họ tên là bắt buộc');
       return;
     }
 
@@ -81,7 +83,7 @@ export default function UserDetails() {
         ? age - 1 : age;
 
       if (actualAge < 18 || actualAge > 100) {
-        alert('Tuổi phải từ 18 đến 100 tuổi.');
+        toast.warning('Tuổi phải từ 18 đến 100 tuổi.');
         return;
       }
     }
@@ -102,7 +104,7 @@ export default function UserDetails() {
       setEditingUser(null);
     } catch (error) {
       console.error('Failed to update user:', error);
-      alert('Không thể cập nhật người dùng');
+      toast.error('Không thể cập nhật người dùng');
     }
   };
 

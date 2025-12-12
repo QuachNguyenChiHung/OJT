@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
-
-
+import { useToast } from '../Components/Toast';
 
 export default function AdminBrands() {
+  const toast = useToast();
   const [brands, setBrands] = useState([]);
   const [filteredBrands, setFilteredBrands] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,10 +67,10 @@ export default function AdminBrands() {
       const res = await api.post('/brands', { brandName: name.trim() });
       setBrands(b => [res.data, ...b]);
       setName('');
-      alert('Thêm thương hiệu thành công');
+      toast.warning('Thêm thương hiệu thành công');
     } catch (err) {
       console.error('Add brand failed', err);
-      alert('Không thể thêm thương hiệu');
+      toast.warning('Không thể thêm thương hiệu');
     }
   };
 
@@ -79,9 +79,9 @@ export default function AdminBrands() {
     try {
       await api.delete(`/brands/${brandId}`);
       setBrands((b) => b.filter(x => (x.brandId || x.id) !== brandId));
-      alert('Xóa thương hiệu thành công');
+      toast.success('Xóa thương hiệu thành công');
     } catch (err) {
-      alert(err?.response?.data?.message || 'Không thể xóa thương hiệu');
+      toast.error(err?.response?.data?.message || 'Không thể xóa thương hiệu');
       console.error('Delete brand failed', err);
     }
   };
@@ -97,15 +97,15 @@ export default function AdminBrands() {
   };
 
   const saveEdit = async (brandId) => {
-    if (!editingName.trim()) return alert('Tên thương hiệu không được để trống');
+    if (!editingName.trim()) return toast.warning('Tên thương hiệu không được để trống');
     try {
       const res = await api.put(`/brands/${brandId}`, { brandName: editingName.trim() });
       setBrands(b => b.map(item => (item.brandId || item.id) === brandId ? res.data : item));
       cancelEdit();
-      alert('Cập nhật thương hiệu thành công');
+      toast.warning('Cập nhật thương hiệu thành công');
     } catch (err) {
       console.error('Update brand failed', err);
-      alert('Không thể cập nhật thương hiệu');
+      toast.warning('Không thể cập nhật thương hiệu');
     }
   };
 

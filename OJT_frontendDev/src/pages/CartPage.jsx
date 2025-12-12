@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useToast } from '../Components/Toast';
 
 export default function CartPage() {
+    const toast = useToast();
     const [cartData, setCartData] = useState(null);
     const [saleProducts, setSaleProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -48,12 +50,12 @@ export default function CartPage() {
                 setIsLoggedIn(false);
                 setCartData({ items: [], totalItems: 0, totalPrice: 0 });
             } else {
-                alert('Không thể tải giỏ hàng');
+                toast.error('Không thể tải giỏ hàng');
             }
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [toast]);
 
     useEffect(() => { fetchCart(); }, [fetchCart]);
 
@@ -61,7 +63,7 @@ export default function CartPage() {
         if (newQuantity < 1) return;
         // Block if exceeds stock (frontend check)
         if (maxStock !== undefined && maxStock !== null && newQuantity > maxStock) {
-            alert(`Chỉ còn ${maxStock} sản phẩm trong kho`);
+            toast.warning(`Chỉ còn ${maxStock} sản phẩm trong kho`);
             return;
         }
         try {
@@ -72,7 +74,7 @@ export default function CartPage() {
             console.error('Error updating quantity:', error);
             // Show error message from API if available
             const errorMsg = error.response?.data?.error || error.response?.data?.message || 'Không thể cập nhật số lượng';
-            alert(errorMsg);
+            toast.error(errorMsg);
             // Refresh cart to get latest stock info
             await fetchCart();
         } finally {
@@ -88,7 +90,7 @@ export default function CartPage() {
             await fetchCart();
         } catch (error) {
             console.error('Error removing item:', error);
-            alert('Không thể xóa sản phẩm');
+            toast.error('Không thể xóa sản phẩm');
         } finally {
             setUpdating(prev => ({ ...prev, [cartId]: false }));
         }
@@ -96,18 +98,18 @@ export default function CartPage() {
 
     const proceedToCheckout = () => {
         if (!isLoggedIn) {
-            alert('Vui lòng đăng nhập để thanh toán');
+            toast.warning('Vui lòng đăng nhập để thanh toán');
             navigate('/login', { state: { from: '/cart' } });
             return;
         }
         if (!cartData?.items || cartData.items.length === 0) {
-            alert('Giỏ hàng trống');
+            toast.warning('Giỏ hàng trống');
             return;
         }
         // Check if any item is out of stock
         const outOfStock = cartData.items.find(item => item.stock !== undefined && item.stock <= 0);
         if (outOfStock) {
-            alert('Có sản phẩm đã hết hàng trong giỏ. Vui lòng xóa trước khi thanh toán.');
+            toast.warning('Có sản phẩm đã hết hàng trong giỏ. Vui lòng xóa trước khi thanh toán.');
             return;
         }
         navigate('/checkout');

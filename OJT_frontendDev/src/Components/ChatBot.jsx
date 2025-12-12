@@ -8,23 +8,7 @@ export default function ChatBot() {
     ]);
     const [inputValue, setInputValue] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
     const messagesEndRef = useRef(null);
-
-    // Check login status
-    useEffect(() => {
-        const checkAuth = () => {
-            const token = localStorage.getItem('token');
-            setIsLoggedIn(!!token);
-        };
-        checkAuth();
-        window.addEventListener('storage', checkAuth);
-        const interval = setInterval(checkAuth, 1000);
-        return () => {
-            window.removeEventListener('storage', checkAuth);
-            clearInterval(interval);
-        };
-    }, []);
 
     // Auto scroll
     useEffect(() => {
@@ -66,8 +50,6 @@ export default function ChatBot() {
         { icon: '🏷️', text: 'Thương hiệu' },
         { icon: '🔥', text: 'Sản phẩm sale' }
     ];
-
-    if (!isLoggedIn) return null;
 
     return (
         <>

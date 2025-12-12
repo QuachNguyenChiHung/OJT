@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 export default function AdminSale() {
+  const toast = useToast();
   const [products, setProducts] = useState([]);
   const [saleProducts, setSaleProducts] = useState([]);
   const [discountLevels, setDiscountLevels] = useState([]);
@@ -94,14 +96,14 @@ export default function AdminSale() {
       setShowAddDiscount(false);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Lỗi khi tạo mức giảm giá');
+      toast.error(error.response?.data?.error || 'Lỗi khi tạo mức giảm giá');
     }
   };
 
   const deleteDiscountLevel = async (discountPercent) => {
     const count = saleProducts.filter(sp => (sp.discountPercent || sp.discount_percent) === discountPercent).length;
     if (count > 0) {
-      alert(`Không thể xóa mức giảm ${discountPercent}% vì có ${count} sản phẩm đang sử dụng.`);
+      toast.warning(`Không thể xóa mức giảm ${discountPercent}% vì có ${count} sản phẩm đang sử dụng.`);
       return;
     }
     try {
@@ -109,7 +111,7 @@ export default function AdminSale() {
       if (filterDiscount === discountPercent) setFilterDiscount(null);
       fetchData();
     } catch (error) {
-      alert(error.response?.data?.error || 'Lỗi khi xóa mức giảm giá');
+      toast.error(error.response?.data?.error || 'Lỗi khi xóa mức giảm giá');
     }
   };
 

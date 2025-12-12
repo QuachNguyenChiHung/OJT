@@ -43,13 +43,13 @@ exports.handler = async (event) => {
   if (path === '/notifications/unread-count' && method === 'GET') {
     return handleGetUnreadCount(event);
   }
-  // PUT /notifications/read-all
+  // PUT /notifications/read-all (with optional action=delete query param)
   if (path === '/notifications/read-all' && method === 'PUT') {
+    const queryParams = event.queryStringParameters || {};
+    if (queryParams.action === 'delete') {
+      return handleDeleteAllNotifications(event);
+    }
     return handleMarkAllAsRead(event);
-  }
-  // DELETE /notifications/delete-all
-  if (path === '/notifications/delete-all' && method === 'DELETE') {
-    return handleDeleteAllNotifications(event);
   }
   // PUT /notifications/{id}/read
   if (path.match(/\/notifications\/[^\/]+\/read$/) && method === 'PUT') {

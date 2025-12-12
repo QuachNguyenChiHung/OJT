@@ -412,7 +412,7 @@ exports.handler = async (event) => {
     notifications.addMethod('GET', ordersIntegration); // Get user notifications
     notifications.addResource('unread-count').addMethod('GET', ordersIntegration); // Get unread count
     notifications.addResource('read-all').addMethod('PUT', ordersIntegration); // Mark all as read
-    notifications.addResource('delete-all').addMethod('DELETE', ordersIntegration); // Delete all notifications
+
     const notificationId = notifications.addResource('{id}');
     notificationId.addResource('read').addMethod('PUT', ordersIntegration); // Mark as read
 

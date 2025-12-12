@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import AdminLayout from './AdminLayout';
+import { useToast } from '../Components/Toast';
 
 export default function AdminCategories() {
+  const toast = useToast();
   const [cats, setCats] = useState([]);
   const [flatCats, setFlatCats] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,7 +98,7 @@ export default function AdminCategories() {
     } catch (error) {
       console.error('Add category failed', error);
       const msg = error?.response?.data?.error || error?.response?.data?.message || 'Không thể thêm danh mục';
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -113,7 +115,7 @@ export default function AdminCategories() {
       fetchCategories();
     } catch (error) {
       console.error('Delete category failed', error);
-      alert(error?.response?.data?.error || error?.response?.data?.message || 'Không thể xóa danh mục');
+      toast.error(error?.response?.data?.error || error?.response?.data?.message || 'Không thể xóa danh mục');
     }
   };
 
@@ -130,7 +132,7 @@ export default function AdminCategories() {
   };
 
   const saveEdit = async (id) => {
-    if (!editingName.trim()) return alert('Tên danh mục không được để trống');
+    if (!editingName.trim()) return toast.warning('Tên danh mục không được để trống');
     try {
       await api.put(`/categories/${id}`, { 
         name: editingName.trim(),
@@ -140,7 +142,7 @@ export default function AdminCategories() {
       cancelEdit();
     } catch (error) {
       console.error('Update category failed', error);
-      alert(error?.response?.data?.message || 'Không thể cập nhật danh mục');
+      toast.error(error?.response?.data?.message || 'Không thể cập nhật danh mục');
     }
   };
 
